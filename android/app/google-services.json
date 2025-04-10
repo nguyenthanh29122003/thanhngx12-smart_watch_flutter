@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "58943886099",
+    "project_id": "smart-wearable-app-dae6c",
+    "storage_bucket": "smart-wearable-app-dae6c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58943886099:android:0e34ed92a66e30428d80e6",
+        "android_client_info": {
+          "package_name": "com.example.smart_wearable_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "58943886099-542oks8jub8mp9l5seev95iq86e60cgo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smart_wearable_app",
+            "certificate_hash": "4b4bda0b0de9275144564edb4e34a34693b73a50"
+          }
+        },
+        {
+          "client_id": "58943886099-7hm78m5u4luj0osr1jfdo5gm6slppqgr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyseMzbH5zu3DVo_dIR2PWVMh46vpN0JE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "58943886099-7hm78m5u4luj0osr1jfdo5gm6slppqgr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "58943886099-bf9nqras1cvsn20hgmq01oqcuofk7nbc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartWearableApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

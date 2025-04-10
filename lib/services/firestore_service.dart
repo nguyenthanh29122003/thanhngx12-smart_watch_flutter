@@ -1,0 +1,231 @@
+// lib/services/firestore_service.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Cần để lấy User object
+import '../app_constants.dart'; // Import các hằng số
+
+class FirestoreService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // --- User Profile Operations ---
+
+  // Tạo hoặc cập nhật hồ sơ người dùng khi đăng ký/đăng nhập lần đầu
+  Future<void> updateUserProfile(
+    User user, {
+    String? displayName,
+    String? photoURL,
+  }) async {
+    // Sử dụng Map để chứa dữ liệu, có thể mở rộng sau này
+    final Map<String, dynamic> userData = {
+      'uid': user.uid,
+      'email': user.email,
+      // Chỉ cập nhật displayName nếu được cung cấp và khác giá trị hiện tại
+      if (displayName != null && displayName.isNotEmpty)
+        'displayName': displayName,
+      // Chỉ cập nhật photoURL nếu được cung cấp và khác giá trị hiện tại
+      if (photoURL != null && photoURL.isNotEmpty) 'photoURL': photoURL,
+      'lastLogin':
+          FieldValue.serverTimestamp(), // Cập nhật thời gian đăng nhập cuối
+      'createdAt':
+          FieldValue.serverTimestamp(), // Chỉ ghi khi tạo mới (dùng set với merge:false)
+    };
+
+    try {
+      // Dùng set với merge: true để tạo mới nếu chưa có, hoặc cập nhật các trường cung cấp nếu đã tồn tại
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true)); // merge:true là quan trọng
+      print("User profile updated/created for ${user.uid}");
+    } catch (e) {
+      print("Error updating/creating user profile: $e");
+      // throw FirestoreException("user_profile_update_failed");
+    }
+  }
+
+  // Lấy thông tin hồ sơ người dùng
+  Future<DocumentSnapshot<Map<String, dynamic>>?> getUserProfile(
+    String userId,
+  ) async {
+    try {
+      final docSnap =
+          await _db.collection(AppConstants.usersCollection).doc(userId).get();
+      if (docSnap.exists) {
+        return docSnap;
+      } else {
+        print("User profile not found for $userId");
+        return null;
+      }
+    } catch (e) {
+      print("Error getting user profile: $e");
+      return null;
+    }
+  }
+
+  // --- Health Data Operations ---
+
+  // Lưu một bản ghi dữ liệu sức khỏe
+  // healthData nên là một Map<String, dynamic> khớp với cấu trúc JSON từ ESP32
+  Future<void> saveHealthData(
+    String userId,
+    Map<String, dynamic> healthData,
+  ) async {
+    // Thêm timestamp từ server nếu trong healthData chưa có hoặc không hợp lệ
+    if (healthData['timestamp'] == null ||
+        healthData['timestamp'] == "Not initialized") {
+      // Nếu không có timestamp từ ESP32 hoặc không hợp lệ, dùng timestamp của server
+      healthData['recordedAt'] = FieldValue.serverTimestamp();
+      // Xóa trường timestamp gốc nếu không muốn lưu giá trị không hợp lệ
+      healthData.remove('timestamp');
+    } else {
+      // Nếu có timestamp từ ESP32, chuyển đổi nó thành kiểu Timestamp của Firestore
+      try {
+        // Cố gắng parse timestamp ISO 8601 từ ESP32
+        DateTime parsedTimestamp = DateTime.parse(healthData['timestamp']);
+        healthData['recordedAt'] = Timestamp.fromDate(parsedTimestamp);
+        // Xóa trường timestamp gốc sau khi đã chuyển đổi
+        healthData.remove('timestamp');
+      } catch (e) {
+        print(
+          "Error parsing timestamp from ESP32: ${healthData['timestamp']}. Using server timestamp. Error: $e",
+        );
+        // Nếu parse lỗi, vẫn dùng timestamp server
+        healthData['recordedAt'] = FieldValue.serverTimestamp();
+        healthData.remove('timestamp');
+      }
+    }
+
+    try {
+      // Tạo document mới với ID tự động trong subcollection 'health_data'
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.healthDataSubcollection)
+          .add(healthData); // add() sẽ tự tạo ID
+      // print("Health data saved for user $userId"); // Giảm log để tránh spam
+    } catch (e) {
+      print("Error saving health data: $e");
+      // throw FirestoreException("health_data_save_failed");
+    }
+  }
+
+  // Lấy lịch sử dữ liệu sức khỏe (ví dụ: 24 giờ qua)
+  // Cần có Index trong Firestore cho trường 'recordedAt' (descending)
+  Stream<QuerySnapshot<Map<String, dynamic>>> getHealthDataHistory(
+    String userId, {
+    int limit = 100,
+  }) {
+    // Lấy dữ liệu được sắp xếp theo thời gian gần nhất
+    return _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection(AppConstants.healthDataSubcollection)
+        .orderBy(
+          'recordedAt',
+          descending: true,
+        ) // Sắp xếp theo timestamp đã xử lý
+        .limit(limit) // Giới hạn số lượng bản ghi lấy về
+        .snapshots(); // snapshots() trả về Stream để cập nhật realtime
+  }
+
+  // Lấy bản ghi dữ liệu sức khỏe mới nhất
+  Future<DocumentSnapshot<Map<String, dynamic>>?> getLatestHealthData(
+    String userId,
+  ) async {
+    try {
+      final querySnap =
+          await _db
+              .collection(AppConstants.usersCollection)
+              .doc(userId)
+              .collection(AppConstants.healthDataSubcollection)
+              .orderBy('recordedAt', descending: true)
+              .limit(1)
+              .get();
+
+      if (querySnap.docs.isNotEmpty) {
+        return querySnap.docs.first;
+      } else {
+        return null; // Không có dữ liệu
+      }
+    } catch (e) {
+      print("Error getting latest health data: $e");
+      return null;
+    }
+  }
+
+  // --- Relatives Operations --- (Sẽ thêm chi tiết sau nếu cần)
+
+  Future<void> addRelative(
+    String userId,
+    Map<String, dynamic> relativeData,
+  ) async {
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.relativesSubcollection)
+          .add(relativeData); // ID tự động
+      print("Relative added for user $userId");
+    } catch (e) {
+      print("Error adding relative: $e");
+    }
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getRelatives(String userId) {
+    return _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection(AppConstants.relativesSubcollection)
+        .snapshots();
+  }
+
+  // --- Goals Operations --- (Sẽ thêm chi tiết sau nếu cần)
+
+  Future<void> setDailyGoal(
+    String userId,
+    Map<String, dynamic> goalData,
+  ) async {
+    try {
+      // Dùng doc('daily') để luôn cập nhật cùng một document mục tiêu
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.goalsSubcollection)
+          .doc('daily') // ID cố định cho mục tiêu hàng ngày
+          .set(
+            goalData,
+            SetOptions(merge: true),
+          ); // Merge để chỉ cập nhật các trường mới
+      print("Daily goal set/updated for user $userId");
+    } catch (e) {
+      print("Error setting daily goal: $e");
+    }
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>?> getDailyGoal(
+    String userId,
+  ) async {
+    try {
+      final docSnap =
+          await _db
+              .collection(AppConstants.usersCollection)
+              .doc(userId)
+              .collection(AppConstants.goalsSubcollection)
+              .doc('daily')
+              .get();
+      if (docSnap.exists) {
+        return docSnap;
+      } else {
+        return null; // Chưa có mục tiêu nào được đặt
+      }
+    } catch (e) {
+      print("Error getting daily goal: $e");
+      return null;
+    }
+  }
+}
+
+// (Tùy chọn) Lớp Exception tùy chỉnh
+// class FirestoreException implements Exception {
+//   final String code;
+//   FirestoreException(this.code);
+// }
