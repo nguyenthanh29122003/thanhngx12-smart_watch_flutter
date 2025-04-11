@@ -6,9 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart'; // Để yêu cầu quyền
 import 'package:cloud_firestore/cloud_firestore.dart'; // Cần cho Timestamp
+// import 'dart:typed_data'; // Import nếu bạn cần dùng Uint8List ở đâu đó
+
 import '../app_constants.dart'; // UUIDs, Tên thiết bị
 
-// *** Nhắc nhở: Nên di chuyển enum và class HealthData sang file riêng ***
+// *** Nhắc nhở: Nên di chuyển enum và class HealthData sang file riêng lib/models/ ***
 enum BleConnectionStatus {
   disconnected,
   scanning,
@@ -49,6 +51,8 @@ class HealthData {
           timestampString is! String) {
         parsedTimestamp = DateTime.now();
       } else {
+        // Thêm xử lý timezone nếu cần, ví dụ nếu ESP32 gửi UTC
+        // parsedTimestamp = DateTime.parse(timestampString).toLocal();
         parsedTimestamp = DateTime.parse(timestampString);
       }
     } catch (e) {
@@ -63,11 +67,10 @@ class HealthData {
         if (defaultValue is double) return value.toDouble() as T;
         if (defaultValue is int) return value.toInt() as T;
       }
-      // Nếu không phải num, log cảnh báo (tùy chọn)
-      // if (value != null) { print("Warning: Expected num but got ${value.runtimeType} for value $value. Using default $defaultValue.");}
       return defaultValue;
     }
 
+    // Parse an toàn hơn, trả về giá trị mặc định nếu key không tồn tại hoặc sai kiểu
     return HealthData(
       ax: _parseNum(json['ax'], 0.0),
       ay: _parseNum(json['ay'], 0.0),
@@ -114,10 +117,8 @@ class BleService {
   Stream<HealthData> get healthDataStream => _healthDataStreamController.stream;
 
   BluetoothDevice? _connectedDevice;
-  BluetoothCharacteristic?
-  _healthCharacteristic; // Lưu trữ characteristic để dùng lại
-  BluetoothCharacteristic?
-  _wifiCharacteristic; // Lưu trữ characteristic để dùng lại
+  BluetoothCharacteristic? _healthCharacteristic;
+  BluetoothCharacteristic? _wifiCharacteristic;
 
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionStateSubscription;
@@ -208,14 +209,13 @@ class BleService {
     scanResults.value = [];
 
     try {
-      await FlutterBluePlus.stopScan(); // Đảm bảo dừng quét cũ
+      await FlutterBluePlus.stopScan();
       _scanSubscription?.cancel();
       _scanSubscription = null;
       _isScanningSubscription?.cancel();
       _isScanningSubscription = null;
 
       _isScanningSubscription = FlutterBluePlus.isScanning.listen((state) {
-        // Cập nhật trạng thái isScanning dựa trên plugin
         if (isScanning.value != state) {
           isScanning.value = state;
           print("Plugin isScanning state: $state");
@@ -236,7 +236,6 @@ class BleService {
                     ),
                   )
                   .toList();
-          // Tối ưu: Chỉ cập nhật nếu list thay đổi ID thiết bị
           if (!_areScanListsEqual(scanResults.value, filtered)) {
             scanResults.value = filtered;
             print("Scan results updated: ${filtered.length} matching devices.");
@@ -257,11 +256,10 @@ class BleService {
       _scanSubscription?.cancel();
       _scanSubscription = null;
       _updateStatus(BleConnectionStatus.error, "Error starting scan");
-      isScanning.value = false; // Đảm bảo reset trạng thái quét
+      isScanning.value = false;
     }
   }
 
-  // Helper so sánh scan results dựa trên ID
   bool _areScanListsEqual(List<ScanResult> list1, List<ScanResult> list2) {
     if (list1.length != list2.length) return false;
     final ids1 = list1.map((r) => r.device.remoteId).toSet();
@@ -271,7 +269,6 @@ class BleService {
 
   Future<void> stopScan() async {
     try {
-      // Chỉ dừng nếu đang thực sự quét (tránh gọi thừa)
       if (FlutterBluePlus.isScanningNow) {
         await FlutterBluePlus.stopScan();
         print("Scan manually stopped.");
@@ -281,13 +278,11 @@ class BleService {
     } catch (e) {
       print("Error stopping scan: $e");
     } finally {
-      // Dù có lỗi hay không, đảm bảo các sub được hủy và trạng thái reset nếu cần
       _isScanningSubscription?.cancel();
       _isScanningSubscription = null;
       _scanSubscription?.cancel();
       _scanSubscription = null;
-      if (isScanning.value)
-        isScanning.value = false; // Cập nhật thủ công nếu stream chưa kịp
+      if (isScanning.value) isScanning.value = false;
       if (connectionStatus.value == BleConnectionStatus.scanning) {
         _updateStatus(
           BleConnectionStatus.disconnected,
@@ -314,25 +309,17 @@ class BleService {
     );
     _updateStatus(BleConnectionStatus.connecting, "Connecting...");
 
-    // Hủy listener cũ trước khi gọi connect mới
     _connectionStateSubscription?.cancel();
     _connectionStateSubscription = null;
 
     try {
-      // Thực hiện kết nối với timeout
       await device.connect(timeout: const Duration(seconds: 15));
-
-      // Nếu connect() hoàn thành mà không ném lỗi:
       print(">>> Connect Future completed successfully.");
 
-      // KIỂM TRA TRẠNG THÁI NGAY LẬP TỨC SAU KHI FUTURE HOÀN THÀNH
-      // Dùng device.connectionState.first để lấy trạng thái hiện tại đáng tin cậy hơn isConnected (đôi khi isConnected chưa cập nhật kịp)
-      // Hoặc dùng FlutterBluePlus.connectedSystemDevices để kiểm tra
-      // Tạm thời dùng cách đơn giản: kiểm tra isConnected trước
-      // await Future.delayed(Duration(milliseconds: 100)); // Thêm delay nhỏ nếu isConnected chưa kịp cập nhật
+      // Thêm delay nhỏ để chờ trạng thái isConnected ổn định hơn (tùy chọn)
+      // await Future.delayed(const Duration(milliseconds: 100));
 
       if (device.isConnected) {
-        // Kiểm tra thuộc tính isConnected
         print(">>> Device is reported as connected after Future completion.");
         _connectedDevice = device;
         _updateStatus(
@@ -340,15 +327,11 @@ class BleService {
           "Discovering services...",
         );
         print(">>> Discovering services...");
-        await _discoverServicesAndSubscribe(
-          device,
-        ); // Chỉ khám phá nếu kết nối thực sự thành công
+        await _discoverServicesAndSubscribe(device);
 
-        // Gắn listener CHỈ để xử lý ngắt kết nối SAU KHI đã kết nối thành công
+        // Gắn listener sau khi khám phá xong (hoặc ngay đây nếu muốn xử lý disconnect sớm hơn)
         _connectionStateSubscription = device.connectionState
-            .where(
-              (state) => state == BluetoothConnectionState.disconnected,
-            ) // Chỉ lắng nghe disconnected
+            .where((state) => state == BluetoothConnectionState.disconnected)
             .listen(
               (state) {
                 print(
@@ -370,7 +353,6 @@ class BleService {
               },
             );
       } else {
-        // Trường hợp lạ: Future connect thành công nhưng device.isConnected là false
         print(
           ">>> WARNING: Connect Future completed but device.isConnected is false. Handling as error.",
         );
@@ -380,16 +362,22 @@ class BleService {
         );
       }
     } catch (e) {
-      // Bắt lỗi xảy ra trong quá trình gọi device.connect() (ví dụ: timeout)
       print("Error during device.connect() Future for ${device.remoteId}: $e");
-      // Không cần thiết phải gọi _handleDisconnect ở đây vì listener (nếu có) hoặc trạng thái connecting sẽ được xử lý
-      // Chỉ cần cập nhật trạng thái lỗi
       if (connectionStatus.value == BleConnectionStatus.connecting) {
+        // Chỉ cập nhật lỗi nếu vẫn đang ở trạng thái connecting
         _updateStatus(
           BleConnectionStatus.error,
           "Connection failed: ${e.toString()}",
         );
+      } else {
+        // Nếu trạng thái đã khác (ví dụ đã disconnect do stream), không ghi đè
+        print(
+          "Connect Future error caught, but status is already ${connectionStatus.value}",
+        );
       }
+      // Đảm bảo listener cũ bị hủy nếu có lỗi ở đây
+      _connectionStateSubscription?.cancel();
+      _connectionStateSubscription = null;
     }
   }
 
@@ -398,16 +386,17 @@ class BleService {
     if (deviceToDisconnect != null) {
       print("Disconnecting from ${deviceToDisconnect.remoteId}...");
       try {
-        // Listener sẽ xử lý việc cập nhật trạng thái khi nhận disconnected
         await deviceToDisconnect.disconnect();
         print("Disconnect call initiated for ${deviceToDisconnect.remoteId}.");
+        // Listener (nếu còn tồn tại) sẽ gọi _handleDisconnect
+        // Nếu listener đã bị hủy hoặc không nhận sự kiện, cần xử lý ở đây
+        // Tạm thời dựa vào listener hoặc timeout
       } catch (e) {
         print("Error during disconnect call: $e");
         _handleDisconnect(isError: true, reason: "Error calling disconnect()");
       }
     } else {
       print("No device connected to disconnect from.");
-      // Đảm bảo trạng thái là disconnected nếu không có thiết bị
       _updateStatus(
         BleConnectionStatus.disconnected,
         "No device was connected",
@@ -423,26 +412,19 @@ class BleService {
     print(
       "Handling disconnect: IsError=$isError, ClearDevice=$clearDevice, Reason=$reason",
     );
-
-    // Hủy các subscription liên quan đến thiết bị cụ thể
     _healthDataSubscription?.cancel();
     _healthDataSubscription = null;
     _connectionStateSubscription?.cancel();
     _connectionStateSubscription = null;
 
-    // Reset các characteristics đã lưu
     _healthCharacteristic = null;
     _wifiCharacteristic = null;
 
     final deviceBeforeDisconnectId = _connectedDevice?.remoteId;
     if (clearDevice || !isError) {
-      // Xóa thiết bị nếu yêu cầu hoặc là disconnect bình thường
       _connectedDevice = null;
     }
-    // Nếu là lỗi nhưng không clearDevice, _connectedDevice vẫn giữ nguyên
-    // cho phép thử kết nối lại mà không cần quét lại (tùy logic mong muốn)
 
-    // Cập nhật trạng thái
     _updateStatus(
       isError ? BleConnectionStatus.error : BleConnectionStatus.disconnected,
       reason,
@@ -454,20 +436,17 @@ class BleService {
       );
     } else if (isError && _connectedDevice != null) {
       print(
-        "Device ${_connectedDevice?.remoteId} encountered an error but internal reference is kept (potential retry?).",
+        "Device ${_connectedDevice?.remoteId} encountered an error but internal reference is kept.",
       );
     }
   }
 
-  // Hàm helper để cập nhật trạng thái và log
   void _updateStatus(BleConnectionStatus newStatus, String reason) {
     if (connectionStatus.value != newStatus) {
       print(
         "Status changing: ${connectionStatus.value} -> $newStatus (Reason: $reason)",
       );
       connectionStatus.value = newStatus;
-    } else {
-      // print("Status already $newStatus. Reason: $reason"); // Có thể bỏ log này nếu quá nhiều
     }
   }
 
@@ -483,16 +462,14 @@ class BleService {
       return;
     }
 
-    _healthCharacteristic = null; // Reset trước khi tìm
-    _wifiCharacteristic = null; // Reset trước khi tìm
+    _healthCharacteristic = null;
+    _wifiCharacteristic = null;
     bool foundTargetService = false;
 
     for (var service in services) {
-      // >>> THÊM LOGGING UUID TÌM THẤY <<<
       print(
         "--- Service Found: UUID = ${service.uuid.toString().toLowerCase()}",
       );
-
       if (service.uuid.toString().toLowerCase() ==
           AppConstants.bleServiceUUID.toLowerCase()) {
         print("+++ Matched Target Service: ${service.uuid}");
@@ -501,7 +478,6 @@ class BleService {
           print(
             "---   Characteristic Found: UUID = ${char.uuid.toString().toLowerCase()} | Properties = ${char.properties}",
           );
-          // Lưu Health Characteristic
           if (char.uuid.toString().toLowerCase() ==
               AppConstants.healthDataCharacteristicUUID.toLowerCase()) {
             if (char.properties.notify) {
@@ -511,11 +487,9 @@ class BleService {
               print("!!!     Health Characteristic does NOT support notify!");
             }
           }
-          // Lưu WiFi Characteristic
           if (char.uuid.toString().toLowerCase() ==
               AppConstants.wifiConfigCharacteristicUUID.toLowerCase()) {
             if (char.properties.write) {
-              // Hoặc writeWithoutResponse tùy firmware
               _wifiCharacteristic = char;
               print("+++     Stored WiFi Characteristic (Write OK)");
             } else {
@@ -525,24 +499,20 @@ class BleService {
             }
           }
         }
-        break; // Đã tìm thấy service mục tiêu
+        break;
       }
     }
 
     if (!foundTargetService) {
-      print(
-        "Target BLE service (${AppConstants.bleServiceUUID}) not found amongst discovered services.",
-      );
+      print("Target BLE service (${AppConstants.bleServiceUUID}) not found.");
       _handleDisconnect(isError: true, reason: "Target service not found");
       return;
     }
 
-    // Nếu tìm thấy Health Characteristic -> Subscribe
     if (_healthCharacteristic != null) {
+      // <<< GỌI HÀM SUBSCRIBE ĐÃ SỬA LẠI >>>
       await _subscribeToHealthData(_healthCharacteristic!);
-      // Chỉ chuyển sang connected nếu subscribe thành công (hoặc ít nhất là bắt đầu thành công)
       if (connectionStatus.value != BleConnectionStatus.error) {
-        // Kiểm tra nếu _subscribeToHealthData báo lỗi
         _updateStatus(
           BleConnectionStatus.connected,
           "Connected and subscribed",
@@ -553,16 +523,14 @@ class BleService {
       print(
         "Health Data Characteristic not found or not suitable. Connection may be limited.",
       );
-      // Quyết định trạng thái ở đây: Có thể vẫn là Connected nếu các chức năng khác OK
-      // Hoặc là Error nếu Health Data là bắt buộc.
       _updateStatus(
         BleConnectionStatus.error,
         "Health characteristic missing/unsuitable",
-      ); // Tạm coi là lỗi
-      // await disconnectFromDevice(); // Ngắt kết nối nếu bắt buộc
+      );
     }
   }
 
+  // --- HÀM SUBSCRIBE ĐÃ SỬA LẠI ĐỂ ĐỌC JSON ---
   Future<void> _subscribeToHealthData(
     BluetoothCharacteristic characteristic,
   ) async {
@@ -576,41 +544,40 @@ class BleService {
       _healthDataSubscription = characteristic.lastValueStream.listen(
         (value) {
           if (value.isEmpty) {
-            print("Received empty data packet.");
+            // print("Received empty data packet."); // Có thể bỏ qua log này
             return;
           }
 
           String? jsonString; // Khai báo ngoài try-catch để log lỗi
           try {
-            // --- QUAY LẠI GIẢI MÃ UTF-8 VÀ JSON ---
-            jsonString = utf8.decode(
-              value,
-              allowMalformed: true,
-            ); // Thêm allowMalformed
+            // --- GIẢI MÃ UTF-8 VÀ JSON ---
+            // allowMalformed giúp xử lý nếu có byte lỗi nhưng vẫn cố giải mã phần còn lại
+            jsonString = utf8.decode(value, allowMalformed: true);
 
-            // Log dữ liệu thô nhận được (quan trọng để debug)
-            // print("Received raw string (len ${jsonString.length}): $jsonString");
+            // Log chuỗi nhận được (quan trọng để debug nếu JSON parse lỗi)
+            // print("Received raw string: $jsonString");
 
-            // Parse JSON
+            // Parse JSON string thành Map
             Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
-            // Tạo đối tượng HealthData (đã bao gồm xử lý timestamp trong factory)
+            // Tạo đối tượng HealthData từ Map
             HealthData data = HealthData.fromJson(jsonData);
 
             // Đẩy dữ liệu đã parse vào stream controller
             _healthDataStreamController.add(data);
-            // print("Parsed JSON to HealthData: Steps=${data.steps}"); // Giảm log
+            print(
+              "Successfully parsed Health Data: Steps=${data.steps}, HR=${data.hr}",
+            ); // Log thành công
           } on FormatException catch (e) {
-            // LỖI QUAN TRỌNG: Xảy ra khi utf8.decode hoặc jsonDecode thất bại
+            // Lỗi xảy ra khi utf8.decode (nếu allowMalformed=false) hoặc jsonDecode thất bại
             print("!!! FormatException decoding/parsing health data: $e");
             print("    Raw bytes: $value");
             if (jsonString != null) {
               print("    Decoded string (may be corrupt): $jsonString");
             }
-            // KHÔNG ngắt kết nối ngay, có thể chỉ là gói tin lỗi tạm thời.
-            // Có thể thêm bộ đếm lỗi và chỉ ngắt nếu lỗi xảy ra liên tục.
+            // Không ngắt kết nối vội, tiếp tục nhận gói tin khác
           } catch (e) {
-            // Bắt các lỗi khác không mong muốn
+            // Bắt các lỗi khác không mong muốn trong quá trình xử lý
             print(
               "!!! Unexpected error processing health data: $e. Raw bytes: $value",
             );
@@ -620,6 +587,7 @@ class BleService {
           }
         },
         onError: (error) {
+          // Lỗi từ bản thân stream của characteristic
           print("Health data stream subscription error: $error");
           _handleDisconnect(
             isError: true,
@@ -627,6 +595,7 @@ class BleService {
           );
         },
         onDone: () {
+          // Stream bị đóng (ví dụ: thiết bị ngắt notify)
           print("Health data stream ended (Notifications stopped?).");
           if (connectionStatus.value == BleConnectionStatus.connected) {
             _handleDisconnect(
@@ -636,10 +605,11 @@ class BleService {
           }
         },
         cancelOnError: true,
-      ); // Giữ cancelOnError để dừng nếu có lỗi nghiêm trọng từ stream
+      ); // Tự hủy nếu stream báo lỗi
 
       print("Subscription to Health Data successful.");
     } catch (e) {
+      // Lỗi khi gọi setNotifyValue
       print("Error setting notify value or subscribing to Health Data: $e");
       _handleDisconnect(
         isError: true,
@@ -647,6 +617,7 @@ class BleService {
       );
     }
   }
+  // ----------------------------------------------
 
   Future<bool> sendWifiConfig(String ssid, String password) async {
     if (connectionStatus.value != BleConnectionStatus.connected ||
@@ -655,11 +626,11 @@ class BleService {
       return false;
     }
 
-    // 1. Ưu tiên sử dụng characteristic đã lưu
-    BluetoothCharacteristic? charToWrite = _wifiCharacteristic;
+    BluetoothCharacteristic? charToWrite =
+        _wifiCharacteristic; // Ưu tiên dùng char đã lưu
 
-    // 2. Nếu chưa có, thử khám phá lại (không khuyến khích làm thường xuyên)
     if (charToWrite == null) {
+      // Nếu chưa lưu, thử khám phá lại
       print("WiFi characteristic not stored. Re-discovering services...");
       try {
         List<BluetoothService> services =
@@ -672,7 +643,7 @@ class BleService {
                   AppConstants.wifiConfigCharacteristicUUID.toLowerCase()) {
                 if (char.properties.write) {
                   charToWrite = char;
-                  _wifiCharacteristic = char; // Lưu lại cho lần sau
+                  _wifiCharacteristic = char; // Lưu lại
                   print(
                     "Found and stored writable WiFi Config Characteristic.",
                   );
@@ -689,7 +660,6 @@ class BleService {
       }
     }
 
-    // 3. Kiểm tra lại sau khi đã thử khám phá
     if (charToWrite == null) {
       print(
         "Writable WiFi Config Characteristic not found after check/discovery.",
@@ -697,17 +667,13 @@ class BleService {
       return false;
     }
 
-    // 4. Chuẩn bị và Gửi Dữ liệu
     try {
       Map<String, String> configData = {'ssid': ssid, 'password': password};
       String jsonString = jsonEncode(configData);
       List<int> bytesToSend = utf8.encode(jsonString);
       print("Sending WiFi config JSON: $jsonString (Bytes: $bytesToSend)");
 
-      await charToWrite.write(
-        bytesToSend,
-        withoutResponse: false,
-      ); // Dùng write có response
+      await charToWrite.write(bytesToSend, withoutResponse: false);
       print("WiFi config sent successfully.");
       return true;
     } catch (e) {
@@ -725,12 +691,10 @@ class BleService {
     _healthDataSubscription?.cancel();
     _healthDataStreamController.close();
 
-    // Cố gắng ngắt kết nối thiết bị nếu đang kết nối
     if (_connectedDevice != null &&
         connectionStatus.value != BleConnectionStatus.disconnected) {
       print("Disconnecting device on BleService dispose...");
       disconnectFromDevice().catchError((e) {
-        // Gọi hàm disconnect đã có sẵn
         print("Error disconnecting device on dispose: $e");
       });
     }
