@@ -51,6 +51,10 @@ dependencies:
   # Networking & Connectivity
   connectivity_plus: ^5.0.2
 
+  flutter_localizations: # <<< Thêm dependency này
+    sdk: flutter         # <<< Để sử dụng localization trong Flutter
+  # Để sử dụng localization trong Flutter, bạn cần thêm dependency này vào pubspec.yaml
+
   # UI & Utils
   intl: ^0.19.0
   fl_chart: ^0.67.0
@@ -59,6 +63,7 @@ dependencies:
 
   # Icons (Thường có sẵn)
   cupertino_icons: ^1.0.6
+  percent_indicator: ^4.2.5
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +83,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+   # >>> THÊM PHẦN NÀY ĐỂ CẤU HÌNH GENERATE CODE <<<
+  generate: true # Bật tính năng tạo code tự động của Flutter
 
     # Để thêm assets vào ứng dụng, thêm một mục assets như sau:
   assets:
@@ -115,3 +123,10 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+# >>> THÊM PHẦN NÀY ĐỂ CẤU HÌNH INTL TOOL <<<
+flutter_intl:
+  enabled: true # Bật công cụ intl
+  class_name: AppLocalizations # Tên class chứa các chuỗi dịch (mặc định là S)
+  main_locale: en # Ngôn ngữ mặc định của ứng dụng
+  arb_dir: lib/l10n # Thư mục chứa file .arb
+  output_dir: lib/generated # Thư mục chứa code được tạo ra

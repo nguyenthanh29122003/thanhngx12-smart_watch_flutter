@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import '../../services/ble_service.dart';
-import '../../app_constants.dart'; // Tên thiết bị
+import 'package:shared_preferences/shared_preferences.dart'; // <<< Import SharedPreferences
+import '../../app_constants.dart'; // <<< Import AppConstants
 import '../../providers/ble_provider.dart';
+import '../../services/ble_service.dart'; // <<< Import BleService (cho enum)
 import '../core/main_navigator.dart'; // Màn hình chính sau khi kết nối
 
 class DeviceSelectScreen extends StatefulWidget {
@@ -17,175 +18,191 @@ class DeviceSelectScreen extends StatefulWidget {
 }
 
 class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
-  late BleProvider _bleProvider; // Khởi tạo trong didChangeDependencies
-  bool _hasInitialScanStarted = false; // Đảm bảo chỉ quét tự động lần đầu
+  late BleProvider _bleProvider;
+  bool _hasInitialScanStarted = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Lấy provider và đăng ký listener ở đây an toàn hơn initState
-    // vì context đã sẵn sàng
     _bleProvider = Provider.of<BleProvider>(context, listen: false);
 
-    // Xóa listener cũ trước khi thêm mới (quan trọng khi hot reload)
-    _bleProvider.connectionStatus.removeListener(_handleConnectionStatusChange);
-    _bleProvider.connectionStatus.addListener(_handleConnectionStatusChange);
+    // Dùng try-catch khi remove/add listener phòng trường hợp provider đã bị dispose
+    try {
+      _bleProvider.connectionStatus.removeListener(
+        _handleConnectionStatusChange,
+      );
+      _bleProvider.connectionStatus.addListener(_handleConnectionStatusChange);
+    } catch (e) {
+      print("Error setting up connection listener: $e");
+    }
 
-    // Bắt đầu quét tự động lần đầu vào màn hình nếu chưa quét
     if (!_hasInitialScanStarted) {
       _hasInitialScanStarted = true;
-      // Đợi một chút để màn hình build xong rồi mới quét
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkAndScan();
+        if (mounted) {
+          // Kiểm tra mounted trước khi gọi
+          _checkAndScan();
+        }
       });
     }
   }
 
   @override
   void dispose() {
-    // Gỡ bỏ listener khi widget bị hủy
-    _bleProvider.connectionStatus.removeListener(_handleConnectionStatusChange);
-    // Cân nhắc dừng quét khi rời màn hình này?
-    // _bleProvider.stopScan(); // Tùy thuộc yêu cầu
+    try {
+      _bleProvider.connectionStatus.removeListener(
+        _handleConnectionStatusChange,
+      );
+    } catch (e) {
+      print("Error removing connection listener on dispose: $e");
+    }
     super.dispose();
   }
 
-  // Listener để xử lý thay đổi trạng thái kết nối
-  void _handleConnectionStatusChange() {
+  // Listener xử lý thay đổi trạng thái kết nối
+  void _handleConnectionStatusChange() async {
+    // Kiểm tra mounted trước khi truy cập state hoặc context
+    if (!mounted) return;
+
     final status = _bleProvider.connectionStatus.value;
     print("DeviceSelectScreen received connection status: $status");
-    if (status == BleConnectionStatus.connected && mounted) {
-      // Đã kết nối thành công -> Chuyển sang màn hình chính
+
+    if (status == BleConnectionStatus.connected) {
+      // --- LƯU DEVICE ID KHI KẾT NỐI THÀNH CÔNG ---
+      // Dùng read<BleProvider> vì không cần rebuild khi gọi hàm này
+      final connectedDevice = context.read<BleProvider>().connectedDevice;
+      if (connectedDevice != null) {
+        final deviceId = connectedDevice.remoteId.toString();
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+            AppConstants.prefKeyConnectedDeviceId,
+            deviceId,
+          );
+          print("[DeviceSelectScreen] Saved connected device ID: $deviceId");
+        } catch (e) {
+          print("!!! [DeviceSelectScreen] Error saving device ID: $e");
+        }
+      } else {
+        print(
+          "!!! [DeviceSelectScreen] Warning: Connected but connectedDevice is null?",
+        );
+      }
+      // -----------------------------------------
+
       print("Navigating to MainNavigator...");
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainNavigator()),
-      );
-    } else if (status == BleConnectionStatus.error && mounted) {
-      // Hiển thị lỗi nếu kết nối thất bại
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to connect to the device.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      // Đảm bảo không lỗi nếu context không còn hợp lệ (dù đã check mounted)
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainNavigator()),
+        );
+      }
+    } else if (status == BleConnectionStatus.error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to connect to the device. Please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
   // Hàm kiểm tra quyền và trạng thái Bluetooth trước khi quét
   Future<void> _checkAndScan() async {
-    // 1. Kiểm tra quyền
+    if (!mounted) return; // Kiểm tra mounted
     if (!await _checkPermissions()) {
-      return; // Dừng lại nếu quyền không được cấp
+      return;
     }
-
-    // 2. Kiểm tra trạng thái Bluetooth
     if (!await _checkBluetoothState()) {
-      return; // Dừng lại nếu Bluetooth không bật
+      return;
     }
-
-    // 3. Bắt đầu quét
-    _bleProvider.startScan();
+    // Dùng read vì chỉ gọi hàm, không cần rebuild
+    context.read<BleProvider>().startScan();
   }
 
   // Hàm kiểm tra và yêu cầu quyền
   Future<bool> _checkPermissions() async {
+    if (!mounted) return false; // Kiểm tra mounted
     Map<Permission, PermissionStatus> statuses = {};
-
-    // Yêu cầu các quyền cần thiết dựa trên nền tảng
     if (Platform.isAndroid) {
       statuses =
           await [
-            Permission.location, // Luôn cần cho Android < 12
-            Permission.bluetoothScan, // Android 12+
-            Permission.bluetoothConnect, // Android 12+
+            Permission.location,
+            Permission.bluetoothScan,
+            Permission.bluetoothConnect,
           ].request();
     } else if (Platform.isIOS) {
       statuses =
-          await [
-            Permission.bluetooth, // Quyền Bluetooth chung cho iOS
-            Permission.locationWhenInUse, // Cần cho quét BLE trên iOS
-          ].request();
+          await [Permission.bluetooth, Permission.locationWhenInUse].request();
     }
-
-    // Kiểm tra kết quả
     bool allGranted = true;
-    statuses.forEach((permission, status) {
-      if (!status.isGranted) {
-        allGranted = false;
-        print("${permission.toString()} permission denied.");
-      }
+    statuses.forEach((p, s) {
+      if (!s.isGranted) allGranted = false;
     });
-
     if (!allGranted && mounted) {
+      // <<< SỬA LỖI showSnackBar >>>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          // <<< Thêm SnackBar(...)
           content: Text(
             'Required permissions were denied. Please grant permissions in settings.',
           ),
           backgroundColor: Colors.orangeAccent,
         ),
       );
-      // Cân nhắc mở cài đặt ứng dụng: await openAppSettings();
     }
     return allGranted;
   }
 
   // Hàm kiểm tra trạng thái Bluetooth và yêu cầu bật
   Future<bool> _checkBluetoothState() async {
-    // Chờ một chút để đảm bảo trạng thái adapter được cập nhật
+    if (!mounted) return false; // Kiểm tra mounted
     await Future.delayed(const Duration(milliseconds: 200));
-
-    if (FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on) {
-      return true; // Bluetooth đã bật
-    } else {
-      if (mounted) {
-        // Chỉ hiển thị dialog nếu widget còn tồn tại
-        await showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Bluetooth Required'),
-                content: const Text(
-                  'This app requires Bluetooth to be enabled to scan for devices.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        () => Navigator.of(
-                          context,
-                        ).pop(false), // Người dùng từ chối
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop(true); // Người dùng đồng ý
-                      try {
-                        if (Platform.isAndroid) {
-                          // Cố gắng yêu cầu hệ thống bật Bluetooth trên Android
-                          await FlutterBluePlus.turnOn();
-                        } else {
-                          // Trên iOS, không thể bật tự động, cần hướng dẫn người dùng
-                          // (Thông báo này có thể hiển thị trong dialog)
-                          print(
-                            "Please enable Bluetooth in your device settings.",
-                          );
-                          // Có thể mở cài đặt: openAppSettings();
-                        }
-                      } catch (e) {
-                        print("Error trying to turn on Bluetooth: $e");
-                      }
-                    },
-                    child: const Text('Turn On'),
-                  ),
-                ],
+    if (FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on)
+      return true;
+    else {
+      bool? userAllowedTurnOn = await showDialog<bool>(
+        // Lưu kết quả dialog
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              /* ... dialog content ... */
+              title: const Text('Bluetooth Required'),
+              content: const Text(
+                'This app requires Bluetooth to be enabled to scan for devices.',
               ),
-        );
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop(true);
+                    try {
+                      if (Platform.isAndroid) {
+                        await FlutterBluePlus.turnOn();
+                      } else {
+                        print("Please enable Bluetooth in settings.");
+                      }
+                    } catch (e) {
+                      print("Error turning on Bluetooth: $e");
+                    }
+                  },
+                  child: const Text('Turn On'),
+                ),
+              ],
+            ),
+      );
 
-        // Kiểm tra lại trạng thái sau khi dialog đóng
-        await Future.delayed(const Duration(milliseconds: 500)); // Đợi một chút
+      if (userAllowedTurnOn == true) {
+        // Chỉ kiểm tra lại nếu người dùng nhấn "Turn On"
+        await Future.delayed(const Duration(milliseconds: 500));
         return FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on;
       } else {
-        return false; // Widget không còn mounted
+        return false; // Người dùng nhấn Cancel
       }
     }
   }
@@ -195,12 +212,9 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Your Device'),
-        // Không cần nút back nếu đây là màn hình đầu tiên sau login
-        // automaticallyImplyLeading: false,
         actions: [
-          // Nút quét/làm mới
+          // Sử dụng watch ở đây vì icon/tooltip thay đổi theo trạng thái isScanning
           Consumer<BleProvider>(
-            // Dùng Consumer để lấy trạng thái isScanning
             builder: (context, provider, child) {
               return IconButton(
                 icon:
@@ -218,10 +232,14 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
                     provider.isScanning.value
                         ? 'Scanning...'
                         : 'Scan for devices',
+                // Gọi hàm thông qua read khi nhấn nút
                 onPressed:
                     provider.isScanning.value
                         ? null
-                        : _checkAndScan, // Vô hiệu hóa khi đang quét
+                        : () =>
+                            context
+                                .read<BleProvider>()
+                                .startScan(), // Gọi lại startScan qua provider
               );
             },
           ),
@@ -229,48 +247,50 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
       ),
       body: Column(
         children: [
-          // --- Hiển thị trạng thái ---
-          Consumer<BleProvider>(
-            // Dùng Consumer để lấy các trạng thái
-            builder: (context, provider, child) {
+          // Thanh trạng thái (dùng ValueListenableBuilder để tối ưu)
+          ValueListenableBuilder<BleConnectionStatus>(
+            valueListenable:
+                context
+                    .read<BleProvider>()
+                    .connectionStatus, // Dùng read để lấy listenable
+            builder: (context, status, child) {
               String statusText = '';
               Color statusColor = Colors.grey;
               Widget? statusIndicator;
-
-              switch (provider.connectionStatus.value) {
+              // ... (switch case để xác định text, color, indicator như cũ) ...
+              switch (status) {
                 case BleConnectionStatus.disconnected:
                   statusText =
-                      provider.isScanning.value
-                          ? 'Scanning for devices...'
-                          : 'Disconnected. Tap scan to find devices.';
-                  if (provider.isScanning.value) {
-                    statusIndicator = const LinearProgressIndicator();
-                  }
+                      context.watch<BleProvider>().isScanning.value
+                          ? 'Scanning...'
+                          : 'Disconnected. Tap scan.';
+                  if (context.watch<BleProvider>().isScanning.value)
+                    statusIndicator = LinearProgressIndicator();
                   break;
                 case BleConnectionStatus.scanning:
                   statusText = 'Scanning...';
-                  statusIndicator = const LinearProgressIndicator();
+                  statusIndicator = LinearProgressIndicator();
                   break;
                 case BleConnectionStatus.connecting:
                   statusText = 'Connecting...';
-                  statusIndicator = const LinearProgressIndicator();
+                  statusIndicator = LinearProgressIndicator();
                   statusColor = Colors.orange;
                   break;
                 case BleConnectionStatus.discovering_services:
-                  statusText = 'Setting up device...';
-                  statusIndicator = const LinearProgressIndicator();
+                  statusText = 'Setting up...';
+                  statusIndicator = LinearProgressIndicator();
                   statusColor = Colors.orange;
                   break;
                 case BleConnectionStatus.connected:
-                  // Trường hợp này sẽ nhanh chóng bị điều hướng đi, nhưng để cho đủ
                   statusText = 'Connected!';
                   statusColor = Colors.green;
                   break;
                 case BleConnectionStatus.error:
-                  statusText =
-                      'Error. Please check permissions/Bluetooth and scan again.';
+                  statusText = 'Error. Check permissions/BT.';
                   statusColor = Colors.red;
                   break;
+                default:
+                  statusText = 'Unknown';
               }
 
               return Container(
@@ -298,50 +318,49 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
             },
           ),
 
-          // --- Danh sách thiết bị ---
+          // Danh sách thiết bị
           Expanded(
+            // Dùng Consumer vì cần rebuild khi scanResults hoặc connectionStatus thay đổi
             child: Consumer<BleProvider>(
-              // Lắng nghe thay đổi scanResults và connectionStatus
               builder: (context, provider, child) {
-                // Lấy trạng thái hiện tại để quyết định có disable nút connect không
                 final currentStatus = provider.connectionStatus.value;
+                // >>> THÊM LẠI DÒNG NÀY <<<
                 final bool isConnectingOrConnected =
                     currentStatus == BleConnectionStatus.connecting ||
                     currentStatus == BleConnectionStatus.discovering_services ||
                     currentStatus == BleConnectionStatus.connected;
+                // --------------------------
+                final scanResults =
+                    provider.scanResults.value; // Lấy kết quả quét
 
+                // ... (logic hiển thị "No devices found" hoặc "Scanning..." như cũ) ...
                 if (!provider.isScanning.value &&
-                    provider.scanResults.value.isEmpty &&
+                    scanResults.isEmpty &&
                     currentStatus == BleConnectionStatus.disconnected) {
-                  // Nếu không quét, không có kết quả, và đang disconnected
                   return const Center(
                     child: Text(
-                      'No devices found.\nMake sure your ESP32 is turned on and nearby.\nTap the refresh icon to scan.',
+                      'No devices found...\nTap refresh to scan.',
                       textAlign: TextAlign.center,
                     ),
                   );
                 }
-
-                if (provider.scanResults.value.isEmpty &&
-                    provider.isScanning.value) {
-                  // Nếu đang quét mà chưa có kết quả
+                if (scanResults.isEmpty && provider.isScanning.value) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 10),
-                        Text("Scanning for ESP32_SmartWatch..."),
+                        Text("Scanning..."),
                       ],
                     ),
                   );
                 }
 
-                // Hiển thị danh sách kết quả
                 return ListView.builder(
-                  itemCount: provider.scanResults.value.length,
+                  itemCount: scanResults.length,
                   itemBuilder: (context, index) {
-                    ScanResult result = provider.scanResults.value[index];
+                    ScanResult result = scanResults[index];
                     String deviceName =
                         result.device.platformName.isNotEmpty
                             ? result.device.platformName
@@ -349,13 +368,12 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
                     String deviceId = result.device.remoteId.toString();
 
                     return ListTile(
-                      leading: const Icon(Icons.watch), // Icon thiết bị
+                      leading: const Icon(Icons.watch),
                       title: Text(deviceName),
                       subtitle: Text("ID: $deviceId\nRSSI: ${result.rssi} dBm"),
                       isThreeLine: true,
                       trailing: ElevatedButton(
-                        // Vô hiệu hóa nếu đang kết nối/đã kết nối với thiết bị khác
-                        // Hoặc nếu đang kết nối chính thiết bị này
+                        // Vô hiệu hóa nút dựa trên trạng thái kết nối tổng thể
                         onPressed:
                             isConnectingOrConnected
                                 ? null
@@ -363,14 +381,18 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
                                   print(
                                     "Connect button pressed for ${result.device.remoteId}",
                                   );
-                                  provider.connectToDevice(result.device);
+                                  // Gọi connect qua provider (dùng read vì chỉ gọi hàm)
+                                  context.read<BleProvider>().connectToDevice(
+                                    result.device,
+                                  );
                                 },
                         child:
                             (currentStatus == BleConnectionStatus.connecting ||
                                     currentStatus ==
                                         BleConnectionStatus
                                             .discovering_services)
-                                // && provider.connectingDeviceId == deviceId // Cần thêm biến để biết đang kết nối thiết bị nào
+                                // (Tùy chọn) Thêm kiểm tra xem có đang kết nối đúng thiết bị này không
+                                // if (_bleProvider.connectingDeviceId == deviceId) // Cần thêm state này vào provider
                                 ? const SizedBox(
                                   width: 16,
                                   height: 16,
@@ -380,10 +402,6 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
                                 )
                                 : const Text('Connect'),
                       ),
-                      // Có thể thêm onTap cho cả ListTile nếu muốn
-                      // onTap: isConnectingOrConnected ? null : () {
-                      //    provider.connectToDevice(result.device);
-                      // },
                     );
                   },
                 );

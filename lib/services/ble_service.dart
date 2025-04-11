@@ -8,6 +8,13 @@ import 'package:permission_handler/permission_handler.dart'; // Để yêu cầu
 import 'package:cloud_firestore/cloud_firestore.dart'; // Cần cho Timestamp
 // import 'dart:typed_data'; // Import nếu bạn cần dùng Uint8List ở đâu đó
 
+import 'auth_service.dart'; // <<< ĐẢM BẢO CÓ DÒNG NÀY
+import 'firestore_service.dart'; // <<< ĐẢM BẢO CÓ DÒNG NÀY
+
+import 'local_db_service.dart'; // <<< Import LocalDbService
+import 'connectivity_service.dart'; // <<< Import ConnectivityService
+import '../models/health_data.dart'; // <<< Đảm bảo import model
+
 import '../app_constants.dart'; // UUIDs, Tên thiết bị
 
 // *** Nhắc nhở: Nên di chuyển enum và class HealthData sang file riêng lib/models/ ***
@@ -18,91 +25,6 @@ enum BleConnectionStatus {
   connected,
   discovering_services,
   error,
-}
-
-class HealthData {
-  final double ax, ay, az, gx, gy, gz;
-  final int steps, hr, spo2, ir, red;
-  final bool wifi;
-  final DateTime timestamp;
-
-  HealthData({
-    required this.ax,
-    required this.ay,
-    required this.az,
-    required this.gx,
-    required this.gy,
-    required this.gz,
-    required this.steps,
-    required this.hr,
-    required this.spo2,
-    required this.ir,
-    required this.red,
-    required this.wifi,
-    required this.timestamp,
-  });
-
-  factory HealthData.fromJson(Map<String, dynamic> json) {
-    DateTime parsedTimestamp;
-    try {
-      final timestampString = json['timestamp'];
-      if (timestampString == null ||
-          timestampString == "Not initialized" ||
-          timestampString is! String) {
-        parsedTimestamp = DateTime.now();
-      } else {
-        // Thêm xử lý timezone nếu cần, ví dụ nếu ESP32 gửi UTC
-        // parsedTimestamp = DateTime.parse(timestampString).toLocal();
-        parsedTimestamp = DateTime.parse(timestampString);
-      }
-    } catch (e) {
-      print(
-        "Error parsing timestamp in HealthData.fromJson: ${json['timestamp']}. Using DateTime.now(). Error: $e",
-      );
-      parsedTimestamp = DateTime.now();
-    }
-
-    T _parseNum<T extends num>(dynamic value, T defaultValue) {
-      if (value is num) {
-        if (defaultValue is double) return value.toDouble() as T;
-        if (defaultValue is int) return value.toInt() as T;
-      }
-      return defaultValue;
-    }
-
-    // Parse an toàn hơn, trả về giá trị mặc định nếu key không tồn tại hoặc sai kiểu
-    return HealthData(
-      ax: _parseNum(json['ax'], 0.0),
-      ay: _parseNum(json['ay'], 0.0),
-      az: _parseNum(json['az'], 0.0),
-      gx: _parseNum(json['gx'], 0.0),
-      gy: _parseNum(json['gy'], 0.0),
-      gz: _parseNum(json['gz'], 0.0),
-      steps: _parseNum(json['steps'], 0),
-      hr: _parseNum(json['hr'], -1),
-      spo2: _parseNum(json['spo2'], -1),
-      ir: _parseNum(json['ir'], 0),
-      red: _parseNum(json['red'], 0),
-      wifi: (json['wifi'] as bool?) ?? false,
-      timestamp: parsedTimestamp,
-    );
-  }
-
-  Map<String, dynamic> toJsonForFirestore() => {
-    'ax': ax,
-    'ay': ay,
-    'az': az,
-    'gx': gx,
-    'gy': gy,
-    'gz': gz,
-    'steps': steps,
-    'hr': hr,
-    'spo2': spo2,
-    'ir': ir,
-    'red': red,
-    'wifi': wifi,
-    'recordedAt': Timestamp.fromDate(timestamp),
-  };
 }
 
 class BleService {
@@ -116,6 +38,12 @@ class BleService {
       StreamController.broadcast();
   Stream<HealthData> get healthDataStream => _healthDataStreamController.stream;
 
+  final AuthService _authService;
+  final FirestoreService _firestoreService;
+  final LocalDbService _localDbService; // <<< Thêm Local DB Service
+  final ConnectivityService
+  _connectivityService; // <<< Thêm Connectivity Service
+
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _healthCharacteristic;
   BluetoothCharacteristic? _wifiCharacteristic;
@@ -128,9 +56,15 @@ class BleService {
 
   BluetoothDevice? get connectedDevice => _connectedDevice;
 
-  BleService() {
+  // >>> ĐẢM BẢO CONSTRUCTOR NHẬN SERVICES <<<
+  BleService(
+    this._authService,
+    this._firestoreService,
+    this._localDbService, // <<< Nhận Local DB Service
+    this._connectivityService, // <<< Nhận Connectivity Service
+  ) {
     _listenToAdapterState();
-    print("BleService Initialized.");
+    print("BleService Initialized with ALL required services.");
   }
 
   void _listenToAdapterState() {
@@ -543,70 +477,72 @@ class BleService {
 
       _healthDataSubscription = characteristic.lastValueStream.listen(
         (value) {
-          if (value.isEmpty) {
-            // print("Received empty data packet."); // Có thể bỏ qua log này
-            return;
-          }
-
-          String? jsonString; // Khai báo ngoài try-catch để log lỗi
+          if (value.isEmpty) return;
+          String? jsonString;
           try {
-            // --- GIẢI MÃ UTF-8 VÀ JSON ---
-            // allowMalformed giúp xử lý nếu có byte lỗi nhưng vẫn cố giải mã phần còn lại
             jsonString = utf8.decode(value, allowMalformed: true);
-
-            // Log chuỗi nhận được (quan trọng để debug nếu JSON parse lỗi)
-            // print("Received raw string: $jsonString");
-
-            // Parse JSON string thành Map
             Map<String, dynamic> jsonData = jsonDecode(jsonString);
-
-            // Tạo đối tượng HealthData từ Map
             HealthData data = HealthData.fromJson(jsonData);
 
-            // Đẩy dữ liệu đã parse vào stream controller
-            _healthDataStreamController.add(data);
             print(
               "Successfully parsed Health Data: Steps=${data.steps}, HR=${data.hr}",
-            ); // Log thành công
-          } on FormatException catch (e) {
-            // Lỗi xảy ra khi utf8.decode (nếu allowMalformed=false) hoặc jsonDecode thất bại
-            print("!!! FormatException decoding/parsing health data: $e");
-            print("    Raw bytes: $value");
-            if (jsonString != null) {
-              print("    Decoded string (may be corrupt): $jsonString");
-            }
-            // Không ngắt kết nối vội, tiếp tục nhận gói tin khác
-          } catch (e) {
-            // Bắt các lỗi khác không mong muốn trong quá trình xử lý
-            print(
-              "!!! Unexpected error processing health data: $e. Raw bytes: $value",
             );
-            if (jsonString != null) {
-              print("    Decoded string (may be corrupt): $jsonString");
+
+            // --- LOGIC LƯU TRỮ ONLINE/OFFLINE ---
+            final currentUser = _authService.currentUser;
+            if (currentUser != null) {
+              // Kiểm tra trạng thái mạng BẰNG ConnectivityService ĐÃ INJECT
+              if (_connectivityService.isOnline()) {
+                // --- ONLINE: Lưu vào Firestore ---
+                print(
+                  "[ONLINE] Queuing data for Firestore save (User: ${currentUser.uid})...",
+                );
+                _firestoreService
+                    .saveHealthData(currentUser.uid, data.toJsonForFirestore())
+                    .catchError((e) {
+                      print("!!! [ONLINE] Error saving to Firestore: $e");
+                      // Cân nhắc lưu vào local khi Firestore lỗi?
+                      // _localDbService.saveHealthRecordLocally(data);
+                    });
+              } else {
+                // --- OFFLINE: Lưu vào SQLite cục bộ ---
+                print(
+                  "[OFFLINE] Saving data locally (User: ${currentUser.uid})...",
+                );
+                _localDbService
+                    .saveHealthRecordLocally(data)
+                    .then((id) {
+                      if (id <= 0) {
+                        // id=0 là do ignore, id=-1 là do lỗi khác
+                        print(
+                          "!!! [OFFLINE] Failed or skipped saving data locally (id: $id).",
+                        );
+                      }
+                    })
+                    .catchError((e) {
+                      print("!!! [OFFLINE] Exception saving data locally: $e");
+                    });
+              }
+            } else {
+              print("!!! Cannot save health data: No user logged in.");
             }
+            // -------------------------------------
+
+            _healthDataStreamController.add(data); // Vẫn đẩy data cho UI
+          } on FormatException catch (e) {
+            /* ... log lỗi parse ... */
+          } catch (e) {
+            /* ... log lỗi khác ... */
           }
         },
         onError: (error) {
-          // Lỗi từ bản thân stream của characteristic
-          print("Health data stream subscription error: $error");
-          _handleDisconnect(
-            isError: true,
-            reason: "Health data stream subscription error",
-          );
+          /* ... */
         },
         onDone: () {
-          // Stream bị đóng (ví dụ: thiết bị ngắt notify)
-          print("Health data stream ended (Notifications stopped?).");
-          if (connectionStatus.value == BleConnectionStatus.connected) {
-            _handleDisconnect(
-              isError: false,
-              reason: "Health data stream ended",
-            );
-          }
+          /* ... */
         },
         cancelOnError: true,
-      ); // Tự hủy nếu stream báo lỗi
-
+      );
       print("Subscription to Health Data successful.");
     } catch (e) {
       // Lỗi khi gọi setNotifyValue

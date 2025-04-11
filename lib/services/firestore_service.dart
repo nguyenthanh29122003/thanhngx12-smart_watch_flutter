@@ -2,9 +2,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Cần để lấy User object
 import '../app_constants.dart'; // Import các hằng số
+import '../models/health_data.dart'; // <<< Import HealthData model
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// Provides access to the Firestore instance for batch operations, etc.
+  FirebaseFirestore get firestoreInstance => _db;
 
   // --- User Profile Operations ---
 
@@ -221,6 +225,68 @@ class FirestoreService {
       print("Error getting daily goal: $e");
       return null;
     }
+  }
+
+  // --- HÀM MỚI ĐỂ LẤY DỮ LIỆU LỊCH SỬ ---
+  /// Lấy danh sách HealthData trong một khoảng thời gian.
+  /// Cần có Index trên Firestore cho collection 'health_data' với trường 'recordedAt' (ASC hoặc DESC).
+  Future<List<HealthData>> getHealthDataForPeriod(
+    String userId,
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
+    List<HealthData> historyData = [];
+    try {
+      print(
+        "[FirestoreService] Fetching health data for $userId from $startTime to $endTime",
+      );
+
+      // Chuyển đổi DateTime sang Timestamp của Firestore (nên dùng UTC để query)
+      final Timestamp startTimestamp = Timestamp.fromDate(startTime.toUtc());
+      final Timestamp endTimestamp = Timestamp.fromDate(endTime.toUtc());
+
+      final querySnapshot =
+          await _db
+              .collection(AppConstants.usersCollection)
+              .doc(userId)
+              .collection(AppConstants.healthDataSubcollection)
+              .where(
+                // Lọc theo trường timestamp đã lưu (phải là kiểu Timestamp)
+                'recordedAt',
+                isGreaterThanOrEqualTo:
+                    startTimestamp, // Lớn hơn hoặc bằng startTime
+                isLessThanOrEqualTo: endTimestamp, // Nhỏ hơn hoặc bằng endTime
+              )
+              .orderBy(
+                'recordedAt',
+                descending: false,
+              ) // Sắp xếp tăng dần theo thời gian
+              // .limit(1000) // Có thể thêm giới hạn nếu cần
+              .get();
+
+      print(
+        "[FirestoreService] Found ${querySnapshot.docs.length} records in period.",
+      );
+
+      // Chuyển đổi các document snapshot thành đối tượng HealthData
+      // lib/services/firestore_service.dart
+      // Trong hàm getHealthDataForPeriod:
+      historyData =
+          querySnapshot.docs.map((doc) {
+            final map = doc.data();
+            // Chuyển đổi Timestamp thủ công trước khi gọi fromDbMap (nếu fromDbMap nhận milliseconds)
+            Timestamp? ts = map['recordedAt'] as Timestamp?;
+            map['timestamp'] =
+                ts?.millisecondsSinceEpoch ??
+                0; // Thêm trường timestamp milliseconds
+            return HealthData.fromDbMap(map); // Gọi hàm cũ
+          }).toList();
+    } catch (e) {
+      print("!!! Error fetching health data history: $e");
+      // Nếu có lỗi, trả về danh sách rỗng
+      // Có thể ném lỗi ra ngoài để xử lý ở tầng trên nếu muốn
+    }
+    return historyData;
   }
 }
 
