@@ -333,6 +333,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             nextScreen = const DeviceSelectScreen();
             break;
         }
+
         break;
     }
     return nextScreen;
