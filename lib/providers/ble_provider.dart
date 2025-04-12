@@ -1,38 +1,49 @@
-// lib/providers/ble_provider.dart
+// lib/providers/ble_provider.dart (Phiên bản gốc - KHÔNG có Auth reset)
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // Cần cho ScanResult và BluetoothDevice
-import '../services/ble_service.dart'; // Import BleService và HealthData
-import '../models/health_data.dart'; // Import model
+import '../services/ble_service.dart'; // Import BleService và Enum BleConnectionStatus
+import '../models/health_data.dart'; // Import model HealthData
+
+// <<< KHÔNG import AuthService >>>
 
 class BleProvider with ChangeNotifier {
+  // Chỉ phụ thuộc vào BleService
   final BleService _bleService;
+  // <<< KHÔNG có final AuthService _authService; >>>
 
-  // Trạng thái từ BleService (dùng ValueListenableBuilder hoặc lắng nghe notifier)
+  // --- State và Notifiers từ BleService ---
   ValueNotifier<BleConnectionStatus> get connectionStatus =>
       _bleService.connectionStatus;
   ValueNotifier<List<ScanResult>> get scanResults => _bleService.scanResults;
   ValueNotifier<bool> get isScanning => _bleService.isScanning;
 
-  // Dữ liệu sức khỏe mới nhất
-  HealthData? _latestHealthData;
+  // --- State nội bộ của Provider ---
+  HealthData? _latestHealthData; // Lưu trữ dữ liệu sức khỏe mới nhất nhận được
   HealthData? get latestHealthData => _latestHealthData;
 
-  // >>> THÊM GETTER NÀY <<<
-  /// Lấy thông tin thiết bị đang kết nối (nếu có) từ BleService.
+  // --- Getter cho thiết bị kết nối ---
   BluetoothDevice? get connectedDevice => _bleService.connectedDevice;
-  // -----------------------
 
-  StreamSubscription? _healthDataSub;
+  // --- Stream Subscription ---
+  StreamSubscription? _healthDataSub; // Lắng nghe dữ liệu health data
+  // <<< KHÔNG có StreamSubscription? _authSub; >>>
 
+  // --- Constructor (Chỉ nhận BleService) ---
   BleProvider(this._bleService) {
+    // <<< CHỈ NHẬN 1 THAM SỐ
     _listenToHealthData();
     _bleService.connectionStatus.addListener(_handleConnectionChange);
-    _bleService.isScanning.addListener(notifyListeners);
-    _bleService.scanResults.addListener(notifyListeners);
-    print("BleProvider Initialized.");
+    _bleService.isScanning.addListener(_notify);
+    _bleService.scanResults.addListener(_notify);
+    // <<< KHÔNG có gọi _listenToAuthChanges(); >>>
+    print("BleProvider Initialized (Original Version - No Auth dependency).");
   }
 
+  // <<< KHÔNG CÓ HÀM _listenToAuthChanges() >>>
+  // <<< KHÔNG CÓ HÀM _resetState() >>>
+
+  // --- Hàm lắng nghe dữ liệu HealthData từ BleService ---
   void _listenToHealthData() {
     _healthDataSub?.cancel();
     _healthDataSub = _bleService.healthDataStream.listen(
@@ -41,26 +52,41 @@ class BleProvider with ChangeNotifier {
         notifyListeners();
       },
       onError: (error) {
-        print("BleProvider: Error in health data stream: $error");
+        print("!!! [BleProvider] Error in health data stream: $error");
       },
     );
   }
 
+  // --- Hàm xử lý khi trạng thái kết nối BLE thay đổi ---
   void _handleConnectionChange() {
+    final status = connectionStatus.value;
     print(
-      "BleProvider detected connection status change: ${connectionStatus.value}",
-    );
-    if (connectionStatus.value == BleConnectionStatus.disconnected ||
-        connectionStatus.value == BleConnectionStatus.error) {
-      _latestHealthData = null;
-      // Giữ lại scanResults và isScanning để UI tự cập nhật từ notifier
+        "[BleProvider] Detected connection status change from BleService: $status");
+    if (status == BleConnectionStatus.disconnected ||
+        status == BleConnectionStatus.error) {
+      if (_latestHealthData != null) {
+        _latestHealthData = null;
+        // Gọi notifyListeners ở cuối hàm này
+      }
     }
-    notifyListeners(); // Thông báo thay đổi trạng thái kết nối
+    // Luôn notify để UI cập nhật chip trạng thái, v.v.
+    notifyListeners();
   }
 
+  // --- Hàm tiện ích để gọi notifyListeners ---
+  void _notify() {
+    if (hasListeners) {
+      notifyListeners();
+    }
+  }
+
+  // --- Các hàm public để gọi hành động trong BleService ---
   Future<void> startScan() async {
-    _latestHealthData = null; // Reset data cũ
-    notifyListeners();
+    // Reset dữ liệu cũ khi quét mới
+    if (_latestHealthData != null) {
+      _latestHealthData = null;
+      notifyListeners();
+    }
     await _bleService.startScan();
   }
 
@@ -80,21 +106,22 @@ class BleProvider with ChangeNotifier {
     return await _bleService.sendWifiConfig(ssid, password);
   }
 
+  // --- Hàm dispose ---
   @override
   void dispose() {
-    print("Disposing BleProvider...");
+    print("Disposing BleProvider (Original Version)...");
     _healthDataSub?.cancel();
-    // Remove listeners khỏi ValueNotifier của BleService
-    // Cách tốt hơn là để BleService tự quản lý Notifier của nó
-    // và Provider này chỉ đọc giá trị khi cần hoặc dùng ValueListenableBuilder
-    // Tạm thời remove ở đây:
+    // <<< KHÔNG có _authSub?.cancel(); >>>
+
+    // Hủy các listeners đã đăng ký với ValueNotifiers của BleService
     try {
-      connectionStatus.removeListener(_handleConnectionChange);
-      isScanning.removeListener(notifyListeners);
-      scanResults.removeListener(notifyListeners);
+      _bleService.connectionStatus.removeListener(_handleConnectionChange);
+      _bleService.isScanning.removeListener(_notify);
+      _bleService.scanResults.removeListener(_notify);
     } catch (e) {
       print("Error removing listeners in BleProvider dispose: $e");
     }
+    print("BleProvider disposed.");
     super.dispose();
   }
 }

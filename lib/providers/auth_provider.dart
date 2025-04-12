@@ -1,287 +1,211 @@
-// lib/providers/auth_provider.dart
+// lib/providers/auth_provider.dart (Phiên bản CÓ THỂ GÂY LỖI TREO)
 import 'dart:async';
 import 'package:flutter/foundation.dart'; // Import ChangeNotifier
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart'; // Cần cho lỗi Google Sign In
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart'; // Cần cho PlatformException
 
+// Import các service phụ thuộc
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart'; // Cần để cập nhật profile
+import '../services/firestore_service.dart';
 
-import 'package:flutter/material.dart'; // <<< THÊM Import Material
-
-// Enum để biểu diễn trạng thái xác thực chi tiết hơn
+// Enum trạng thái xác thực chi tiết hơn
 enum AuthStatus {
-  uninitialized, // Trạng thái ban đầu, chưa biết
-  authenticated, // Đã đăng nhập thành công
-  authenticating, // Đang trong quá trình đăng nhập/đăng ký
-  unauthenticated, // Chưa đăng nhập hoặc đã đăng xuất
-  error, // Có lỗi xảy ra trong quá trình xác thực
+  uninitialized,
+  authenticated,
+  authenticating,
+  unauthenticated,
+  error
 }
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
-  final FirestoreService _firestoreService; // Inject FirestoreService
+  final FirestoreService _firestoreService;
 
-  // <<< THÊM KEY VÀ GETTER >>>
-  Key _appKey = UniqueKey(); // Khởi tạo key ban đầu
-  Key get appKey => _appKey;
-  // -------------------------
-
+  // State
   User? _user;
   AuthStatus _status = AuthStatus.uninitialized;
-  String _lastErrorMessage =
-      "An unknown error occurred."; // Lưu thông báo lỗi cuối cùng
+  String _lastErrorMessage = "An unknown error occurred.";
+
+  // Stream Subscription
   StreamSubscription<User?>? _authStateSubscription;
 
-  // Getters để bên ngoài truy cập trạng thái
+  // Getters công khai
   User? get user => _user;
   AuthStatus get status => _status;
-  // >>> THÊM DÒNG GETTER NÀY <<<
-  String get lastErrorMessage =>
-      _lastErrorMessage; // Getter public cho thông báo lỗi
+  String get lastErrorMessage => _lastErrorMessage;
+  // <<< KHÔNG CÓ appKey trong phiên bản này >>>
 
+  // Constructor
   AuthProvider(this._authService, this._firestoreService) {
-    // Ngay khi provider được tạo, bắt đầu lắng nghe trạng thái auth
     _listenToAuthChanges();
-    print("AuthProvider Initialized and listening to auth changes.");
+    print("AuthProvider Initialized (Buggy Version Simulation).");
   }
 
-  // Lắng nghe stream từ AuthService
+  // Lắng nghe thay đổi trạng thái đăng nhập từ Firebase Auth
   void _listenToAuthChanges() {
-    // Hủy subscription cũ nếu có để tránh leak
     _authStateSubscription?.cancel();
-    _authStateSubscription = _authService.authStateChanges.listen(
-      (User? firebaseUser) async {
-        bool statusChanged =
-            false; // Cờ kiểm tra xem trạng thái có thực sự thay đổi không
-        if (firebaseUser == null) {
-          if (_user != null) {
-            // Chỉ cập nhật nếu trước đó đã đăng nhập
-            _user = null;
-            _updateStatus(AuthStatus.unauthenticated);
-            statusChanged = true;
-          }
-        } else {
-          if (_user?.uid != firebaseUser.uid ||
-              _status != AuthStatus.authenticated) {
-            // Chỉ cập nhật nếu user thay đổi hoặc trạng thái trước đó khác
-            _user = firebaseUser;
-            _updateStatus(AuthStatus.authenticated);
-            statusChanged = true;
-          }
+    _authStateSubscription =
+        _authService.authStateChanges.listen((User? firebaseUser) async {
+      bool statusChanged = false; // Cờ kiểm tra xem có thay đổi thực sự không
+      if (firebaseUser == null) {
+        // Người dùng đăng xuất
+        if (_user != null) {
+          // Chỉ xử lý nếu trước đó có user
+          _user = null;
+          _updateStatusInternal(AuthStatus.unauthenticated,
+              "User signed out via stream"); // Chỉ cập nhật state nội bộ
+          statusChanged = true;
         }
+      } else {
+        // Người dùng đăng nhập hoặc thay đổi
+        if (_user?.uid != firebaseUser.uid ||
+            _status != AuthStatus.authenticated) {
+          _user = firebaseUser;
+          _updateStatusInternal(
+              AuthStatus.authenticated); // Chỉ cập nhật state nội bộ
+          statusChanged = true;
+        }
+      }
 
-        // <<< TẠO KEY MỚI NẾU TRẠNG THÁI THAY ĐỔI >>>
-        if (statusChanged) {
-          print("[AuthProvider] Auth status changed. Generating new App Key.");
-          _appKey = UniqueKey(); // Tạo key mới hoàn toàn
-          notifyListeners(); // Thông báo key mới (và trạng thái mới)
-        }
-        // ---------------------------------------
-      },
-      onError: (error) {
-        print("AuthProvider: Error in auth state stream: $error");
-        // Cập nhật trạng thái lỗi nếu có lỗi từ stream
-        _updateStatus(
-          AuthStatus.error,
-          "Error listening to authentication state.",
-        );
-      },
-    );
+      // <<< CHỈ GỌI notifyListeners() KHI TRẠNG THÁI THAY ĐỔI TỪ STREAM >>>
+      if (statusChanged) {
+        print("[AuthProvider] Auth state changed from stream. Notifying.");
+        notifyListeners();
+      }
+      // -------------------------------------------------------------
+    }, onError: (error) {
+      // Xử lý lỗi từ stream auth state
+      print("!!! AuthProvider: Error in auth state stream: $error");
+      _updateStatusInternal(AuthStatus.error,
+          "Error listening to authentication state."); // Chỉ cập nhật state nội bộ
+      // <<< KHÔNG GỌI notifyListeners() KHI STREAM BÁO LỖI >>>
+    });
   }
 
-  // Hàm helper để cập nhật trạng thái và thông báo listeners
-  // message là thông báo lỗi cụ thể nếu có
-  void _updateStatus(AuthStatus newStatus, [String? message]) {
-    // // Chỉ cập nhật và thông báo nếu trạng thái thực sự thay đổi hoặc có lỗi mới
-    // if (_status != newStatus ||
-    //     (newStatus == AuthStatus.error && message != null)) {
-    //   print(
-    //     "AuthProvider: Updating status from $_status to $newStatus ${message != null ? 'with message: $message' : ''}",
-    //   );
-    //   _status = newStatus;
-    //   _lastErrorMessage =
-    //       message ?? "An unknown error occurred."; // Cập nhật lỗi
-    //   notifyListeners(); // Thông báo cho các widget đang lắng nghe sự thay đổi
-    // }
+  // Hàm helper CHỈ cập nhật state nội bộ, KHÔNG gọi notifyListeners
+  void _updateStatusInternal(AuthStatus newStatus, [String? message]) {
     _status = newStatus;
     _lastErrorMessage = message ?? "An unknown error occurred.";
-    print("[AuthProvider] Status updated internally to: $_status");
+    print("[AuthProvider] Status updated INTERNALLY to: $_status");
+    // <<< KHÔNG CÓ notifyListeners() Ở ĐÂY >>>
   }
 
-  // --- Các hàm gọi đến AuthService ---
+  // --- Các hàm thực hiện hành động xác thực ---
+  // Các hàm này gọi _updateStatusInternal nhưng KHÔNG gọi notifyListeners()
+  // Đây chính là điểm có thể gây lỗi treo loading
 
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
-    _updateStatus(AuthStatus.authenticating, "Signing in..."); // Báo đang xử lý
+    _updateStatusInternal(
+        AuthStatus.authenticating, "Signing in..."); // Chỉ cập nhật state
+    // <<< KHÔNG NOTIFY >>>
     try {
-      final userCredential = await _authService.signInWithEmailAndPassword(
-        email,
-        password,
-      );
+      final userCredential =
+          await _authService.signInWithEmailAndPassword(email, password);
       if (userCredential?.user != null) {
-        // Cập nhật profile ngay sau khi đăng nhập thành công
         await _firestoreService.updateUserProfile(userCredential!.user!);
-        // Stream sẽ tự động cập nhật trạng thái thành authenticated
-        // _updateStatus(AuthStatus.authenticated); // Không cần gọi trực tiếp ở đây nữa
-        return true; // Đăng nhập thành công
+        // Chờ _listenToAuthChanges xử lý và notify sau
+        return true;
       } else {
-        // Trường hợp này ít xảy ra nếu _authService trả về null khi lỗi
-        _updateStatus(
-          AuthStatus.error,
-          "Sign in failed. Invalid credentials or user not found.",
-        );
+        _updateStatusInternal(AuthStatus.error, "Sign in failed...");
+        // <<< KHÔNG NOTIFY >>>
         return false;
       }
     } on FirebaseAuthException catch (e) {
-      // Bắt lỗi cụ thể từ Firebase Auth
-      print(
-        "AuthProvider: Error signing in with email: ${e.code} - ${e.message}",
-      );
-      // Cập nhật trạng thái lỗi với thông báo từ Firebase
-      _updateStatus(
-        AuthStatus.error,
-        e.message ?? "Sign in failed (code: ${e.code})",
-      );
+      _updateStatusInternal(AuthStatus.error, e.message ?? "Sign in failed...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     } catch (e) {
-      // Bắt các lỗi khác không mong muốn
-      print("AuthProvider: Unexpected error signing in with email: $e");
-      _updateStatus(
-        AuthStatus.error,
-        "An unexpected error occurred during sign in.",
-      );
+      _updateStatusInternal(AuthStatus.error, "Unexpected error...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     }
   }
 
-  Future<bool> createUserWithEmailAndPassword(
-    String email,
-    String password, {
-    String? displayName,
-  }) async {
-    _updateStatus(
-      AuthStatus.authenticating,
-      "Creating account...",
-    ); // Báo đang xử lý
+  Future<bool> createUserWithEmailAndPassword(String email, String password,
+      {String? displayName}) async {
+    _updateStatusInternal(AuthStatus.authenticating, "Creating account...");
+    // <<< KHÔNG NOTIFY >>>
     try {
-      final userCredential = await _authService.createUserWithEmailAndPassword(
-        email,
-        password,
-      );
+      final userCredential =
+          await _authService.createUserWithEmailAndPassword(email, password);
       if (userCredential?.user != null) {
-        // Cập nhật profile Firestore với thông tin ban đầu ngay sau khi đăng ký
-        await _firestoreService.updateUserProfile(
-          userCredential!.user!,
-          displayName: displayName, // Truyền displayName nếu người dùng nhập
-          // photoURL: null // Có thể thêm photoURL mặc định
-        );
-        // (Tùy chọn) Gửi email xác thực nếu cần
-        // await _authService.sendEmailVerification();
-
-        // Stream sẽ tự động cập nhật trạng thái thành authenticated
-        // _updateStatus(AuthStatus.authenticated); // Không cần gọi trực tiếp
-        return true; // Đăng ký thành công
+        await _firestoreService.updateUserProfile(userCredential!.user!,
+            displayName: displayName);
+        // Chờ _listenToAuthChanges xử lý
+        return true;
       } else {
-        _updateStatus(
-          AuthStatus.error,
-          "Sign up failed. Could not create user.",
-        );
+        _updateStatusInternal(AuthStatus.error, "Sign up failed...");
+        // <<< KHÔNG NOTIFY >>>
         return false;
       }
     } on FirebaseAuthException catch (e) {
-      print("AuthProvider: Error creating user: ${e.code} - ${e.message}");
-      // Thông báo lỗi cụ thể (ví dụ: email đã tồn tại, mật khẩu yếu)
-      _updateStatus(
-        AuthStatus.error,
-        e.message ?? "Sign up failed (code: ${e.code})",
-      );
+      _updateStatusInternal(AuthStatus.error, e.message ?? "Sign up failed...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     } catch (e) {
-      print("AuthProvider: Unexpected error creating user: $e");
-      _updateStatus(
-        AuthStatus.error,
-        "An unexpected error occurred during sign up.",
-      );
+      _updateStatusInternal(AuthStatus.error, "Unexpected error...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     }
   }
 
   Future<bool> signInWithGoogle() async {
-    _updateStatus(
-      AuthStatus.authenticating,
-      "Signing in with Google...",
-    ); // Báo đang xử lý
+    _updateStatusInternal(
+        AuthStatus.authenticating, "Signing in with Google...");
+    // <<< KHÔNG NOTIFY >>>
     try {
       final userCredential = await _authService.signInWithGoogle();
       if (userCredential?.user != null) {
-        // Cập nhật profile ngay sau khi đăng nhập Google thành công
-        await _firestoreService.updateUserProfile(
-          userCredential!.user!,
-          displayName: userCredential.user!.displayName, // Lấy tên từ Google
-          photoURL: userCredential.user!.photoURL, // Lấy ảnh từ Google
-        );
-        // Stream sẽ tự động cập nhật trạng thái thành authenticated
-        // _updateStatus(AuthStatus.authenticated); // Không cần gọi trực tiếp
-        return true; // Đăng nhập Google thành công
+        await _firestoreService.updateUserProfile(userCredential!.user!,
+            displayName: userCredential.user!.displayName,
+            photoURL: userCredential.user!.photoURL);
+        // Chờ _listenToAuthChanges xử lý
+        return true;
       } else {
-        // Người dùng có thể đã hủy
-        _updateStatus(
-          AuthStatus.unauthenticated,
-          "Google Sign-In cancelled or failed.",
-        );
+        _updateStatusInternal(
+            AuthStatus.unauthenticated, "Google Sign-In cancelled...");
+        // <<< KHÔNG NOTIFY >>>
         return false;
       }
     } on FirebaseAuthException catch (e) {
-      // Lỗi từ Firebase khi xác thực credential Google
-      print(
-        "FirebaseAuthException during Google sign in: ${e.code} - ${e.message}",
-      );
-      _updateStatus(
-        AuthStatus.error,
-        e.message ?? "Google Sign-In Error (Auth: ${e.code})",
-      );
+      _updateStatusInternal(
+          AuthStatus.error, e.message ?? "Google Sign-In Error...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     } on PlatformException catch (e) {
-      // Lỗi từ plugin google_sign_in (ví dụ: lỗi mạng, APIException 10)
-      print(
-        "PlatformException during Google sign in: ${e.code} - ${e.message}",
-      );
-      _updateStatus(
-        AuthStatus.error,
-        e.message ?? "Google Sign-In Error (Platform: ${e.code})",
-      );
-      // Có thể cần signOut ở đây không? Xem xét lại logic của _authService.signInWithGoogle
-      // await _authService.signOut(); // Đã xử lý trong AuthService?
+      _updateStatusInternal(
+          AuthStatus.error, e.message ?? "Google Sign-In Error...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     } catch (e) {
-      // Bắt các lỗi khác không mong muốn
-      print("An unexpected error occurred during Google sign in: $e");
-      await _authService.signOut(); // Đăng xuất để đảm bảo trạng thái nhất quán
-      _updateStatus(
-        AuthStatus.error,
-        "An unexpected Google Sign-In error occurred.",
-      );
+      print("!!! AuthProvider: Unexpected error during Google sign in: $e");
+      await _authService.signOut().catchError((signOutError) {/* ... */});
+      _updateStatusInternal(
+          AuthStatus.error, "Unexpected Google Sign-In error...");
+      // <<< KHÔNG NOTIFY >>>
       return false;
     }
   }
 
   Future<void> signOut() async {
+    print("[AuthProvider] Attempting to sign out (Buggy Version)...");
     try {
       await _authService.signOut();
-      // Cập nhật trạng thái ngay để UI phản hồi nhanh, dù stream cũng sẽ làm việc này
-      _updateStatus(AuthStatus.unauthenticated, "Signed out successfully.");
+      // Chờ _listenToAuthChanges xử lý và notify
     } catch (e) {
-      print("AuthProvider: Error signing out: $e");
-      // Có thể cập nhật trạng thái lỗi nếu muốn, nhưng thường chỉ cần về unauthenticated
-      _updateStatus(AuthStatus.error, "Failed to sign out.");
+      print("!!! AuthProvider: Error signing out: $e");
+      _updateStatusInternal(AuthStatus.error, "Failed to sign out.");
+      // <<< KHÔNG NOTIFY >>>
     }
   }
 
-  // Đảm bảo hủy subscription khi provider bị dispose để tránh memory leak
+  // --- Dispose ---
   @override
   void dispose() {
+    print("Disposing AuthProvider (Buggy Version Simulation)...");
     _authStateSubscription?.cancel();
+    print("AuthProvider disposed.");
     super.dispose();
   }
 }
