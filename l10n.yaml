@@ -1,0 +1,9 @@
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+# --- ĐẢM BẢO CÓ DÒNG NÀY ---
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+# --- THÊM HOẶC SỬA DÒNG NÀY ---
+output-dir: lib/generated # <<< Chỉ định thư mục output ở đây
+# ---------------------------
+nullable-getter: false

@@ -30,6 +30,10 @@ import 'screens/device/device_select_screen.dart';
 import 'providers/relatives_provider.dart'; // <<< Import RelativesProvider
 import 'providers/settings_provider.dart'; // <<< Import SettingsProvider
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'generated/app_localizations.dart'; // Lớp được tạo tự động
+import 'providers/settings_provider.dart'; // Để lấy locale
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -48,50 +52,45 @@ Future<void> main() async {
 
         // --- 2. Cung cấp các Service/Provider phụ thuộc (Thứ tự quan trọng) ---
         Provider<BleService>(
-          create:
-              (context) => BleService(
-                context.read<AuthService>(),
-                context.read<FirestoreService>(),
-                context.read<LocalDbService>(),
-                context.read<ConnectivityService>(),
-              ),
+          create: (context) => BleService(
+            context.read<AuthService>(),
+            context.read<FirestoreService>(),
+            context.read<LocalDbService>(),
+            context.read<ConnectivityService>(),
+          ),
           dispose: (context, service) => service.dispose(),
         ),
         ChangeNotifierProvider<AuthProvider>(
-          create:
-              (context) => AuthProvider(
-                context.read<AuthService>(),
-                context.read<FirestoreService>(),
-              ),
+          create: (context) => AuthProvider(
+            context.read<AuthService>(),
+            context.read<FirestoreService>(),
+          ),
         ),
         ChangeNotifierProvider<BleProvider>(
           create: (context) => BleProvider(context.read<BleService>()),
         ),
         ChangeNotifierProvider<DashboardProvider>(
-          create:
-              (context) => DashboardProvider(
-                context.read<FirestoreService>(),
-                context.read<AuthService>(),
-              ),
+          create: (context) => DashboardProvider(
+            context.read<FirestoreService>(),
+            context.read<AuthService>(),
+          ),
         ),
         Provider<DataSyncService>(
-          create:
-              (context) => DataSyncService(
-                context.read<ConnectivityService>(),
-                context.read<LocalDbService>(),
-                context.read<FirestoreService>(),
-                context.read<AuthService>(),
-              ),
+          create: (context) => DataSyncService(
+            context.read<ConnectivityService>(),
+            context.read<LocalDbService>(),
+            context.read<FirestoreService>(),
+            context.read<AuthService>(),
+          ),
           dispose: (context, service) => service.dispose(),
           lazy: false, // Đảm bảo DataSyncService khởi tạo ngay
         ),
         // >>> THÊM RELATIVES PROVIDER <<<
         ChangeNotifierProvider<RelativesProvider>(
-          create:
-              (context) => RelativesProvider(
-                context.read<FirestoreService>(),
-                context.read<AuthService>(),
-              ),
+          create: (context) => RelativesProvider(
+            context.read<FirestoreService>(),
+            context.read<AuthService>(),
+          ),
         ),
         // >>> THÊM SETTINGS PROVIDER <<<
         ChangeNotifierProvider<SettingsProvider>(
@@ -139,6 +138,15 @@ class MyApp extends StatelessWidget {
       themeMode: settingsProvider.themeMode, // Lấy từ state của provider
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
+      locale: settingsProvider.appLocale, // <<< Lấy locale từ provider
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales:
+          AppLocalizations.supportedLocales, // <<< Lấy từ lớp được tạo
     );
   }
 }

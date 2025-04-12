@@ -8,6 +8,8 @@ import 'package:flutter/services.dart'; // Cần cho PlatformException
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart'; // Cần để cập nhật profile
 
+import 'package:flutter/material.dart'; // <<< THÊM Import Material
+
 // Enum để biểu diễn trạng thái xác thực chi tiết hơn
 enum AuthStatus {
   uninitialized, // Trạng thái ban đầu, chưa biết
@@ -20,6 +22,11 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
   final FirestoreService _firestoreService; // Inject FirestoreService
+
+  // <<< THÊM KEY VÀ GETTER >>>
+  Key _appKey = UniqueKey(); // Khởi tạo key ban đầu
+  Key get appKey => _appKey;
+  // -------------------------
 
   User? _user;
   AuthStatus _status = AuthStatus.uninitialized;
@@ -46,25 +53,32 @@ class AuthProvider with ChangeNotifier {
     _authStateSubscription?.cancel();
     _authStateSubscription = _authService.authStateChanges.listen(
       (User? firebaseUser) async {
+        bool statusChanged =
+            false; // Cờ kiểm tra xem trạng thái có thực sự thay đổi không
         if (firebaseUser == null) {
-          _user = null;
-          // Chỉ cập nhật nếu trạng thái hiện tại không phải là unauthenticated
-          if (_status != AuthStatus.unauthenticated) {
+          if (_user != null) {
+            // Chỉ cập nhật nếu trước đó đã đăng nhập
+            _user = null;
             _updateStatus(AuthStatus.unauthenticated);
-            print("AuthProvider: User state changed to signed out.");
+            statusChanged = true;
           }
         } else {
-          _user = firebaseUser;
-          // Chỉ cập nhật nếu trạng thái hiện tại không phải là authenticated
-          if (_status != AuthStatus.authenticated) {
+          if (_user?.uid != firebaseUser.uid ||
+              _status != AuthStatus.authenticated) {
+            // Chỉ cập nhật nếu user thay đổi hoặc trạng thái trước đó khác
+            _user = firebaseUser;
             _updateStatus(AuthStatus.authenticated);
-            print(
-              "AuthProvider: User state changed to signed in: ${firebaseUser.uid}",
-            );
-            // Có thể gọi cập nhật profile ở đây nếu cần, nhưng thường gọi sau khi login/signup thành công sẽ tốt hơn
-            // await _firestoreService.updateUserProfile(firebaseUser);
+            statusChanged = true;
           }
         }
+
+        // <<< TẠO KEY MỚI NẾU TRẠNG THÁI THAY ĐỔI >>>
+        if (statusChanged) {
+          print("[AuthProvider] Auth status changed. Generating new App Key.");
+          _appKey = UniqueKey(); // Tạo key mới hoàn toàn
+          notifyListeners(); // Thông báo key mới (và trạng thái mới)
+        }
+        // ---------------------------------------
       },
       onError: (error) {
         print("AuthProvider: Error in auth state stream: $error");
@@ -80,17 +94,20 @@ class AuthProvider with ChangeNotifier {
   // Hàm helper để cập nhật trạng thái và thông báo listeners
   // message là thông báo lỗi cụ thể nếu có
   void _updateStatus(AuthStatus newStatus, [String? message]) {
-    // Chỉ cập nhật và thông báo nếu trạng thái thực sự thay đổi hoặc có lỗi mới
-    if (_status != newStatus ||
-        (newStatus == AuthStatus.error && message != null)) {
-      print(
-        "AuthProvider: Updating status from $_status to $newStatus ${message != null ? 'with message: $message' : ''}",
-      );
-      _status = newStatus;
-      _lastErrorMessage =
-          message ?? "An unknown error occurred."; // Cập nhật lỗi
-      notifyListeners(); // Thông báo cho các widget đang lắng nghe sự thay đổi
-    }
+    // // Chỉ cập nhật và thông báo nếu trạng thái thực sự thay đổi hoặc có lỗi mới
+    // if (_status != newStatus ||
+    //     (newStatus == AuthStatus.error && message != null)) {
+    //   print(
+    //     "AuthProvider: Updating status from $_status to $newStatus ${message != null ? 'with message: $message' : ''}",
+    //   );
+    //   _status = newStatus;
+    //   _lastErrorMessage =
+    //       message ?? "An unknown error occurred."; // Cập nhật lỗi
+    //   notifyListeners(); // Thông báo cho các widget đang lắng nghe sự thay đổi
+    // }
+    _status = newStatus;
+    _lastErrorMessage = message ?? "An unknown error occurred.";
+    print("[AuthProvider] Status updated internally to: $_status");
   }
 
   // --- Các hàm gọi đến AuthService ---
@@ -265,7 +282,6 @@ class AuthProvider with ChangeNotifier {
   @override
   void dispose() {
     _authStateSubscription?.cancel();
-    print("AuthProvider disposed. Auth stream cancelled.");
     super.dispose();
   }
 }

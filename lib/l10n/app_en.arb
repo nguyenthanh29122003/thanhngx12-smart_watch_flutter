@@ -1,0 +1,39 @@
+{
+  "@@locale": "en",
+  "appTitle": "Smart Wearable App",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "settingsTitle": "Settings",
+  "dashboardTitle": "Dashboard",
+  "relativesTitle": "Relatives",
+  "goalsTitle": "Goals",
+  "loginTitle": "Login",
+  "selectDeviceTitle": "Select Your Device",
+  "configureWifiTitle": "Configure Device WiFi",
+  "language": "Language",
+  "appearance": "Appearance",
+  "systemDefault": "System Default",
+  "lightMode": "Light Mode",
+  "darkMode": "Dark Mode",
+  "logout": "Logout",
+  "addRelative": "Add Relative",
+  "name": "Name",
+  "relationship": "Relationship",
+  "cancel": "Cancel",
+  "add": "Add",
+  "delete": "Delete",
+  "confirmDeletion": "Confirm Deletion",
+  "confirmDeleteRelative": "Are you sure you want to delete {relativeName} ({relativeRelationship})?",
+  "@confirmDeleteRelative": {
+     "description": "Confirmation message for deleting a relative.",
+     "placeholders": {
+        "relativeName": { "type": "String", "example": "John Doe"},
+        "relativeRelationship": { "type": "String", "example": "Father" }
+     }
+  },
+  "relativeAddedSuccess": "Relative added successfully!",
+  "relativeAddedError": "Failed to add relative.",
+  "relativeDeletedSuccess": "Relative deleted.",
+  "relativeDeletedError": "Failed to delete relative."
+}

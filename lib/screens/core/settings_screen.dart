@@ -1,310 +1,315 @@
 // lib/screens/core/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <<< Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/ble_provider.dart'; // <<< Import BleProvider
-import '../../services/ble_service.dart'; // <<< Import BleService (cho enum)
-import '../../app_constants.dart'; // <<< Import AppConstants (cho key SharedPreferences)
-import '../config/wifi_config_screen.dart';
-import '../device/device_select_screen.dart'; // <<< Import màn hình chọn thiết bị
-import '../../providers/settings_provider.dart'; // <<< Import SettingsProvider
+import '../../providers/ble_provider.dart';
+import '../../providers/settings_provider.dart'; // Import SettingsProvider
+import '../../services/ble_service.dart'; // Import BleService (cho enum)
+import '../../app_constants.dart'; // Import AppConstants (cho key SharedPreferences)
+import '../config/wifi_config_screen.dart'; // Import màn hình Wifi Config
+import '../device/device_select_screen.dart'; // Import màn hình chọn thiết bị
+import '../../generated/app_localizations.dart'; // <<< Import lớp Localization
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  // --- HÀM HIỂN THỊ DIALOG CHỌN NGÔN NGỮ ---
+  Future<void> _showLanguageDialog(
+      BuildContext context, SettingsProvider provider) async {
+    Locale? currentLocale = provider.appLocale; // Locale hiện tại từ provider
+    final l10n = AppLocalizations.of(context)!; // Lấy đối tượng dịch
+
+    Locale? selectedLocale = await showDialog<Locale>(
+        context: context,
+        builder: (dialogContext) {
+          // Dùng StatefulBuilder để RadioListTile cập nhật state trong dialog
+          String? groupValueLangCode = currentLocale?.languageCode;
+
+          return StatefulBuilder(builder: (stfContext, stfSetState) {
+            return AlertDialog(
+              title: Text(l10n.language), // Dùng key đã dịch
+              contentPadding:
+                  const EdgeInsets.only(top: 12.0), // Giảm padding top
+              content: SizedBox(
+                width: double.minPositive, // Co lại theo chiều rộng tối thiểu
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    // Lựa chọn System Default
+                    RadioListTile<String?>(
+                      title: Text(l10n.systemDefault),
+                      value: null, // null đại diện cho system
+                      groupValue: groupValueLangCode,
+                      onChanged: (String? value) {
+                        // Không cần stfSetState ở đây vì pop sẽ đóng dialog
+                        Navigator.of(dialogContext)
+                            .pop(null); // Trả về null cho system
+                      },
+                    ),
+                    // Lặp qua các ngôn ngữ được hỗ trợ từ AppLocalizations
+                    ...AppLocalizations.supportedLocales.map((locale) {
+                      // Lấy tên ngôn ngữ (có thể cần map chi tiết hơn)
+                      String languageName = locale.languageCode == 'en'
+                          ? 'English'
+                          : locale.languageCode == 'vi'
+                              ? 'Tiếng Việt'
+                              : locale.languageCode;
+                      return RadioListTile<String?>(
+                        title: Text(languageName),
+                        value: locale.languageCode, // Value là language code
+                        groupValue: groupValueLangCode,
+                        onChanged: (String? value) {
+                          // Không cần stfSetState ở đây
+                          Navigator.of(dialogContext)
+                              .pop(locale); // Trả về Locale đã chọn
+                        },
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext)
+                      .pop(), // Đóng dialog không chọn gì
+                  child: Text(l10n.cancel), // Dùng key đã dịch
+                ),
+              ],
+            );
+          });
+        });
+
+    // Nếu người dùng đã chọn một locale mới (hoặc system default - null)
+    // Chỉ gọi update nếu lựa chọn thực sự khác
+    if (selectedLocale != currentLocale) {
+      print(
+          "[SettingsScreen] Updating locale to: ${selectedLocale?.languageCode ?? 'system'}");
+      // Gọi hàm cập nhật từ provider (dùng read vì chỉ gọi hàm)
+      await context.read<SettingsProvider>().updateLocale(selectedLocale);
+    }
+  }
+  // ---------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    // Lấy thông tin người dùng từ AuthProvider
+    // Lấy các providers
     final authUser = context.watch<AuthProvider>().user;
-    // Lấy thông tin BLE từ BleProvider
     final bleProvider = context.watch<BleProvider>();
+    final settingsProvider = context.watch<SettingsProvider>();
+
+    // Lấy các giá trị state
+    final currentThemeMode = settingsProvider.themeMode;
+    final currentLocale = settingsProvider.appLocale;
     final connectedDevice = bleProvider.connectedDevice;
     final connectionStatus = bleProvider.connectionStatus.value;
-    final bool isConnected = connectionStatus == BleConnectionStatus.connected;
+    final isConnected = connectionStatus == BleConnectionStatus.connected;
 
-    // <<< LẤY SETTINGS PROVIDER >>>
-    final settingsProvider = context.watch<SettingsProvider>();
-    final currentThemeMode = settingsProvider.themeMode;
+    // Lấy đối tượng AppLocalizations để truy cập chuỗi dịch
+    final l10n = AppLocalizations.of(context)!;
+
+    // Xác định tên ngôn ngữ hiện tại để hiển thị
+    String currentLanguageName = l10n.systemDefault; // Mặc định
+    if (currentLocale?.languageCode == 'en')
+      currentLanguageName = 'English';
+    else if (currentLocale?.languageCode == 'vi')
+      currentLanguageName = 'Tiếng Việt';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        // Sử dụng ListView để dễ dàng thêm/bớt các mục cài đặt
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // --- Phần Thông tin Người dùng ---
-          if (authUser != null) ...[
-            // Sử dụng collection-if để thêm nếu user tồn tại
-            ListTile(
-              leading: CircleAvatar(
-                // Hiển thị ảnh user nếu có, hoặc icon mặc định
-                backgroundImage:
-                    authUser.photoURL != null
-                        ? NetworkImage(authUser.photoURL!)
-                        : null,
-                child:
-                    authUser.photoURL == null ? const Icon(Icons.person) : null,
+        appBar: AppBar(title: Text(l10n.settingsTitle)), // Dùng chuỗi dịch
+        body: ListView(
+          padding: const EdgeInsets.symmetric(
+              vertical: 8.0, horizontal: 0), // Giảm padding ngang ListView
+          children: [
+            // --- User Info ---
+            if (authUser != null) ...[
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20.0, vertical: 10.0),
+                leading: CircleAvatar(
+                  radius: 24,
+                  backgroundImage: authUser.photoURL != null
+                      ? NetworkImage(authUser.photoURL!)
+                      : null,
+                  child: authUser.photoURL == null
+                      ? const Icon(Icons.person, size: 28)
+                      : null,
+                ),
+                title: Text(authUser.displayName ?? l10n.name,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500)), // Dịch 'Name' nếu null
+                subtitle: Text(authUser.email ?? 'No Email'),
               ),
-              title: Text(authUser.displayName ?? 'No Name Provided'),
-              subtitle: Text(authUser.email ?? 'No Email Provided'),
-            ),
-            const Divider(),
-          ],
+              const Divider(height: 1),
+            ],
 
-          // --- Phần Quản lý Thiết bị ---
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              'Device Management',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: Icon(
-              isConnected
-                  ? Icons.bluetooth_connected
-                  : Icons.bluetooth_disabled,
-              color: isConnected ? Colors.green : Colors.grey,
-            ),
-            title: Text(
-              connectedDevice != null
+            // --- Device Management Section ---
+            _buildSectionTitle(
+                context, 'Device Management'), // Hàm helper tạo tiêu đề
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              leading: Icon(
+                  isConnected
+                      ? Icons.bluetooth_connected
+                      : Icons.bluetooth_disabled,
+                  color: isConnected ? Colors.green : Colors.grey),
+              title: Text(connectedDevice != null
                   ? (connectedDevice.platformName.isNotEmpty
                       ? connectedDevice.platformName
-                      : 'ESP32 Wearable') // Tên mặc định nếu trống
-                  : 'No Device Connected',
-              style: TextStyle(
-                fontWeight: isConnected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            subtitle: Text(
-              connectedDevice?.remoteId.toString() ??
-                  'Connect via "Change Device"',
-            ),
-            // Chỉ hiển thị nút Disconnect khi đang thực sự kết nối
-            trailing:
-                isConnected
-                    ? TextButton(
-                      child: const Text(
-                        'Disconnect',
-                        style: TextStyle(color: Colors.orange),
-                      ),
+                      : 'ESP32 Wearable')
+                  : 'No Device Connected'),
+              subtitle: Text(connectedDevice?.remoteId.toString() ??
+                  'Connect via "Change Device"'),
+              trailing: isConnected
+                  ? TextButton(
+                      child: const Text('Disconnect',
+                          style: TextStyle(color: Colors.orange)),
                       onPressed: () async {
-                        print("[SettingsScreen] Disconnect button pressed.");
-                        // Gọi hàm disconnect từ BleProvider (dùng read vì chỉ gọi hàm)
                         await context
                             .read<BleProvider>()
-                            .disconnectFromDevice();
-                        // Không cần xóa SharedPreferences ở đây
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Device disconnected.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                    )
-                    : null,
-          ),
-          ListTile(
-            leading: const Icon(Icons.devices_other_outlined),
-            title: const Text('Change / Forget Device'),
-            subtitle: const Text('Scan and connect to a new device'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              print("[SettingsScreen] Change/Forget device tapped.");
-              // 1. Ngắt kết nối thiết bị hiện tại (nếu có)
-              if (isConnected) {
-                await context.read<BleProvider>().disconnectFromDevice();
-                // Thêm delay nhỏ để đảm bảo disconnect hoàn tất trước khi xóa prefs
-                await Future.delayed(const Duration(milliseconds: 300));
-              }
-              // 2. Xóa device ID đã lưu trong SharedPreferences
-              try {
+                            .disconnectFromDevice(); /* ... SnackBar ... */
+                      })
+                  : null,
+            ),
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              leading: const Icon(Icons.devices_other_outlined),
+              title: const Text('Change / Forget Device'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                /* ... Logic Change/Forget Device ... */
+                if (isConnected) {
+                  await context.read<BleProvider>().disconnectFromDevice();
+                  await Future.delayed(const Duration(milliseconds: 300));
+                }
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.remove(AppConstants.prefKeyConnectedDeviceId);
-                print(
-                  "[SettingsScreen] Removed saved device ID from SharedPreferences.",
-                );
-              } catch (e) {
-                print("!!! [SettingsScreen] Error removing device ID: $e");
-              }
-              // 3. Điều hướng đến màn hình chọn thiết bị (thay thế màn hình hiện tại)
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  // Dùng pushReplacement
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const DeviceSelectScreen(),
-                  ),
-                );
-              }
-            },
-          ),
-          const Divider(),
-
-          // --- Phần Cấu hình WiFi (Giữ nguyên) ---
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              'Network Configuration',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+                if (context.mounted)
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const DeviceSelectScreen()));
+              },
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.wifi_password),
-            title: const Text('Configure Device WiFi'),
-            subtitle: const Text('Send WiFi credentials to ESP32'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // Chỉ cho phép cấu hình khi đang kết nối
-              if (isConnected) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WifiConfigScreen(),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Connect to a device first to configure WiFi.',
+            const Divider(height: 1),
+
+            // --- Network Configuration Section ---
+            _buildSectionTitle(context, 'Network'),
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              leading: const Icon(Icons.wifi_password_outlined),
+              title: Text(l10n.configureWifiTitle), // Dịch title
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                /* ... Logic mở WifiConfigScreen (kiểm tra isConnected) ... */
+                if (isConnected)
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const WifiConfigScreen()));
+                else
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Connect to device first.'),
+                      backgroundColor: Colors.orangeAccent));
+              },
+            ),
+            const Divider(height: 1),
+
+            // --- Appearance Section ---
+            _buildSectionTitle(context, l10n.appearance), // Dịch tiêu đề
+            RadioListTile<ThemeMode>(
+                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
+                title: Text(l10n.systemDefault),
+                value: ThemeMode.system,
+                groupValue: currentThemeMode,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().updateThemeMode(v)),
+            RadioListTile<ThemeMode>(
+                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
+                title: Text(l10n.lightMode),
+                value: ThemeMode.light,
+                groupValue: currentThemeMode,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().updateThemeMode(v)),
+            RadioListTile<ThemeMode>(
+                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
+                title: Text(l10n.darkMode),
+                value: ThemeMode.dark,
+                groupValue: currentThemeMode,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().updateThemeMode(v)),
+            const Divider(height: 1),
+
+            // --- Language Section ---
+            _buildSectionTitle(context, l10n.language), // Dịch tiêu đề
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              leading: const Icon(Icons.language_outlined),
+              title: Text(l10n.language), // Dịch title
+              subtitle:
+                  Text(currentLanguageName), // Hiển thị tên ngôn ngữ hiện tại
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                _showLanguageDialog(context, context.read<SettingsProvider>());
+              }, // Gọi dialog
+            ),
+            const Divider(height: 1),
+
+            // --- Notifications Placeholder ---
+            _buildSectionTitle(
+                context, 'Notifications'), // Có thể dịch 'Notifications'
+            SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              title: const Text('Enable Health Alerts'), // Dịch nếu cần
+              subtitle: const Text(
+                  'Receive notifications for abnormal readings'), // Dịch nếu cần
+              value: false, // TODO: Lấy state
+              onChanged: (bool value) {/* TODO: Lưu state */},
+              secondary: const Icon(Icons.notifications_active_outlined),
+            ),
+            const Divider(height: 1),
+
+            // --- Logout Button ---
+            Padding(
+              // Thêm Padding quanh nút Logout
+              padding:
+                  const EdgeInsets.symmetric(vertical: 30.0, horizontal: 20.0),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.logout),
+                label: Text(l10n.logout), // Dịch label
+                onPressed: () async {
+                  await context.read<AuthProvider>().signOut();
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .errorContainer, // Màu nền khác
+                    foregroundColor: Theme.of(context)
+                        .colorScheme
+                        .onErrorContainer, // Màu chữ tương phản
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12) // Padding nút
                     ),
-                    backgroundColor: Colors.orangeAccent,
-                  ),
-                );
-              }
-            },
-          ),
-          const Divider(),
-
-          // TODO: Thêm các mục cài đặt khác (Ngôn ngữ, Theme, Thông báo)
-          // Ví dụ:
-          // ListTile(leading: Icon(Icons.language), title: Text('Language'), trailing: Icon(Icons.chevron_right), onTap: () {}),
-          // ListTile(leading: Icon(Icons.brightness_6), title: Text('Appearance (Theme)'), trailing: Icon(Icons.chevron_right), onTap: () {}),
-          // SwitchListTile(title: Text('Enable Health Alerts'), value: true, onChanged: (val){}),
-
-          // --- APPEARANCE (THEME) SECTION ---
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              'Appearance',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
               ),
             ),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('System Default'),
-            subtitle: const Text('Follows your device theme'),
-            value: ThemeMode.system,
-            groupValue: currentThemeMode, // Giá trị hiện tại đang được chọn
-            onChanged: (ThemeMode? value) {
-              // Gọi hàm cập nhật từ provider (dùng read)
-              context.read<SettingsProvider>().updateThemeMode(value);
-            },
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Light Mode'),
-            value: ThemeMode.light,
-            groupValue: currentThemeMode,
-            onChanged: (ThemeMode? value) {
-              context.read<SettingsProvider>().updateThemeMode(value);
-            },
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Dark Mode'),
-            value: ThemeMode.dark,
-            groupValue: currentThemeMode,
-            onChanged: (ThemeMode? value) {
-              context.read<SettingsProvider>().updateThemeMode(value);
-            },
-          ),
-          const Divider(),
-          // --------------------------------
+          ],
+        ));
+  }
 
-          // --- LANGUAGE SECTION (Placeholder) ---
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              'Language',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+  // --- Hàm Helper tạo Tiêu đề Section ---
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(
+          left: 20.0, right: 20.0, top: 16.0, bottom: 8.0),
+      child: Text(
+        title.toUpperCase(), // In hoa tiêu đề
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              // Dùng labelSmall
+              color: Theme.of(context).colorScheme.primary, // Màu primary
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8, // Giãn cách chữ
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('App Language'),
-            subtitle: const Text('English'), // TODO: Lấy ngôn ngữ hiện tại
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Hiển thị dialog/màn hình chọn ngôn ngữ
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Language selection coming soon!'),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          // -------------------------------------
-
-          // --- HEALTH ALERTS (Placeholder) ---
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              'Notifications',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Enable Health Alerts'),
-            subtitle: const Text('Receive notifications for abnormal readings'),
-            value:
-                false, // TODO: Lấy trạng thái từ SharedPreferences/SettingsProvider
-            onChanged: (bool value) {
-              // TODO: Lưu trạng thái mới
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Alert settings coming soon!')),
-              );
-            },
-            secondary: const Icon(Icons.notifications_active_outlined),
-          ),
-          const Divider(),
-          // ----------------------------------
-
-          // --- Nút Logout (Giữ nguyên) ---
-          const SizedBox(height: 40), // Thêm khoảng cách trước nút logout
-          ElevatedButton.icon(
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
-            onPressed: () async {
-              // Gọi hàm signOut từ AuthProvider
-              await context.read<AuthProvider>().signOut();
-              // AuthWrapper sẽ tự động xử lý điều hướng về LoginScreen
-              // Không cần gọi Navigator.pushAndRemoveUntil ở đây
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Theme.of(
-                    context,
-                  ).colorScheme.error, // Dùng màu error của theme
-              foregroundColor:
-                  Theme.of(context).colorScheme.onError, // Màu chữ tương phản
-            ),
-          ),
-          const SizedBox(height: 20), // Padding dưới cùng
-        ],
       ),
     );
   }
