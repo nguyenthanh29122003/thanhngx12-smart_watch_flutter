@@ -1,47 +1,32 @@
 // lib/providers/ble_provider.dart (Phiên bản gốc - KHÔNG có Auth reset)
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // Cần cho ScanResult và BluetoothDevice
-import '../services/ble_service.dart'; // Import BleService và Enum BleConnectionStatus
-import '../models/health_data.dart'; // Import model HealthData
-
-// <<< KHÔNG import AuthService >>>
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../services/ble_service.dart';
+import '../models/health_data.dart';
 
 class BleProvider with ChangeNotifier {
   // Chỉ phụ thuộc vào BleService
   final BleService _bleService;
-  // <<< KHÔNG có final AuthService _authService; >>>
 
-  // --- State và Notifiers từ BleService ---
   ValueNotifier<BleConnectionStatus> get connectionStatus =>
       _bleService.connectionStatus;
   ValueNotifier<List<ScanResult>> get scanResults => _bleService.scanResults;
   ValueNotifier<bool> get isScanning => _bleService.isScanning;
-
-  // --- State nội bộ của Provider ---
-  HealthData? _latestHealthData; // Lưu trữ dữ liệu sức khỏe mới nhất nhận được
+  HealthData? _latestHealthData;
   HealthData? get latestHealthData => _latestHealthData;
-
-  // --- Getter cho thiết bị kết nối ---
   BluetoothDevice? get connectedDevice => _bleService.connectedDevice;
-
-  // --- Stream Subscription ---
-  StreamSubscription? _healthDataSub; // Lắng nghe dữ liệu health data
-  // <<< KHÔNG có StreamSubscription? _authSub; >>>
+  StreamSubscription? _healthDataSub;
 
   // --- Constructor (Chỉ nhận BleService) ---
   BleProvider(this._bleService) {
-    // <<< CHỈ NHẬN 1 THAM SỐ
     _listenToHealthData();
     _bleService.connectionStatus.addListener(_handleConnectionChange);
     _bleService.isScanning.addListener(_notify);
     _bleService.scanResults.addListener(_notify);
-    // <<< KHÔNG có gọi _listenToAuthChanges(); >>>
-    print("BleProvider Initialized (Original Version - No Auth dependency).");
+    // <<< KHÔNG gọi listen auth >>>
+    print("BleProvider Initialized (No Auth Dependency).");
   }
-
-  // <<< KHÔNG CÓ HÀM _listenToAuthChanges() >>>
-  // <<< KHÔNG CÓ HÀM _resetState() >>>
 
   // --- Hàm lắng nghe dữ liệu HealthData từ BleService ---
   void _listenToHealthData() {
@@ -109,11 +94,9 @@ class BleProvider with ChangeNotifier {
   // --- Hàm dispose ---
   @override
   void dispose() {
-    print("Disposing BleProvider (Original Version)...");
+    print("Disposing BleProvider (No Auth Dependency)...");
     _healthDataSub?.cancel();
-    // <<< KHÔNG có _authSub?.cancel(); >>>
-
-    // Hủy các listeners đã đăng ký với ValueNotifiers của BleService
+    // <<< KHÔNG có _authSub?.cancel() >>>
     try {
       _bleService.connectionStatus.removeListener(_handleConnectionChange);
       _bleService.isScanning.removeListener(_notify);

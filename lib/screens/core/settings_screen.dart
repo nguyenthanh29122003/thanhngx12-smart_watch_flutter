@@ -272,25 +272,42 @@ class SettingsScreen extends StatelessWidget {
 
             // --- Logout Button ---
             Padding(
-              // Thêm Padding quanh nút Logout
               padding:
                   const EdgeInsets.symmetric(vertical: 30.0, horizontal: 20.0),
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.logout),
                 label: Text(l10n.logout), // Dịch label
                 onPressed: () async {
-                  await context.read<AuthProvider>().signOut();
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(l10n
+                          .confirmLogoutTitle), // Ví dụ: "Xác nhận đăng xuất"
+                      content: Text(l10n
+                          .confirmLogoutMessage), // Ví dụ: "Bạn có chắc chắn muốn đăng xuất không?"
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: Text(l10n.cancel), // Ví dụ: "Hủy"
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: Text(l10n.confirm), // Ví dụ: "Đồng ý"
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await context.read<AuthProvider>().signOut();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .errorContainer, // Màu nền khác
-                    foregroundColor: Theme.of(context)
-                        .colorScheme
-                        .onErrorContainer, // Màu chữ tương phản
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 12) // Padding nút
-                    ),
+                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onErrorContainer,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 // lib/main.dart (Trạng thái trước khi sửa lỗi treo loading)
+// lib/main.dart (Phiên bản KHÔNG dùng Key, inject Provider đúng)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,7 +20,7 @@ import 'app_constants.dart';
 import 'generated/app_localizations.dart';
 
 // Import các Providers quản lý state
-import 'providers/auth_provider.dart'; // <<< Phiên bản có thể gây lỗi treo
+import 'providers/auth_provider.dart'; // <<< Phiên bản đã sửa lỗi treo
 import 'providers/ble_provider.dart'; // <<< Phiên bản không có Auth reset
 import 'providers/dashboard_provider.dart';
 import 'providers/relatives_provider.dart';
@@ -38,7 +39,7 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // --- Cung cấp Provider theo đúng thứ tự ---
+        // --- 1. Cung cấp các Service cơ bản/Singleton ---
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<ConnectivityService>(
             create: (_) => ConnectivityService(),
@@ -47,11 +48,14 @@ Future<void> main() async {
         Provider<FirestoreService>(create: (_) => FirestoreService()),
         ChangeNotifierProvider<SettingsProvider>(
             create: (_) => SettingsProvider()),
-        // AuthProvider (Phiên bản có thể gây lỗi treo)
+
+        // --- 2. Cung cấp các Service/Provider phụ thuộc ---
+        // AuthProvider (Phiên bản đã sửa)
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(
               context.read<AuthService>(), context.read<FirestoreService>()),
         ),
+        // BleService
         Provider<BleService>(
           create: (context) => BleService(
               context.read<AuthService>(),
@@ -60,19 +64,22 @@ Future<void> main() async {
               context.read<ConnectivityService>()),
           dispose: (context, s) => s.dispose(),
         ),
-        // BleProvider (Chỉ phụ thuộc BleService)
+        // BleProvider (KHÔNG inject AuthService)
         ChangeNotifierProvider<BleProvider>(
-          create: (context) =>
-              BleProvider(context.read<BleService>()), // Chỉ inject BleService
+          create: (context) => BleProvider(
+              context.read<BleService>()), // <<< Chỉ nhận BleService
         ),
+        // DashboardProvider
         ChangeNotifierProvider<DashboardProvider>(
           create: (context) => DashboardProvider(
               context.read<FirestoreService>(), context.read<AuthService>()),
         ),
+        // RelativesProvider
         ChangeNotifierProvider<RelativesProvider>(
           create: (context) => RelativesProvider(
               context.read<FirestoreService>(), context.read<AuthService>()),
         ),
+        // DataSyncService
         Provider<DataSyncService>(
           create: (context) => DataSyncService(
               context.read<ConnectivityService>(),
@@ -83,7 +90,8 @@ Future<void> main() async {
           lazy: false,
         ),
       ],
-      child: const MyApp(), // Không dùng Consumer và Key
+      // <<< KHÔNG DÙNG Consumer và Key ở đây >>>
+      child: const MyApp(),
     ),
   );
 }
@@ -105,10 +113,17 @@ class MyApp extends StatelessWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
-        /*...*/ useMaterial3: true,
+        brightness: Brightness.light,
+        primarySwatch: Colors.teal,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: true,
       ),
       darkTheme: ThemeData(
-        /*...*/ useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal, brightness: Brightness.dark),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: true,
       ),
       themeMode: settingsProvider.themeMode,
       debugShowCheckedModeBanner: false,
@@ -333,7 +348,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
             nextScreen = const DeviceSelectScreen();
             break;
         }
-
         break;
     }
     return nextScreen;

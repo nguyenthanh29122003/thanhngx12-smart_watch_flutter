@@ -35,5 +35,17 @@
   "relativeAddedSuccess": "Relative added successfully!",
   "relativeAddedError": "Failed to add relative.",
   "relativeDeletedSuccess": "Relative deleted.",
-  "relativeDeletedError": "Failed to delete relative."
+  "relativeDeletedError": "Failed to delete relative.",
+  "confirmLogoutTitle": "Confirm Logout",
+  "@confirmLogoutTitle": {
+    "description": "Title for logout confirmation dialog."
+  },
+  "confirmLogoutMessage": "Are you sure you want to log out?",
+  "@confirmLogoutMessage": {
+    "description": "Confirmation message shown when the user wants to log out."
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Label for confirm button in dialogs."
+  }
 }

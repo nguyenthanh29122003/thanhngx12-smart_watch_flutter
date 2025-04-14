@@ -72,7 +72,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDeletion => 'Confirm Deletion';
 
   @override
-  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(
+      String relativeName, String relativeRelationship) {
     return 'Are you sure you want to delete $relativeName ($relativeRelationship)?';
   }
 
@@ -87,4 +88,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get relativeDeletedError => 'Failed to delete relative.';
+
+  @override
+  String get confirmLogoutTitle => 'Confirm Logout';
+
+  @override
+  String get confirmLogoutMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get confirm => 'Confirm';
 }

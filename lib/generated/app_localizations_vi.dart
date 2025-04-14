@@ -72,7 +72,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get confirmDeletion => 'Xác nhận Xóa';
 
   @override
-  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(
+      String relativeName, String relativeRelationship) {
     return 'Bạn chắc chắn muốn xóa $relativeName ($relativeRelationship)?';
   }
 
@@ -87,4 +88,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get relativeDeletedError => 'Xóa người thân thất bại.';
+
+  @override
+  String get confirmLogoutTitle => 'Xác nhận Đăng xuất';
+
+  @override
+  String get confirmLogoutMessage => 'Bạn có chắc chắn muốn đăng xuất?';
+
+  @override
+  String get confirm => 'Đồng ý';
 }

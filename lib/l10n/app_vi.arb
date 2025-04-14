@@ -25,5 +25,8 @@
   "relativeAddedSuccess": "Đã thêm người thân thành công!",
   "relativeAddedError": "Thêm người thân thất bại.",
   "relativeDeletedSuccess": "Đã xóa người thân.",
-  "relativeDeletedError": "Xóa người thân thất bại."
+  "relativeDeletedError": "Xóa người thân thất bại." ,
+  "confirmLogoutTitle": "Xác nhận Đăng xuất",
+  "confirmLogoutMessage": "Bạn có chắc chắn muốn đăng xuất?",
+  "confirm": "Đồng ý"
 }
