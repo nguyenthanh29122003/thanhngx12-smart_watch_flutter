@@ -72,8 +72,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get confirmDeletion => 'Xác nhận Xóa';
 
   @override
-  String confirmDeleteRelative(
-      String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
     return 'Bạn chắc chắn muốn xóa $relativeName ($relativeRelationship)?';
   }
 
@@ -97,4 +96,31 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get confirm => 'Đồng ý';
+
+  @override
+  String get chatbotTitle => 'Trò chuyện với AI';
+
+  @override
+  String get predictTitle => 'Dự đoán';
+
+  @override
+  String get connectDevice => 'Kết nối Thiết bị';
+
+  @override
+  String get predictPlaceholder => 'Chức năng dự đoán đang được phát triển!';
+
+  @override
+  String get sendMessage => 'Gửi';
+
+  @override
+  String get enterMessage => 'Nhập tin nhắn hoặc câu hỏi của bạn';
+
+  @override
+  String get imageUrlLabel => 'Nhập URL hình ảnh (tùy chọn)';
+
+  @override
+  String get errorSendingMessage => 'Lỗi khi gửi tin nhắn';
+
+  @override
+  String get healthDisclaimer => 'Đây là thông tin chung, không phải lời khuyên y tế. Hãy tham khảo ý kiến bác sĩ để được tư vấn chuyên nghiệp.';
 }

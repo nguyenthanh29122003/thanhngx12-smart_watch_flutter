@@ -1,5 +1,3 @@
-// lib/main.dart (Trạng thái trước khi sửa lỗi treo loading)
-// lib/main.dart (Phiên bản KHÔNG dùng Key, inject Provider đúng)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
-// Import các file cấu hình và services
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:smart_wearable_app/screens/core/chatbot_screen.dart';
+import 'package:smart_wearable_app/screens/core/dashboard_screen.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
@@ -18,15 +17,11 @@ import 'services/connectivity_service.dart';
 import 'services/data_sync_service.dart';
 import 'app_constants.dart';
 import 'generated/app_localizations.dart';
-
-// Import các Providers quản lý state
-import 'providers/auth_provider.dart'; // <<< Phiên bản đã sửa lỗi treo
-import 'providers/ble_provider.dart'; // <<< Phiên bản không có Auth reset
+import 'providers/auth_provider.dart';
+import 'providers/ble_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/relatives_provider.dart';
 import 'providers/settings_provider.dart';
-
-// Import các màn hình
 import 'screens/core/main_navigator.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -34,12 +29,28 @@ import 'screens/device/device_select_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform)
+        .timeout(const Duration(seconds: 10), onTimeout: () {
+      throw TimeoutException('Firebase initialization timed out');
+    });
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+  }
+
+  try {
+    await dotenv.load(fileName: '.env');
+    print('Loaded .env successfully: ${dotenv.env['OPENROUTER_API_KEY']}');
+  } catch (e) {
+    print('Error loading .env: $e');
+    print(
+        'Please ensure .env file exists in project root with OPENROUTER_API_KEY.');
+  }
 
   runApp(
     MultiProvider(
       providers: [
-        // --- 1. Cung cấp các Service cơ bản/Singleton ---
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<ConnectivityService>(
             create: (_) => ConnectivityService(),
@@ -48,14 +59,10 @@ Future<void> main() async {
         Provider<FirestoreService>(create: (_) => FirestoreService()),
         ChangeNotifierProvider<SettingsProvider>(
             create: (_) => SettingsProvider()),
-
-        // --- 2. Cung cấp các Service/Provider phụ thuộc ---
-        // AuthProvider (Phiên bản đã sửa)
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(
               context.read<AuthService>(), context.read<FirestoreService>()),
         ),
-        // BleService
         Provider<BleService>(
           create: (context) => BleService(
               context.read<AuthService>(),
@@ -64,22 +71,17 @@ Future<void> main() async {
               context.read<ConnectivityService>()),
           dispose: (context, s) => s.dispose(),
         ),
-        // BleProvider (KHÔNG inject AuthService)
         ChangeNotifierProvider<BleProvider>(
-          create: (context) => BleProvider(
-              context.read<BleService>()), // <<< Chỉ nhận BleService
+          create: (context) => BleProvider(context.read<BleService>()),
         ),
-        // DashboardProvider
         ChangeNotifierProvider<DashboardProvider>(
           create: (context) => DashboardProvider(
               context.read<FirestoreService>(), context.read<AuthService>()),
         ),
-        // RelativesProvider
         ChangeNotifierProvider<RelativesProvider>(
           create: (context) => RelativesProvider(
               context.read<FirestoreService>(), context.read<AuthService>()),
         ),
-        // DataSyncService
         Provider<DataSyncService>(
           create: (context) => DataSyncService(
               context.read<ConnectivityService>(),
@@ -87,16 +89,14 @@ Future<void> main() async {
               context.read<FirestoreService>(),
               context.read<AuthService>()),
           dispose: (context, s) => s.dispose(),
-          lazy: false,
+          lazy: true,
         ),
       ],
-      // <<< KHÔNG DÙNG Consumer và Key ở đây >>>
       child: const MyApp(),
     ),
   );
 }
 
-// --- MyApp (Không cần Key) ---
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
@@ -128,13 +128,15 @@ class MyApp extends StatelessWidget {
       themeMode: settingsProvider.themeMode,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
+      routes: {
+        '/device_select': (context) => const DeviceSelectScreen(),
+        '/main': (context) => const MainNavigator(),
+        '/login': (context) => const LoginScreen(),
+      },
     );
   }
 }
 
-// --- AuthWrapper (StatefulWidget với logic kiểm tra thiết bị) ---
-// Giữ nguyên phiên bản StatefulWidget bạn đã cung cấp gần nhất
-// vì logic này không phải là nguyên nhân chính gây treo
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
   @override
@@ -158,8 +160,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
         _bleProviderRef = Provider.of<BleProvider>(context, listen: false);
         ap.addListener(_handleAuthChange);
         if (ap.status == AuthStatus.authenticated) {
-          if (!_checkingDevice && _deviceCheckStatus == 'initial')
+          if (!_checkingDevice && _deviceCheckStatus == 'initial') {
             _checkSavedDeviceAndConnect();
+          }
         }
       }
     });
@@ -171,11 +174,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
     try {
       Provider.of<AuthProvider>(context, listen: false)
           .removeListener(_handleAuthChange);
-    } catch (e) {}
+    } catch (e) {
+      print('Error removing auth listener: $e');
+    }
     if (_bleStatusListener != null && _bleProviderRef != null) {
       try {
         _bleProviderRef!.connectionStatus.removeListener(_bleStatusListener!);
-      } catch (e) {}
+      } catch (e) {
+        print('Error removing BLE listener: $e');
+      }
     }
     super.dispose();
   }
@@ -194,7 +201,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
         try {
           _bleProviderRef!.connectionStatus.removeListener(_bleStatusListener!);
           _bleStatusListener = null;
-        } catch (e) {}
+        } catch (e) {
+          print('Error removing BLE listener: $e');
+        }
       }
     }
     if (mounted) setState(() {});
@@ -205,118 +214,194 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkingDevice = true;
     if (mounted) setState(() => _deviceCheckStatus = 'checking');
     print("[AuthWrapper] Checking saved device ID...");
-    SharedPreferences prefs;
-    String? savedDeviceId;
+
     try {
-      prefs = await SharedPreferences.getInstance();
-      savedDeviceId = prefs.getString(AppConstants.prefKeyConnectedDeviceId);
-    } catch (e) {
-      print("!!! SharedPreferences Error: $e");
-      if (_isMounted) setState(() => _deviceCheckStatus = 'no_device');
-      _checkingDevice = false;
-      return;
-    }
-    if (!_isMounted) {
-      _checkingDevice = false;
-      return;
-    }
-    if (savedDeviceId != null && savedDeviceId.isNotEmpty) {
-      print(
-          "[AuthWrapper] Found saved ID: $savedDeviceId. Trying auto-connect...");
-      if (mounted) setState(() => _deviceCheckStatus = 'connecting');
-      if (_bleProviderRef == null && mounted) {
-        _bleProviderRef = Provider.of<BleProvider>(context, listen: false);
-      }
-      if (_bleProviderRef == null) {
-        if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+      final prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        throw TimeoutException('SharedPreferences timeout');
+      });
+      final savedDeviceId =
+          prefs.getString(AppConstants.prefKeyConnectedDeviceId);
+
+      if (!_isMounted) {
         _checkingDevice = false;
         return;
       }
-      if (_bleStatusListener != null) {
-        try {
-          _bleProviderRef!.connectionStatus.removeListener(_bleStatusListener!);
-        } catch (e) {}
-      }
-      _bleStatusListener = () {
-        if (!_isMounted || _bleProviderRef == null) {
-          _bleStatusListener = null;
+
+      if (savedDeviceId != null && savedDeviceId.isNotEmpty) {
+        print(
+            "[AuthWrapper] Found saved ID: $savedDeviceId. Trying auto-connect...");
+        if (mounted) setState(() => _deviceCheckStatus = 'connecting');
+        if (_bleProviderRef == null && mounted) {
+          _bleProviderRef = Provider.of<BleProvider>(context, listen: false);
+        }
+        if (_bleProviderRef == null) {
+          if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+          _checkingDevice = false;
           return;
         }
-        final status = _bleProviderRef!.connectionStatus.value;
-        print("[AuthWrapper] Auto-connect listener status: $status");
-        if (_deviceCheckStatus == 'connecting') {
-          if (status == BleConnectionStatus.connected) {
-            if (_isMounted) setState(() => _deviceCheckStatus = 'connected');
-            if (_bleStatusListener != null) {
-              try {
-                _bleProviderRef!.connectionStatus
-                    .removeListener(_bleStatusListener!);
-              } catch (e) {}
-              _bleStatusListener = null;
-            }
-          } else if (status == BleConnectionStatus.error ||
-              status == BleConnectionStatus.disconnected) {
-            prefs.remove(AppConstants.prefKeyConnectedDeviceId);
-            if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
-            if (_bleStatusListener != null) {
-              try {
-                _bleProviderRef!.connectionStatus
-                    .removeListener(_bleStatusListener!);
-              } catch (e) {}
-              _bleStatusListener = null;
-            }
-          }
-        } else {
-          if (_bleStatusListener != null) {
-            try {
-              _bleProviderRef!.connectionStatus
-                  .removeListener(_bleStatusListener!);
-            } catch (e) {}
-            _bleStatusListener = null;
-          }
-        }
-      };
-      try {
-        _bleProviderRef!.connectionStatus.addListener(_bleStatusListener!);
-      } catch (e) {
-        print("Error adding listener: $e");
-        if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
-        _checkingDevice = false;
-        return;
-      }
-      try {
-        List<BluetoothDevice> systemConnected =
-            FlutterBluePlus.connectedDevices;
-        BluetoothDevice? targetDevice;
-        final targetDeviceId = DeviceIdentifier(savedDeviceId);
-        try {
-          targetDevice =
-              systemConnected.firstWhere((d) => d.remoteId == targetDeviceId);
-        } catch (e) {
-          targetDevice = null;
-        }
-        targetDevice ??= BluetoothDevice(remoteId: targetDeviceId);
-        print("[AuthWrapper] Calling connectToDevice for $savedDeviceId");
-        await _bleProviderRef!.connectToDevice(targetDevice);
-      } catch (e) {
-        print("!!! Error initiating auto-connect: $e");
-        prefs.remove(AppConstants.prefKeyConnectedDeviceId);
-        if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+
         if (_bleStatusListener != null) {
           try {
             _bleProviderRef!.connectionStatus
                 .removeListener(_bleStatusListener!);
-          } catch (e) {}
-          _bleStatusListener = null;
+          } catch (e) {
+            print('Error removing BLE listener: $e');
+          }
         }
+
+        _bleStatusListener = () {
+          if (!_isMounted || _bleProviderRef == null) {
+            _bleStatusListener = null;
+            return;
+          }
+          final status = _bleProviderRef!.connectionStatus.value;
+          print("[AuthWrapper] Auto-connect listener status: $status");
+          if (_deviceCheckStatus == 'connecting') {
+            if (status == BleConnectionStatus.connected) {
+              if (_isMounted) setState(() => _deviceCheckStatus = 'connected');
+              if (_bleStatusListener != null) {
+                try {
+                  _bleProviderRef!.connectionStatus
+                      .removeListener(_bleStatusListener!);
+                } catch (e) {
+                  print('Error removing BLE listener: $e');
+                }
+                _bleStatusListener = null;
+              }
+            } else if (status == BleConnectionStatus.error ||
+                status == BleConnectionStatus.disconnected) {
+              prefs.remove(AppConstants.prefKeyConnectedDeviceId);
+              if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+              if (_bleStatusListener != null) {
+                try {
+                  _bleProviderRef!.connectionStatus
+                      .removeListener(_bleStatusListener!);
+                } catch (e) {
+                  print('Error removing BLE listener: $e');
+                }
+                _bleStatusListener = null;
+              }
+            }
+          }
+        };
+
+        try {
+          _bleProviderRef!.connectionStatus.addListener(_bleStatusListener!);
+        } catch (e) {
+          print("Error adding listener: $e");
+          if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+          _checkingDevice = false;
+          return;
+        }
+
+        try {
+          // Sửa lỗi timeout: Áp dụng trên Future
+          List<BluetoothDevice> systemConnected =
+              FlutterBluePlus.connectedDevices;
+
+          BluetoothDevice? targetDevice;
+          final targetDeviceId = DeviceIdentifier(savedDeviceId);
+          try {
+            targetDevice = systemConnected.firstWhere(
+                (d) => d.remoteId == targetDeviceId,
+                orElse: () => BluetoothDevice(remoteId: targetDeviceId));
+          } catch (e) {
+            targetDevice = BluetoothDevice(remoteId: targetDeviceId);
+          }
+
+          print("[AuthWrapper] Calling connectToDevice for $savedDeviceId");
+          await _bleProviderRef!
+              .connectToDevice(targetDevice)
+              .timeout(const Duration(seconds: 10), onTimeout: () {
+            throw TimeoutException('BLE connection timeout');
+          });
+        } catch (e) {
+          print("!!! Error initiating auto-connect: $e");
+          await prefs.remove(AppConstants.prefKeyConnectedDeviceId);
+          if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+          if (_bleStatusListener != null) {
+            try {
+              _bleProviderRef!.connectionStatus
+                  .removeListener(_bleStatusListener!);
+            } catch (e) {
+              print('Error removing BLE listener: $e');
+            }
+            _bleStatusListener = null;
+          }
+          _checkingDevice = false;
+          return;
+        }
+      } else {
+        print("[AuthWrapper] No saved device ID found.");
+        if (_isMounted) setState(() => _deviceCheckStatus = 'no_device');
       }
-    } else {
-      print("[AuthWrapper] No saved device ID found.");
-      if (_isMounted) setState(() => _deviceCheckStatus = 'no_device');
+    } catch (e) {
+      print("!!! Error in checkSavedDeviceAndConnect: $e");
+      if (_isMounted) setState(() => _deviceCheckStatus = 'failed');
+      _checkingDevice = false;
     }
     _checkingDevice = false;
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   final authProvider = context.watch<AuthProvider>();
+  //   print(
+  //       "[AuthWrapper] build. Auth: ${authProvider.status}, DeviceCheck: $_deviceCheckStatus");
+
+  //   // Timeout cho uninitialized
+  //   if (authProvider.status == AuthStatus.uninitialized) {
+  //     Future.delayed(const Duration(seconds: 10), () {
+  //       if (mounted && authProvider.status == AuthStatus.uninitialized) {
+  //         print(
+  //             "[AuthWrapper] Auth uninitialized timeout, forcing unauthenticated");
+  //         authProvider.forceUnauthenticated();
+  //       }
+  //     });
+  //   }
+
+  //   Widget nextScreen = const SplashScreen();
+  //   switch (authProvider.status) {
+  //     case AuthStatus.uninitialized:
+  //     case AuthStatus.authenticating:
+  //       nextScreen = const SplashScreen();
+  //       break;
+  //     case AuthStatus.unauthenticated:
+  //     case AuthStatus.error:
+  //       nextScreen = const LoginScreen();
+  //       break;
+  //     case AuthStatus.authenticated:
+  //       switch (_deviceCheckStatus) {
+  //         case 'initial':
+  //         case 'checking':
+  //         case 'connecting':
+  //           // Timeout cho BLE
+  //           Future.delayed(const Duration(seconds: 15), () {
+  //             if (mounted &&
+  //                 _deviceCheckStatus != 'connected' &&
+  //                 _deviceCheckStatus != 'no_device' &&
+  //                 _deviceCheckStatus != 'failed') {
+  //               print("[AuthWrapper] BLE check timeout, setting to failed");
+  //               setState(() => _deviceCheckStatus = 'failed');
+  //             }
+  //           });
+  //           nextScreen = const SplashScreen();
+  //           break;
+  //         case 'connected':
+  //           nextScreen = const MainNavigator();
+  //           break;
+  //         case 'no_device':
+  //         case 'failed':
+  //         default:
+  //           // nextScreen = const DeviceSelectScreen();
+  //           nextScreen = const DashboardScreen();
+  //           break;
+  //       }
+  //       break;
+  //   }
+  //   return nextScreen;
+  // }
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -345,7 +430,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
           case 'no_device':
           case 'failed':
           default:
-            nextScreen = const DeviceSelectScreen();
+            // nextScreen = const DashboardScreen();
+            nextScreen = const MainNavigator();
             break;
         }
         break;

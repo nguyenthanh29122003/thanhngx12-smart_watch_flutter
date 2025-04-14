@@ -72,8 +72,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDeletion => 'Confirm Deletion';
 
   @override
-  String confirmDeleteRelative(
-      String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
     return 'Are you sure you want to delete $relativeName ($relativeRelationship)?';
   }
 
@@ -97,4 +96,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confirm => 'Confirm';
+
+  @override
+  String get chatbotTitle => 'Chatbot';
+
+  @override
+  String get predictTitle => 'Predict';
+
+  @override
+  String get connectDevice => 'Connect Device';
+
+  @override
+  String get predictPlaceholder => 'Prediction functionality is under development!';
+
+  @override
+  String get sendMessage => 'Send';
+
+  @override
+  String get enterMessage => 'Enter your message or question';
+
+  @override
+  String get imageUrlLabel => 'Enter image URL (optional)';
+
+  @override
+  String get errorSendingMessage => 'Error sending message';
+
+  @override
+  String get healthDisclaimer => 'This is general information, not medical advice. Consult a doctor for professional guidance.';
 }

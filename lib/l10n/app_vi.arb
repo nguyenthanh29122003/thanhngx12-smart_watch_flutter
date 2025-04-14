@@ -28,5 +28,14 @@
   "relativeDeletedError": "Xóa người thân thất bại." ,
   "confirmLogoutTitle": "Xác nhận Đăng xuất",
   "confirmLogoutMessage": "Bạn có chắc chắn muốn đăng xuất?",
-  "confirm": "Đồng ý"
+  "confirm": "Đồng ý",
+  "chatbotTitle": "Trò chuyện với AI",
+  "predictTitle": "Dự đoán",
+  "connectDevice": "Kết nối Thiết bị",
+  "predictPlaceholder": "Chức năng dự đoán đang được phát triển!",
+  "sendMessage": "Gửi",
+  "enterMessage": "Nhập tin nhắn hoặc câu hỏi của bạn",
+  "imageUrlLabel": "Nhập URL hình ảnh (tùy chọn)",
+  "errorSendingMessage": "Lỗi khi gửi tin nhắn",
+  "healthDisclaimer": "Đây là thông tin chung, không phải lời khuyên y tế. Hãy tham khảo ý kiến bác sĩ để được tư vấn chuyên nghiệp."
 }

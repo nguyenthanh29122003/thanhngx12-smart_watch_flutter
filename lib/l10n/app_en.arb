@@ -46,6 +46,15 @@
   },
   "confirm": "Confirm",
   "@confirm": {
-    "description": "Label for confirm button in dialogs."
-  }
+    "description": "Label for confirm butto n in dialogs."
+  },
+  "chatbotTitle": "Chatbot",
+  "predictTitle": "Predict",
+  "connectDevice": "Connect Device",
+  "predictPlaceholder": "Prediction functionality is under development!",
+  "sendMessage": "Send",
+  "enterMessage": "Enter your message or question",
+  "imageUrlLabel": "Enter image URL (optional)",
+  "errorSendingMessage": "Error sending message",
+  "healthDisclaimer": "This is general information, not medical advice. Consult a doctor for professional guidance."
 }

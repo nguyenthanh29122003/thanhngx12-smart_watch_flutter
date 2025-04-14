@@ -62,17 +62,15 @@ import 'app_localizations_vi.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
-  static AppLocalizations of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+  static AppLocalizations? of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -228,8 +225,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delete {relativeName} ({relativeRelationship})?'**
-  String confirmDeleteRelative(
-      String relativeName, String relativeRelationship);
+  String confirmDeleteRelative(String relativeName, String relativeRelationship);
 
   /// No description provided for @relativeAddedSuccess.
   ///
@@ -254,13 +250,81 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to delete relative.'**
   String get relativeDeletedError;
+
+  /// Title for logout confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Logout'**
   String get confirmLogoutTitle;
+
+  /// Confirmation message shown when the user wants to log out.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
   String get confirmLogoutMessage;
+
+  /// Label for confirm butto n in dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
   String get confirm;
+
+  /// No description provided for @chatbotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chatbot'**
+  String get chatbotTitle;
+
+  /// No description provided for @predictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Predict'**
+  String get predictTitle;
+
+  /// No description provided for @connectDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Device'**
+  String get connectDevice;
+
+  /// No description provided for @predictPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Prediction functionality is under development!'**
+  String get predictPlaceholder;
+
+  /// No description provided for @sendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get sendMessage;
+
+  /// No description provided for @enterMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your message or question'**
+  String get enterMessage;
+
+  /// No description provided for @imageUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter image URL (optional)'**
+  String get imageUrlLabel;
+
+  /// No description provided for @errorSendingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error sending message'**
+  String get errorSendingMessage;
+
+  /// No description provided for @healthDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'This is general information, not medical advice. Consult a doctor for professional guidance.'**
+  String get healthDisclaimer;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -269,25 +333,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'vi'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'vi'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'vi':
-      return AppLocalizationsVi();
+    case 'en': return AppLocalizationsEn();
+    case 'vi': return AppLocalizationsVi();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }
