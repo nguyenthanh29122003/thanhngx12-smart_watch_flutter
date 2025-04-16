@@ -16,10 +16,13 @@ class RealtimeMetricsCard extends StatelessWidget {
     final latestData = bleProvider.latestHealthData;
     final connectionStatus = bleProvider.connectionStatus.value;
     final DateFormat formatter = DateFormat('HH:mm:ss - dd/MM');
-    final String timestampStr =
-        latestData != null
-            ? formatter.format(latestData.timestamp.toLocal())
-            : '--:--:--';
+    final bool isWifiConnected = latestData?.wifi ?? false;
+    final String timestampStr = latestData != null
+        ? formatter.format(latestData.timestamp.toLocal())
+        : '--:--:--';
+    // Chỉ hiển thị trạng thái WiFi nếu thiết bị đang kết nối
+    final bool showWifiStatus =
+        connectionStatus == BleConnectionStatus.connected;
 
     return Card(
       elevation: 4.0,
@@ -28,12 +31,55 @@ class RealtimeMetricsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Realtime Metrics',
-              style: Theme.of(context).textTheme.titleLarge,
+            // <<< SỬ DỤNG ROW CHO TIÊU ĐỀ VÀ TRẠNG THÁI WIFI >>>
+            Row(
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween, // Đẩy 2 phần tử ra 2 đầu
+              crossAxisAlignment: CrossAxisAlignment.start, // Canh lề trên
+              children: [
+                // Tiêu đề Card
+                Text(
+                  'Realtime Metrics', // TODO: Dịch
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+
+                // Trạng thái WiFi (chỉ hiển thị khi kết nối)
+                if (showWifiStatus) // <<< CHỈ HIỂN THỊ KHI KẾT NỐI BLE >>>
+                  Row(
+                    // Dùng Row nhỏ để nhóm icon và text WiFi
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isWifiConnected ? Icons.wifi : Icons.wifi_off,
+                        size: 18, // Kích thước icon nhỏ hơn chút
+                        color: isWifiConnected
+                            ? Colors.teal
+                            : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isWifiConnected
+                            ? 'WiFi On'
+                            : 'WiFi Off', // Text ngắn gọn hơn
+                        // TODO: Dịch
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isWifiConnected
+                                  ? Colors.teal
+                                  : Colors.grey.shade600,
+                              // fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ],
+                  )
+                else
+                  const SizedBox
+                      .shrink(), // Hoặc không hiển thị gì nếu không kết nối
+              ],
             ),
-            const SizedBox(height: 15),
-            // Nội dung dựa trên trạng thái kết nối
+            // ------------------------------------------------
+
+            const SizedBox(height: 15), // Khoảng cách giữa tiêu đề và nội dung
+            // Nội dung dựa trên trạng thái kết nối (Hàm _buildContent không cần thay đổi)
             _buildContent(context, connectionStatus, latestData, timestampStr),
           ],
         ),
@@ -153,9 +199,9 @@ class RealtimeMetricsCard extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
-          ),
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
         ),
         if (unit.isNotEmpty)
           Text(

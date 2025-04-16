@@ -104,6 +104,8 @@ class SettingsScreen extends StatelessWidget {
     final connectedDevice = bleProvider.connectedDevice;
     final connectionStatus = bleProvider.connectionStatus.value;
     final isConnected = connectionStatus == BleConnectionStatus.connected;
+    final bool notificationsAreEnabled =
+        settingsProvider.notificationsEnabled; // Lấy state
 
     // Lấy đối tượng AppLocalizations để truy cập chuỗi dịch
     final l10n = AppLocalizations.of(context)!;
@@ -175,21 +177,36 @@ class SettingsScreen extends StatelessWidget {
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               leading: const Icon(Icons.devices_other_outlined),
-              title: const Text('Change / Forget Device'),
+              title: const Text('Change / Forget Device'), // TODO: Dịch
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                /* ... Logic Change/Forget Device ... */
+                // Ngắt kết nối nếu đang kết nối
                 if (isConnected) {
+                  print("[SettingsScreen] Disconnecting from device...");
                   await context.read<BleProvider>().disconnectFromDevice();
+                  // Có thể đợi một chút để đảm bảo trạng thái cập nhật
                   await Future.delayed(const Duration(milliseconds: 300));
                 }
+
+                // Xóa ID thiết bị đã lưu
+                print("[SettingsScreen] Forgetting saved device ID...");
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.remove(AppConstants.prefKeyConnectedDeviceId);
-                if (context.mounted)
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const DeviceSelectScreen()));
+
+                // Kiểm tra context còn tồn tại không trước khi điều hướng
+                if (context.mounted) {
+                  print(
+                      "[SettingsScreen] Navigating to DeviceSelectScreen using push...");
+                  // <<< SỬ DỤNG Navigator.push THAY VÌ pushReplacement >>>
+                  Navigator.push(
+                    // <<< THAY ĐỔI Ở ĐÂY
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DeviceSelectScreen(),
+                    ),
+                  );
+                  // --------------------------------------------------
+                }
               },
             ),
             const Divider(height: 1),
@@ -257,16 +274,25 @@ class SettingsScreen extends StatelessWidget {
             const Divider(height: 1),
 
             // --- Notifications Placeholder ---
-            _buildSectionTitle(
-                context, 'Notifications'), // Có thể dịch 'Notifications'
+            // --- Notifications Section --- // <<< CẬP NHẬT PHẦN NÀY
+            _buildSectionTitle(context, "Notifications"), // Dịch ''
             SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              title: const Text('Enable Health Alerts'), // Dịch nếu cần
-              subtitle: const Text(
-                  'Receive notifications for abnormal readings'), // Dịch nếu cần
-              value: false, // TODO: Lấy state
-              onChanged: (bool value) {/* TODO: Lưu state */},
+              title:
+                  Text("Enable Health Alerts"), // Dịch 'Enable Health Alerts'
+              subtitle: Text(
+                  "Receive notifications..."), // Dịch 'Receive notifications...'
+              // --- Lấy value từ provider ---
+              value: notificationsAreEnabled,
+              // --- Gọi hàm update từ provider khi thay đổi ---
+              onChanged: (bool newValue) {
+                context
+                    .read<SettingsProvider>()
+                    .updateNotificationsEnabled(newValue);
+              },
               secondary: const Icon(Icons.notifications_active_outlined),
+              activeColor:
+                  Theme.of(context).colorScheme.primary, // Thêm màu cho đẹp
             ),
             const Divider(height: 1),
 

@@ -14,11 +14,14 @@ class SettingsProvider with ChangeNotifier {
   // --- State khởi tạo ---
   bool _isInitialized = false; // Đánh dấu đã tải cài đặt lần đầu chưa
 
+  bool _notificationsEnabled = true;
+
   // --- Getters ---
   ThemeMode get themeMode => _themeMode;
   Locale? get appLocale => _appLocale;
   bool get isInitialized =>
       _isInitialized; // Có thể dùng để hiển thị loading ban đầu
+  bool get notificationsEnabled => _notificationsEnabled;
 
   // --- Constructor ---
   SettingsProvider() {
@@ -64,11 +67,20 @@ class SettingsProvider with ChangeNotifier {
         _appLocale = null; // null nghĩa là dùng locale hệ thống
       }
       // ---------------
+
+      // --- LOAD NOTIFICATIONS ENABLED STATE --- // <<< THÊM VÀO ĐÂY
+      // Đọc giá trị boolean. Nếu chưa có (lần đầu) thì mặc định là true.
+      _notificationsEnabled =
+          prefs.getBool(AppConstants.prefKeyNotificationsEnabled) ?? true;
+      print(
+          "[SettingsProvider] Loaded notifications enabled: $_notificationsEnabled");
+      // ----------------------------------------
     } catch (e) {
       print("!!! [SettingsProvider] Error loading settings: $e");
       // Reset về mặc định nếu có lỗi
       _themeMode = ThemeMode.system;
       _appLocale = null;
+      _notificationsEnabled = true; // Reset về mặc định nếu lỗi
     } finally {
       _isInitialized = true; // Đánh dấu đã load xong
       notifyListeners(); // Thông báo cho UI cập nhật (quan trọng)
@@ -139,4 +151,26 @@ class SettingsProvider with ChangeNotifier {
     }
   }
   // ------------------------
+
+  // --- HÀM MỚI: CẬP NHẬT TRẠNG THÁI NOTIFICATIONS --- // <<< THÊM HÀM NÀY
+  Future<void> updateNotificationsEnabled(bool isEnabled) async {
+    if (_notificationsEnabled == isEnabled) return; // Không thay đổi
+
+    _notificationsEnabled = isEnabled;
+    print(
+        "[SettingsProvider] Updating notifications enabled to: $_notificationsEnabled");
+    notifyListeners(); // Cập nhật UI
+
+    // Lưu vào SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(
+          AppConstants.prefKeyNotificationsEnabled, _notificationsEnabled);
+      print(
+          "[SettingsProvider] Saved notifications enabled: $_notificationsEnabled");
+    } catch (e) {
+      print(
+          "!!! [SettingsProvider] Error saving notifications enabled state: $e");
+    }
+  }
 }

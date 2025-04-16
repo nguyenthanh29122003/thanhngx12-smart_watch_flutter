@@ -6,8 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:smart_wearable_app/screens/core/chatbot_screen.dart';
-import 'package:smart_wearable_app/screens/core/dashboard_screen.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
@@ -26,6 +24,7 @@ import 'screens/core/main_navigator.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/device/device_select_screen.dart';
+import 'services/notification_service.dart'; // <<< THÊM IMPORT NÀY
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +37,21 @@ Future<void> main() async {
   } catch (e) {
     print('Error initializing Firebase: $e');
   }
+
+  // --- KHỞI TẠO NOTIFICATION SERVICE --- // <<< THÊM VÀO ĐÂY
+  try {
+    // Lấy instance singleton và gọi init (init sẽ tự động gọi requestPermissions)
+    await NotificationService().init().timeout(const Duration(seconds: 5),
+        onTimeout: () {
+      print("!!! Warning: Notification Service initialization timed out.");
+      // Có thể tiếp tục chạy app hoặc báo lỗi tùy mức độ quan trọng
+    });
+    print("[Main] Notification Service initialized (or timeout reached).");
+  } catch (e) {
+    print("!!! Error initializing Notification Service: $e");
+    // Xử lý lỗi nếu cần
+  }
+  // ------------------------------------
 
   try {
     await dotenv.load(fileName: '.env');
@@ -52,6 +66,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         Provider<LocalDbService>.value(value: LocalDbService.instance),
+        Provider<NotificationService>.value(value: NotificationService()),
         Provider<ConnectivityService>(
             create: (_) => ConnectivityService(),
             dispose: (_, s) => s.dispose()),
@@ -65,10 +80,13 @@ Future<void> main() async {
         ),
         Provider<BleService>(
           create: (context) => BleService(
-              context.read<AuthService>(),
-              context.read<FirestoreService>(),
-              context.read<LocalDbService>(),
-              context.read<ConnectivityService>()),
+            context.read<AuthService>(),
+            context.read<FirestoreService>(),
+            context.read<LocalDbService>(),
+            context.read<ConnectivityService>(),
+            // <<< TRUYỀN NOTIFICATION SERVICE VÀO BLESERVICE >>>
+            context.read<NotificationService>(),
+          ),
           dispose: (context, s) => s.dispose(),
         ),
         ChangeNotifierProvider<BleProvider>(

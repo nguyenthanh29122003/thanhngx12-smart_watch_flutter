@@ -17,6 +17,8 @@ import '../models/health_data.dart'; // <<< Đảm bảo import model
 
 import '../app_constants.dart'; // UUIDs, Tên thiết bị
 
+import 'notification_service.dart'; // Import service
+
 // *** Nhắc nhở: Nên di chuyển enum và class HealthData sang file riêng lib/models/ ***
 enum BleConnectionStatus {
   disconnected,
@@ -42,7 +44,8 @@ class BleService {
   final FirestoreService _firestoreService;
   final LocalDbService _localDbService; // <<< Thêm Local DB Service
   final ConnectivityService
-  _connectivityService; // <<< Thêm Connectivity Service
+      _connectivityService; // <<< Thêm Connectivity Service
+  final NotificationService _notificationService;
 
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _healthCharacteristic;
@@ -62,6 +65,7 @@ class BleService {
     this._firestoreService,
     this._localDbService, // <<< Nhận Local DB Service
     this._connectivityService, // <<< Nhận Connectivity Service
+    this._notificationService,
   ) {
     _listenToAdapterState();
     print("BleService Initialized with ALL required services.");
@@ -162,14 +166,13 @@ class BleService {
 
       _scanSubscription = FlutterBluePlus.scanResults.listen(
         (results) {
-          final filtered =
-              results
-                  .where(
-                    (r) => r.device.platformName.contains(
-                      AppConstants.targetDeviceName,
-                    ),
-                  )
-                  .toList();
+          final filtered = results
+              .where(
+                (r) => r.device.platformName.contains(
+                  AppConstants.targetDeviceName,
+                ),
+              )
+              .toList();
           if (!_areScanListsEqual(scanResults.value, filtered)) {
             scanResults.value = filtered;
             print("Scan results updated: ${filtered.length} matching devices.");
@@ -267,25 +270,25 @@ class BleService {
         _connectionStateSubscription = device.connectionState
             .where((state) => state == BluetoothConnectionState.disconnected)
             .listen(
-              (state) {
-                print(
-                  ">>> [STATE STREAM - POST CONNECT] Received disconnect event.",
-                );
-                _handleDisconnect(
-                  isError: false,
-                  reason: "Disconnected event received post-connection",
-                );
-              },
-              onError: (error) {
-                print(
-                  ">>> [STATE STREAM - POST CONNECT] Connection state listener error: $error",
-                );
-                _handleDisconnect(
-                  isError: true,
-                  reason: "Connection stream error post-connection",
-                );
-              },
+          (state) {
+            print(
+              ">>> [STATE STREAM - POST CONNECT] Received disconnect event.",
             );
+            _handleDisconnect(
+              isError: false,
+              reason: "Disconnected event received post-connection",
+            );
+          },
+          onError: (error) {
+            print(
+              ">>> [STATE STREAM - POST CONNECT] Connection state listener error: $error",
+            );
+            _handleDisconnect(
+              isError: true,
+              reason: "Connection stream error post-connection",
+            );
+          },
+        );
       } else {
         print(
           ">>> WARNING: Connect Future completed but device.isConnected is false. Handling as error.",
@@ -500,28 +503,25 @@ class BleService {
                 _firestoreService
                     .saveHealthData(currentUser.uid, data.toJsonForFirestore())
                     .catchError((e) {
-                      print("!!! [ONLINE] Error saving to Firestore: $e");
-                      // Cân nhắc lưu vào local khi Firestore lỗi?
-                      // _localDbService.saveHealthRecordLocally(data);
-                    });
+                  print("!!! [ONLINE] Error saving to Firestore: $e");
+                  // Cân nhắc lưu vào local khi Firestore lỗi?
+                  // _localDbService.saveHealthRecordLocally(data);
+                });
               } else {
                 // --- OFFLINE: Lưu vào SQLite cục bộ ---
                 print(
                   "[OFFLINE] Saving data locally (User: ${currentUser.uid})...",
                 );
-                _localDbService
-                    .saveHealthRecordLocally(data)
-                    .then((id) {
-                      if (id <= 0) {
-                        // id=0 là do ignore, id=-1 là do lỗi khác
-                        print(
-                          "!!! [OFFLINE] Failed or skipped saving data locally (id: $id).",
-                        );
-                      }
-                    })
-                    .catchError((e) {
-                      print("!!! [OFFLINE] Exception saving data locally: $e");
-                    });
+                _localDbService.saveHealthRecordLocally(data).then((id) {
+                  if (id <= 0) {
+                    // id=0 là do ignore, id=-1 là do lỗi khác
+                    print(
+                      "!!! [OFFLINE] Failed or skipped saving data locally (id: $id).",
+                    );
+                  }
+                }).catchError((e) {
+                  print("!!! [OFFLINE] Exception saving data locally: $e");
+                });
               }
             } else {
               print("!!! Cannot save health data: No user logged in.");

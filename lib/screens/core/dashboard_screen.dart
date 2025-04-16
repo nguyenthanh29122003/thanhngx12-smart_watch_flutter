@@ -9,6 +9,10 @@ import '../../widgets/dashboard/realtime_metrics_card.dart'; // <<< Import Widge
 import '../../widgets/dashboard/history_chart_card.dart'; // <<< Import Widget Con
 import '../../widgets/dashboard/spo2_history_chart_card.dart'; // <<< Import Widget Con
 import '../../widgets/dashboard/steps_history_chart_card.dart'; // <<< Import Widget Con
+import '../../app_constants.dart'; // <<< Import AppConstants
+import '../../services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/main_navigator.dart';
 
 class DashboardScreen extends StatefulWidget {
   // <<< CHUYỂN THÀNH STATEFUL
@@ -20,10 +24,14 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   // <<< TẠO STATE
-
+  // --- THÊM STATE CHO MỤC TIÊU CỦA DASHBOARD ---
+  int _dashboardStepGoal = AppConstants.defaultDailyStepGoal;
+  bool _isLoadingDashboardGoal = true;
+  // ------------------------------------------
   @override
   void initState() {
     super.initState();
+    _loadDashboardGoal();
     // Gọi fetch data lần đầu khi màn hình được tạo
     // Dùng addPostFrameCallback để đảm bảo context đã sẵn sàng và provider đã được build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -44,6 +52,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  // --- THÊM HÀM ĐỌC MỤC TIÊU TỪ SHAREDPREFERENCES ---
+  Future<void> _loadDashboardGoal() async {
+    // Không cần setState isLoading = true vì giá trị khởi tạo đã là true
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedGoal = prefs.getInt(AppConstants.prefKeyDailyStepGoal);
+      if (mounted) {
+        // Kiểm tra mounted trước khi setState
+        setState(() {
+          _dashboardStepGoal = savedGoal ?? AppConstants.defaultDailyStepGoal;
+          _isLoadingDashboardGoal = false; // Đánh dấu đã tải xong
+        });
+        print(
+            "[DashboardScreen] Loaded step goal from Prefs: $_dashboardStepGoal");
+      }
+    } catch (e) {
+      print("!!! [DashboardScreen] Error loading step goal from Prefs: $e");
+      if (mounted) {
+        setState(() {
+          _dashboardStepGoal =
+              AppConstants.defaultDailyStepGoal; // Dùng default nếu lỗi
+          _isLoadingDashboardGoal = false; // Đánh dấu đã tải xong (dù là lỗi)
+        });
+      }
+    }
+  }
+  // -------------------------------------------------
+
   @override
   void dispose() {
     // Hủy listener khi màn hình bị hủy
@@ -61,18 +97,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Hàm để tải lại dữ liệu lịch sử khi kết nối lại BLE (tùy chọn)
   void _handleConnectionChangeForRefresh() {
+    if (!mounted) {
+      print(
+          "[DashboardScreen] _handleConnectionChangeForRefresh called but widget is unmounted. Ignoring.");
+      return;
+    }
     final bleStatus =
         Provider.of<BleProvider>(context, listen: false).connectionStatus.value;
     if (bleStatus == BleConnectionStatus.connected) {
       print("[DashboardScreen] Reconnected to BLE, refreshing history...");
-      // Gọi fetch lại sau một khoảng delay nhỏ
       Future.delayed(const Duration(seconds: 2), () {
+        // Kiểm tra mounted lần nữa trước khi thực hiện thao tác bất đồng bộ
         if (mounted) {
-          // Kiểm tra mounted trước khi truy cập provider
-          Provider.of<DashboardProvider>(
-            context,
-            listen: false,
-          ).fetchHealthHistory();
+          Provider.of<DashboardProvider>(context, listen: false)
+              .fetchHealthHistory();
         }
       });
     }
@@ -80,7 +118,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Hàm helper để lấy text và màu cho trạng thái BLE (giữ nguyên)
   Widget _buildBleStatusChip(BleConnectionStatus status) {
-    // ... (code hàm này giữ nguyên) ...
     String text;
     Color color;
     IconData icon;
@@ -172,6 +209,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
+            const SizedBox(height: 16),
+            // --- NÚT TEST THÔNG BÁO TẠM THỜI --- // <<< THÊM VÀO ĐÂY
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 40.0), // Canh giữa chút
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.notifications_active),
+                label: const Text('Test Notification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber, // Màu nổi bật
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () {
+                  // Lấy instance NotificationService (đã được cung cấp trong main.dart)
+                  final notificationService =
+                      context.read<NotificationService>();
+
+                  // Gọi hàm hiển thị thông báo
+                  notificationService.showSimpleNotification(
+                    id: 999, // ID duy nhất cho thông báo test này
+                    title: "Smart Wearable Test",
+                    body:
+                        "Đây là thông báo kiểm tra hoạt động! ${DateTime.now().second}s",
+                    payload: "test_button_tapped", // Dữ liệu gửi kèm (tùy chọn)
+                    // Chỉ định kênh riêng cho test nếu muốn
+                    channelId: 'test_channel',
+                    channelName: 'Test Notifications',
+                    channelDescription:
+                        'Channel for testing notifications manually.',
+                  );
+                  print("[DashboardScreen] Test notification button pressed.");
+                  // Hiển thị SnackBar để xác nhận đã nhấn nút
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('Sent test notification! Check system tray.'),
+                        duration: Duration(seconds: 2)),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20), // Thêm khoảng cách
             // --- Widget Chỉ Số Realtime ---
             const RealtimeMetricsCard(), // <<< SỬ DỤNG WIDGET CON
             const SizedBox(height: 16),
@@ -181,16 +260,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               elevation: 2.0,
               child: ListTile(
                 leading: const Icon(Icons.flag_outlined),
-                title: const Text('Daily Goal Progress'),
-                subtitle: Consumer<BleProvider>(
-                  // Lấy steps realtime
-                  builder: (context, bleProvider, child) {
-                    final steps = bleProvider.latestHealthData?.steps ?? 0;
-                    final goal =
-                        10000; // TODO: Lấy mục tiêu từ Settings/Provider
-                    return Text('Steps: $steps / $goal');
-                  },
-                ),
+                title: const Text('Daily Goal Progress'), // TODO: Dịch
+                // <<< SỬA LẠI SUBTITLE >>>
+                subtitle: _isLoadingDashboardGoal
+                    ? const Text('Loading goal...') // Hiển thị loading
+                    : Consumer<BleProvider>(
+                        // Chỉ cần BleProvider
+                        builder: (context, bleProvider, child) {
+                          final steps =
+                              bleProvider.latestHealthData?.steps ?? 0;
+                          // Dùng _dashboardStepGoal từ state của màn hình này
+                          final goal = _dashboardStepGoal;
+                          return Text('Steps: $steps / $goal');
+                        },
+                      ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   /* Điều hướng tới GoalsScreen qua BottomNavBar */
