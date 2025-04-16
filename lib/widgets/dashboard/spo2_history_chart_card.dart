@@ -1,4 +1,4 @@
-// lib/widgets/dashboard/history_chart_card.dart
+// lib/widgets/dashboard/spo2_history_chart_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,8 +7,11 @@ import 'package:intl/intl.dart'; // Import để định dạng ngày giờ
 import '../../providers/dashboard_provider.dart';
 import '../../models/health_data.dart'; // Cần để truy cập HealthData
 
-class HistoryChartCard extends StatelessWidget {
-  const HistoryChartCard({super.key});
+class Spo2HistoryChartCard extends StatelessWidget {
+  const Spo2HistoryChartCard({super.key});
+
+  // Ngưỡng SpO2 tối thiểu hợp lệ để hiển thị trên biểu đồ
+  static const int minValidSpo2 = 85;
 
   @override
   Widget build(BuildContext context) {
@@ -17,17 +20,21 @@ class HistoryChartCard extends StatelessWidget {
       builder: (context, provider, child) {
         Widget chartContent;
 
-        // Xử lý các trạng thái tải dữ liệu
+        // Xử lý các trạng thái tải dữ liệu (giống HistoryChartCard)
         switch (provider.historyStatus) {
           case HistoryStatus.initial:
           case HistoryStatus.loading:
-            chartContent = const Center(child: CircularProgressIndicator());
+            // Giữ yên lặng trong trạng thái initial, chỉ hiện loading khi provider báo
+            chartContent = (provider.historyStatus == HistoryStatus.loading)
+                ? const Center(child: CircularProgressIndicator())
+                : const SizedBox(height: 200); // Placeholder giữ chiều cao
             break;
           case HistoryStatus.error:
             chartContent = Center(
               child: Text(
                 'Error: ${provider.historyError ?? "Could not load history"}',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
+                textAlign: TextAlign.center,
               ),
             );
             break;
@@ -38,8 +45,9 @@ class HistoryChartCard extends StatelessWidget {
                   child: Text(
                       'No history data available for the selected period.'));
             } else {
-              // Nếu có dữ liệu, tạo biểu đồ
-              chartContent = _buildLineChart(context, provider.healthHistory);
+              // Nếu có dữ liệu, tạo biểu đồ SpO2
+              chartContent =
+                  _buildSpo2LineChart(context, provider.healthHistory);
             }
             break;
         }
@@ -53,7 +61,7 @@ class HistoryChartCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Heart Rate History (Last 24h)', // Tiêu đề biểu đồ
+                  'SpO₂ History (Last 24h)', // <<< THAY ĐỔI TIÊU ĐỀ
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 16),
@@ -70,44 +78,41 @@ class HistoryChartCard extends StatelessWidget {
     );
   }
 
-  // --- Hàm xây dựng LineChart ---
-  Widget _buildLineChart(BuildContext context, List<HealthData> historyData) {
+  // --- Hàm xây dựng LineChart cho SpO2 ---
+  Widget _buildSpo2LineChart(
+      BuildContext context, List<HealthData> historyData) {
     // --- 1. Chuẩn bị dữ liệu cho biểu đồ ---
     List<FlSpot> spots = [];
-    List<HealthData> validData = []; // Chỉ lấy dữ liệu hợp lệ (hr > 0)
+    List<HealthData> validData = [];
 
-    // Lọc dữ liệu không hợp lệ (ví dụ: hr = -1 hoặc 0)
-    validData = historyData.where((data) => data.hr > 0).toList();
+    // Lọc dữ liệu SpO2 hợp lệ (ví dụ: >= minValidSpo2)
+    validData = historyData.where((data) => data.spo2 >= minValidSpo2).toList();
 
     // Nếu không có dữ liệu hợp lệ nào sau khi lọc
     if (validData.isEmpty) {
       return const Center(
-          child: Text('No valid heart rate data found in this period.'));
+          child: Text(
+              'No valid SpO₂ data (>= $minValidSpo2%) found in this period.'));
     }
 
-    // Tìm min/max cho trục Y (HR) từ dữ liệu hợp lệ
-    double minY = double.infinity;
-    double maxY = double.negativeInfinity;
+    // Tạo FlSpot và tìm min/max X
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
 
     for (var data in validData) {
-      // Tạo FlSpot: X là thời gian (milliseconds), Y là nhịp tim
+      final timeMillis = data.timestamp.millisecondsSinceEpoch.toDouble();
+      // Tạo FlSpot: X là thời gian (milliseconds), Y là SpO2
       spots.add(FlSpot(
-        data.timestamp.millisecondsSinceEpoch.toDouble(), // Trục X: Thời gian
-        data.hr.toDouble(), // Trục Y: Nhịp tim
+        timeMillis,
+        data.spo2.toDouble(), // <<< THAY ĐỔI: Dùng spo2
       ));
-      // Cập nhật min/max Y
-      if (data.hr < minY) minY = data.hr.toDouble();
-      if (data.hr > maxY) maxY = data.hr.toDouble();
+      if (timeMillis < minX) minX = timeMillis;
+      if (timeMillis > maxX) maxX = timeMillis;
     }
 
-    // Thêm khoảng đệm cho trục Y để đẹp hơn
-    minY = (minY - 5).clamp(0, double.infinity); // Đảm bảo không âm
-    maxY = maxY + 5;
-
-    // Tìm min/max cho trục X (Timestamp) - lấy từ record đầu và cuối đã sắp xếp
-    // (Giả sử historyData đã được sắp xếp theo thời gian tăng dần từ Firestore)
-    double minX = validData.first.timestamp.millisecondsSinceEpoch.toDouble();
-    double maxX = validData.last.timestamp.millisecondsSinceEpoch.toDouble();
+    // Thiết lập cứng min/max cho trục Y (SpO2) để có thang đo ổn định
+    double minY = minValidSpo2.toDouble() - 1; // Hơi dưới ngưỡng lọc
+    const double maxY = 101; // Hơi trên 100% để hiển thị đẹp
 
     // --- 2. Cấu hình LineChartData ---
     return LineChart(
@@ -115,50 +120,43 @@ class HistoryChartCard extends StatelessWidget {
         // --- Dữ liệu đường kẻ ---
         lineBarsData: [
           LineChartBarData(
-            spots: spots, // Danh sách các điểm dữ liệu
-            isCurved: true, // Vẽ đường cong
-            color: Colors.redAccent, // Màu đường kẻ
-            barWidth: 3, // Độ dày đường kẻ
+            spots: spots,
+            isCurved: true,
+            color: Colors.blue, // <<< THAY ĐỔI: Màu xanh dương cho SpO2
+            barWidth: 3,
             isStrokeCapRound: true,
-            dotData:
-                FlDotData(show: false), // Không hiển thị chấm trên điểm dữ liệu
+            dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
-              // Tô màu khu vực dưới đường kẻ
               show: true,
-              color: Colors.redAccent.withOpacity(0.2),
+              color: Colors.blue.withOpacity(0.2), // <<< THAY ĐỔI: Màu nền
             ),
           ),
         ],
 
         // --- Tiêu đề trục (Titles) ---
         titlesData: FlTitlesData(
-          // --- Trục Trái (Y - Heart Rate) ---
+          // --- Trục Trái (Y - SpO2) ---
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true, // Hiển thị tiêu đề trục Y
-              reservedSize: 40, // Khoảng trống cho tiêu đề
+              showTitles: true,
+              reservedSize: 40,
               getTitlesWidget: (value, meta) {
-                // Chỉ hiển thị một vài giá trị chính
-                if (value == meta.min ||
-                    value == meta.max ||
-                    (value >= minY + 5 && (value.toInt() % 10 == 0))) {
+                // Chỉ hiển thị các mốc chính (ví dụ: 90, 95, 100)
+                if (value == 90 || value == 95 || value == 100) {
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
-                    space: 8.0, // Khoảng cách từ trục
+                    space: 8.0,
                     child: Text(
-                      value
-                          .toInt()
-                          .toString(), // Hiển thị giá trị HR (số nguyên)
+                      '${value.toInt()}%', // <<< THAY ĐỔI: Hiển thị %
                       style: const TextStyle(fontSize: 10),
                     ),
                   );
                 }
-                return Container(); // Không hiển thị các giá trị khác
+                return Container();
               },
-              // interval: 10, // Có thể dùng interval nếu muốn cách đều
+              // interval: 5, // Hoặc có thể đặt interval cố định là 5
             ),
           ),
-          // Ẩn trục phải, trên
           rightTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles:
@@ -167,16 +165,14 @@ class HistoryChartCard extends StatelessWidget {
           // --- Trục Dưới (X - Thời gian) ---
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true, // Hiển thị tiêu đề trục X
-              reservedSize: 30, // Khoảng trống
-              interval: _calculateBottomTitleInterval(
-                  minX, maxX), // Tính khoảng cách tự động
+              showTitles: true,
+              reservedSize: 30,
+              interval: _calculateBottomTitleInterval(minX, maxX), // Giữ nguyên
               getTitlesWidget: (value, meta) {
-                // Chuyển đổi milliseconds về DateTime
+                // Giữ nguyên logic hiển thị giờ:phút
                 final dt = DateTime.fromMillisecondsSinceEpoch(value.toInt(),
                         isUtc: true)
                     .toLocal();
-                // Định dạng giờ:phút
                 final format = DateFormat('HH:mm');
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
@@ -196,9 +192,10 @@ class HistoryChartCard extends StatelessWidget {
           show: true,
           drawVerticalLine: true,
           drawHorizontalLine: true,
-          horizontalInterval: 10, // Khoảng cách lưới ngang (theo giá trị HR)
-          verticalInterval: _calculateBottomTitleInterval(
-              minX, maxX), // Khoảng cách lưới dọc (theo thời gian)
+          horizontalInterval:
+              5, // <<< THAY ĐỔI: Khoảng cách lưới ngang (theo SpO2 %)
+          verticalInterval:
+              _calculateBottomTitleInterval(minX, maxX), // Giữ nguyên
           getDrawingHorizontalLine: (value) {
             return FlLine(
                 color: Colors.grey.withOpacity(0.3), strokeWidth: 0.5);
@@ -208,50 +205,44 @@ class HistoryChartCard extends StatelessWidget {
                 color: Colors.grey.withOpacity(0.3), strokeWidth: 0.5);
           },
           checkToShowHorizontalLine: (value) {
-            // Chỉ vẽ lưới ngang tại các mốc chẵn 10
-            return value.toInt() % 10 == 0;
+            // Chỉ vẽ lưới ngang tại các mốc chẵn 5
+            return value.toInt() % 5 == 0;
           },
         ),
 
         // --- Đường viền (Border) ---
         borderData: FlBorderData(
+          // Giữ nguyên
           show: true,
           border: Border.all(color: Colors.grey.withOpacity(0.5), width: 1),
         ),
 
         // --- Giới hạn trục (Min/Max) ---
-        minX: minX, // Thời gian bắt đầu
-        maxX: maxX, // Thời gian kết thúc
-        minY: minY, // HR thấp nhất (có padding)
-        maxY: maxY, // HR cao nhất (có padding)
+        minX: minX, // Thời gian bắt đầu (tính từ dữ liệu lọc)
+        maxX: maxX, // Thời gian kết thúc (tính từ dữ liệu lọc)
+        minY: minY, // SpO2 thấp nhất (đặt cứng)
+        maxY: maxY, // SpO2 cao nhất (đặt cứng)
 
         // --- Dữ liệu chạm (Touch Tooltip) ---
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
               return touchedBarSpots.map((barSpot) {
-                // barSpot bây giờ là một LineBarSpot
-
-                // final flSpot = barSpot.spot; // <<< XÓA DÒNG NÀY ĐI
-
-                // Sử dụng trực tiếp barSpot.x và barSpot.y
-                // Chuyển X (milliseconds) về DateTime
                 final dt = DateTime.fromMillisecondsSinceEpoch(
                         barSpot.x.toInt(),
                         isUtc: true)
                     .toLocal();
-                // Định dạng tooltip
                 final timeStr = DateFormat('HH:mm:ss').format(dt);
-                // Lấy giá trị Y (HR) trực tiếp từ barSpot.y
-                final hrStr = barSpot.y.toInt().toString();
+                // <<< THAY ĐỔI: Lấy giá trị SpO2 và định dạng
+                final spo2Str = '${barSpot.y.toInt()}%';
 
                 return LineTooltipItem(
-                  '$timeStr\n', // Dòng 1: Thời gian
+                  '$timeStr\n',
                   const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(
-                      text: 'HR: $hrStr bpm', // Dòng 2: Giá trị HR
+                      text: 'SpO₂: $spo2Str', // <<< THAY ĐỔI: Hiển thị SpO2
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontWeight: FontWeight.normal,
@@ -263,22 +254,25 @@ class HistoryChartCard extends StatelessWidget {
               }).toList();
             },
           ),
-          handleBuiltInTouches: true, // Bật xử lý chạm mặc định
+          handleBuiltInTouches: true,
         ),
       ),
-      // duration: Duration(milliseconds: 150), // Optional animation
-      // curve: Curves.linear, // Optional animation curve
     );
   }
 
-  // Hàm tính khoảng cách (interval) phù hợp cho trục thời gian (X)
+  // Hàm tính khoảng cách (interval) phù hợp cho trục thời gian (X) - Giữ nguyên
   double _calculateBottomTitleInterval(double minX, double maxX) {
     final double durationMillis = maxX - minX;
-    // Quy đổi sang giờ
+    // Handle case where minX == maxX (only one data point)
+    if (durationMillis <= 0) return 1000 * 60 * 15; // Default to 15 mins
+
     final double durationHours = durationMillis / (1000 * 60 * 60);
 
-    if (durationHours <= 2) {
-      // Dưới 2 giờ: hiển thị mỗi 15 phút
+    if (durationHours <= 1) {
+      // Dưới 1 giờ: hiển thị mỗi 5 phút
+      return 1000 * 60 * 5;
+    } else if (durationHours <= 2) {
+      // 1-2 giờ: hiển thị mỗi 15 phút
       return 1000 * 60 * 15;
     } else if (durationHours <= 6) {
       // 2-6 giờ: hiển thị mỗi 30 phút

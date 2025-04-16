@@ -8,7 +8,7 @@ class HealthData {
   final int steps, hr, spo2, ir, red;
   final bool wifi;
   final DateTime
-  timestamp; // Lưu ý: Timestamp này nên là UTC nếu lấy từ DB/Server
+      timestamp; // Lưu ý: Timestamp này nên là UTC nếu lấy từ DB/Server
 
   HealthData({
     required this.ax,
@@ -74,13 +74,13 @@ class HealthData {
 
   // Chuyển đổi thành Map để lưu vào Firestore
   Map<String, dynamic> toJsonForFirestore() => {
-    'ax': ax, 'ay': ay, 'az': az,
-    'gx': gx, 'gy': gy, 'gz': gz,
-    'steps': steps, 'hr': hr, 'spo2': spo2,
-    'ir': ir, 'red': red, 'wifi': wifi,
-    // Firestore Timestamp lưu trực tiếp từ DateTime (nên là UTC)
-    'recordedAt': Timestamp.fromDate(timestamp),
-  };
+        'ax': ax, 'ay': ay, 'az': az,
+        'gx': gx, 'gy': gy, 'gz': gz,
+        'steps': steps, 'hr': hr, 'spo2': spo2,
+        'ir': ir, 'red': red, 'wifi': wifi,
+        // Firestore Timestamp lưu trực tiếp từ DateTime (nên là UTC)
+        'recordedAt': Timestamp.fromDate(timestamp),
+      };
 
   // (Tùy chọn) Thêm factory constructor để tạo từ Map của SQLite
   factory HealthData.fromDbMap(Map<String, dynamic> map) {
@@ -97,14 +97,56 @@ class HealthData {
       spo2: (map[LocalDbService.columnSpo2] as num?)?.toInt() ?? -1,
       ir: (map[LocalDbService.columnIr] as num?)?.toInt() ?? 0,
       red: (map[LocalDbService.columnRed] as num?)?.toInt() ?? 0,
-      wifi:
-          (map[LocalDbService.columnWifi] as int?) ==
+      wifi: (map[LocalDbService.columnWifi] as int?) ==
           1, // Chuyển int thành bool
       // Chuyển int milliseconds (đã lưu là UTC) thành DateTime UTC
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         map[LocalDbService.columnTimestamp] as int? ?? 0,
         isUtc: true,
       ),
+    );
+  }
+
+  // Factory mới để tạo từ Map của Firestore
+  factory HealthData.fromFirestoreMap(Map<String, dynamic> map) {
+    // Lấy Timestamp từ Firestore và kiểm tra null
+    Timestamp? recordTimestamp = map['recordedAt'] as Timestamp?;
+    // Chuyển đổi Timestamp Firestore thành DateTime (giữ UTC để nhất quán)
+    final DateTime timestampUTC = recordTimestamp?.toDate().toUtc() ??
+        DateTime.fromMillisecondsSinceEpoch(0,
+            isUtc: true); // Hoặc dùng DateTime.now().toUtc() nếu muốn
+
+    // Hàm helper parse số, trả về giá trị mặc định nếu null hoặc sai kiểu
+    T _parseNum<T extends num>(dynamic value, T defaultValue) {
+      if (value == null) return defaultValue;
+      if (value is String) {
+        // Xử lý nếu lỡ lưu thành String
+        if (defaultValue is double)
+          return (double.tryParse(value) ?? defaultValue) as T;
+        if (defaultValue is int)
+          return (int.tryParse(value) ?? defaultValue) as T;
+      }
+      if (value is num) {
+        if (defaultValue is double) return value.toDouble() as T;
+        if (defaultValue is int) return value.toInt() as T;
+      }
+      return defaultValue;
+    }
+
+    return HealthData(
+      ax: _parseNum(map['ax'], 0.0),
+      ay: _parseNum(map['ay'], 0.0),
+      az: _parseNum(map['az'], 0.0),
+      gx: _parseNum(map['gx'], 0.0),
+      gy: _parseNum(map['gy'], 0.0),
+      gz: _parseNum(map['gz'], 0.0),
+      steps: _parseNum(map['steps'], 0),
+      hr: _parseNum(map['hr'], -1), // Giữ -1 nếu không có hoặc null
+      spo2: _parseNum(map['spo2'], -1), // Giữ -1 nếu không có hoặc null
+      ir: _parseNum(map['ir'], 0),
+      red: _parseNum(map['red'], 0),
+      wifi: (map['wifi'] as bool?) ?? false,
+      timestamp: timestampUTC, // Sử dụng DateTime UTC đã parse
     );
   }
 

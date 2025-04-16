@@ -29,8 +29,8 @@ class FirestoreService {
       if (photoURL != null && photoURL.isNotEmpty) 'photoURL': photoURL,
       'lastLogin':
           FieldValue.serverTimestamp(), // Cập nhật thời gian đăng nhập cuối
-      'createdAt':
-          FieldValue.serverTimestamp(), // Chỉ ghi khi tạo mới (dùng set với merge:false)
+      'createdAt': FieldValue
+          .serverTimestamp(), // Chỉ ghi khi tạo mới (dùng set với merge:false)
     };
 
     try {
@@ -136,14 +136,13 @@ class FirestoreService {
     String userId,
   ) async {
     try {
-      final querySnap =
-          await _db
-              .collection(AppConstants.usersCollection)
-              .doc(userId)
-              .collection(AppConstants.healthDataSubcollection)
-              .orderBy('recordedAt', descending: true)
-              .limit(1)
-              .get();
+      final querySnap = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.healthDataSubcollection)
+          .orderBy('recordedAt', descending: true)
+          .limit(1)
+          .get();
 
       if (querySnap.docs.isNotEmpty) {
         return querySnap.docs.first;
@@ -209,13 +208,12 @@ class FirestoreService {
     String userId,
   ) async {
     try {
-      final docSnap =
-          await _db
-              .collection(AppConstants.usersCollection)
-              .doc(userId)
-              .collection(AppConstants.goalsSubcollection)
-              .doc('daily')
-              .get();
+      final docSnap = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.goalsSubcollection)
+          .doc('daily')
+          .get();
       if (docSnap.exists) {
         return docSnap;
       } else {
@@ -245,24 +243,23 @@ class FirestoreService {
       final Timestamp startTimestamp = Timestamp.fromDate(startTime.toUtc());
       final Timestamp endTimestamp = Timestamp.fromDate(endTime.toUtc());
 
-      final querySnapshot =
-          await _db
-              .collection(AppConstants.usersCollection)
-              .doc(userId)
-              .collection(AppConstants.healthDataSubcollection)
-              .where(
-                // Lọc theo trường timestamp đã lưu (phải là kiểu Timestamp)
-                'recordedAt',
-                isGreaterThanOrEqualTo:
-                    startTimestamp, // Lớn hơn hoặc bằng startTime
-                isLessThanOrEqualTo: endTimestamp, // Nhỏ hơn hoặc bằng endTime
-              )
-              .orderBy(
-                'recordedAt',
-                descending: false,
-              ) // Sắp xếp tăng dần theo thời gian
-              // .limit(1000) // Có thể thêm giới hạn nếu cần
-              .get();
+      final querySnapshot = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.healthDataSubcollection)
+          .where(
+            // Lọc theo trường timestamp đã lưu (phải là kiểu Timestamp)
+            'recordedAt',
+            isGreaterThanOrEqualTo:
+                startTimestamp, // Lớn hơn hoặc bằng startTime
+            isLessThanOrEqualTo: endTimestamp, // Nhỏ hơn hoặc bằng endTime
+          )
+          .orderBy(
+            'recordedAt',
+            descending: false,
+          ) // Sắp xếp tăng dần theo thời gian
+          // .limit(1000) // Có thể thêm giới hạn nếu cần
+          .get();
 
       print(
         "[FirestoreService] Found ${querySnapshot.docs.length} records in period.",
@@ -271,16 +268,23 @@ class FirestoreService {
       // Chuyển đổi các document snapshot thành đối tượng HealthData
       // lib/services/firestore_service.dart
       // Trong hàm getHealthDataForPeriod:
-      historyData =
-          querySnapshot.docs.map((doc) {
-            final map = doc.data();
-            // Chuyển đổi Timestamp thủ công trước khi gọi fromDbMap (nếu fromDbMap nhận milliseconds)
-            Timestamp? ts = map['recordedAt'] as Timestamp?;
-            map['timestamp'] =
-                ts?.millisecondsSinceEpoch ??
-                0; // Thêm trường timestamp milliseconds
-            return HealthData.fromDbMap(map); // Gọi hàm cũ
-          }).toList();
+      // Trong hàm getHealthDataForPeriod:
+      historyData = querySnapshot.docs
+          .map((doc) {
+            try {
+              // Lấy dữ liệu từ document snapshot
+              final map = doc.data();
+              // Gọi hàm factory mới để parse từ map của Firestore
+              return HealthData.fromFirestoreMap(map); // <<< SỬA Ở ĐÂY
+            } catch (e) {
+              print("!!! Error parsing Firestore document ${doc.id}: $e");
+              print("Document data: ${doc.data()}"); // In ra dữ liệu gây lỗi
+              return null; // Trả về null nếu parse lỗi
+            }
+          })
+// Lọc bỏ các giá trị null có thể xảy ra do lỗi parsing
+          .whereType<HealthData>()
+          .toList();
     } catch (e) {
       print("!!! Error fetching health data history: $e");
       // Nếu có lỗi, trả về danh sách rỗng

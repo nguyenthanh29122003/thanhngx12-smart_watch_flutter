@@ -7,6 +7,8 @@ import '../../providers/dashboard_provider.dart'; // <<< Import DashboardProvide
 import '../../services/ble_service.dart';
 import '../../widgets/dashboard/realtime_metrics_card.dart'; // <<< Import Widget Con
 import '../../widgets/dashboard/history_chart_card.dart'; // <<< Import Widget Con
+import '../../widgets/dashboard/spo2_history_chart_card.dart'; // <<< Import Widget Con
+import '../../widgets/dashboard/steps_history_chart_card.dart'; // <<< Import Widget Con
 
 class DashboardScreen extends StatefulWidget {
   // <<< CHUYỂN THÀNH STATEFUL
@@ -137,8 +139,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Center(
               child: ValueListenableBuilder<BleConnectionStatus>(
                 valueListenable: context.read<BleProvider>().connectionStatus,
-                builder:
-                    (context, status, child) => _buildBleStatusChip(status),
+                builder: (context, status, child) =>
+                    _buildBleStatusChip(status),
               ),
             ),
           ),
@@ -174,13 +176,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const RealtimeMetricsCard(), // <<< SỬ DỤNG WIDGET CON
             const SizedBox(height: 16),
 
-            // --- Widget Biểu Đồ Lịch Sử ---
-            const HistoryChartCard(), // <<< SỬ DỤNG WIDGET CON
-            const SizedBox(height: 16),
-
-            // Có thể thêm lại các Card khác nếu muốn (IMU, Other Sensors)
-            // Hoặc di chuyển chúng vào widget con riêng
-
             // --- Placeholder Mục Tiêu (Ví dụ) ---
             Card(
               elevation: 2.0,
@@ -202,6 +197,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
             ),
+
+            // --- Widget Biểu Đồ Lịch Sử ---
+            const HistoryChartCard(), // <<< SỬ DỤNG WIDGET CON
+            const SizedBox(height: 16),
+
+            // --- Widget Biểu Đồ Lịch Sử SpO2 --- // <<< THÊM VÀO ĐÂY
+            const Spo2HistoryChartCard(),
+            const SizedBox(height: 16),
+
+            // --- Widget Biểu Đồ Lịch Sử Steps --- // <<< THÊM VÀO ĐÂY
+            StepsHistoryChartCard(), // <<< KHÔNG DÙNG CONST
+            const SizedBox(height: 16),
+
+            // Có thể thêm lại các Card khác nếu muốn (IMU, Other Sensors)
+            // Hoặc di chuyển chúng vào widget con riêng
           ],
         ),
       ),
