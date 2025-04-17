@@ -123,4 +123,151 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get healthDisclaimer => 'This is general information, not medical advice. Consult a doctor for professional guidance.';
+
+  @override
+  String get relativesScreenTitle => 'Relatives';
+
+  @override
+  String get addRelativeTooltip => 'Add Relative';
+
+  @override
+  String get addRelativeDialogTitle => 'Add New Relative';
+
+  @override
+  String get relativeNameLabel => 'Name';
+
+  @override
+  String get relativeNameHint => 'Enter relative\'s full name';
+
+  @override
+  String get relativeNameValidation => 'Please enter a name';
+
+  @override
+  String get relationshipLabel => 'Relationship';
+
+  @override
+  String get relationshipHint => 'Select Relationship';
+
+  @override
+  String get relationshipValidation => 'Please select a relationship';
+
+  @override
+  String get addRelativeButton => 'Add Relative';
+
+  @override
+  String get deleteButton => 'Delete';
+
+  @override
+  String get deleteRelativeConfirmationTitle => 'Confirm Deletion';
+
+  @override
+  String relativeDeletedSnackbar(String relativeName) {
+    return 'Relative \'$relativeName\' deleted.';
+  }
+
+  @override
+  String get pleaseLoginRelatives => 'Please login to manage relatives.';
+
+  @override
+  String get noRelativesYet => 'No relatives added yet.';
+
+  @override
+  String get addFirstRelativeHint => 'Tap the + button above to add your first relative.';
+
+  @override
+  String get addRelativeEmptyButton => 'Add Relative';
+
+  @override
+  String deleteRelativeTooltip(String relativeName) {
+    return 'Delete $relativeName';
+  }
+
+  @override
+  String get editRelativeDialogTitle => 'Edit Relative';
+
+  @override
+  String get saveChangesButton => 'Save Changes';
+
+  @override
+  String get relativeUpdatedSuccess => 'Relative updated successfully!';
+
+  @override
+  String get relativeUpdatedError => 'Failed to update relative.';
+
+  @override
+  String editRelativeTooltip(String relativeName) {
+    return 'Edit $relativeName';
+  }
+
+  @override
+  String get relationFather => 'Father';
+
+  @override
+  String get relationMother => 'Mother';
+
+  @override
+  String get relationSon => 'Son';
+
+  @override
+  String get relationDaughter => 'Daughter';
+
+  @override
+  String get relationBrother => 'Brother';
+
+  @override
+  String get relationSister => 'Sister';
+
+  @override
+  String get relationGrandfather => 'Grandfather';
+
+  @override
+  String get relationGrandmother => 'Grandmother';
+
+  @override
+  String get relationFriend => 'Friend';
+
+  @override
+  String get relationSpouse => 'Spouse';
+
+  @override
+  String get relationPartner => 'Partner';
+
+  @override
+  String get relationGuardian => 'Guardian';
+
+  @override
+  String get relationDoctor => 'Doctor';
+
+  @override
+  String get relationCaregiver => 'Caregiver';
+
+  @override
+  String get relationOther => 'Other';
+
+  @override
+  String get sectionDeviceManagement => 'Device Management';
+
+  @override
+  String get sectionNetwork => 'Network';
+
+  @override
+  String get sectionNotifications => 'Notifications';
+
+  @override
+  String get noDeviceConnected => 'No Device Connected';
+
+  @override
+  String get connectPrompt => 'Connect via \"Change Device\"';
+
+  @override
+  String get disconnectButton => 'Disconnect';
+
+  @override
+  String get changeForgetDevice => 'Change / Forget Device';
+
+  @override
+  String get connectDeviceFirstSnackbar => 'Connect to device first.';
+
+  @override
+  String get noEmail => 'No Email';
 }

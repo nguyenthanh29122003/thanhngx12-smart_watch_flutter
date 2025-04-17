@@ -292,10 +292,60 @@ class FirestoreService {
     }
     return historyData;
   }
-}
 
-// (Tùy chọn) Lớp Exception tùy chỉnh
-// class FirestoreException implements Exception {
-//   final String code;
-//   FirestoreException(this.code);
-// }
+  // Trong class FirestoreService
+  Future<void> deleteRelative(String userId, String relativeId) async {
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants.relativesSubcollection)
+          .doc(relativeId)
+          .delete();
+      print("Relative $relativeId deleted for user $userId");
+    } catch (e) {
+      print("Error deleting relative $relativeId: $e");
+      // Ném lại lỗi để Provider có thể bắt và xử lý
+      throw FirebaseException(
+          plugin: 'FirestoreService',
+          code: 'delete-failed',
+          message: e.toString());
+    }
+  }
+
+  // <<< THÊM HÀM CẬP NHẬT NGƯỜI THÂN >>>
+  Future<void> updateRelative(String userId, String relativeId,
+      Map<String, dynamic> updatedData) async {
+    // Chỉ cho phép cập nhật 'name' và 'relationship', thêm 'updatedAt'
+    final Map<String, dynamic> dataToUpdate = {
+      if (updatedData.containsKey('name')) 'name': updatedData['name'],
+      if (updatedData.containsKey('relationship'))
+        'relationship': updatedData['relationship'],
+      'updatedAt':
+          FieldValue.serverTimestamp(), // Luôn cập nhật thời gian sửa đổi
+    };
+
+    // Chỉ thực hiện cập nhật nếu có dữ liệu cần cập nhật (tránh ghi timestamp không cần thiết)
+    if (dataToUpdate.length > 1) {
+      // Luôn có updatedAt
+      try {
+        await _db
+            .collection(AppConstants.usersCollection)
+            .doc(userId)
+            .collection(AppConstants.relativesSubcollection)
+            .doc(relativeId)
+            .update(dataToUpdate); // Dùng update()
+        print("Relative $relativeId updated for user $userId");
+      } catch (e) {
+        print("Error updating relative $relativeId: $e");
+        throw FirebaseException(
+            plugin: 'FirestoreService',
+            code: 'update-failed',
+            message: e.toString());
+      }
+    } else {
+      print("No changes detected for relative $relativeId. Update skipped.");
+      // Có thể throw lỗi nhẹ hoặc trả về gì đó nếu muốn báo không có gì thay đổi
+    }
+  }
+}

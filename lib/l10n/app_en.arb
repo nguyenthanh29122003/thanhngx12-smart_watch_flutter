@@ -56,5 +56,70 @@
   "enterMessage": "Enter your message or question",
   "imageUrlLabel": "Enter image URL (optional)",
   "errorSendingMessage": "Error sending message",
-  "healthDisclaimer": "This is general information, not medical advice. Consult a doctor for professional guidance."
+  "healthDisclaimer": "This is general information, not medical advice. Consult a doctor for professional guidance.",
+  "relativesScreenTitle": "Relatives",
+  "addRelativeTooltip": "Add Relative",
+  "addRelativeDialogTitle": "Add New Relative",
+  "relativeNameLabel": "Name",
+  "relativeNameHint": "Enter relative's full name",
+  "relativeNameValidation": "Please enter a name",
+  "relationshipLabel": "Relationship",
+  "relationshipHint": "Select Relationship",
+  "relationshipValidation": "Please select a relationship",
+  "addRelativeButton": "Add Relative",
+  "deleteButton": "Delete",
+  "deleteRelativeConfirmationTitle": "Confirm Deletion",
+  "relativeDeletedSnackbar": "Relative '{relativeName}' deleted.",
+  "@relativeDeletedSnackbar": {
+    "description": "Snackbar message shown after successfully deleting a relative.",
+    "placeholders": {
+      "relativeName": { "type": "String", "example": "Jane Doe" }
+    }
+  },
+  "pleaseLoginRelatives": "Please login to manage relatives.",
+  "noRelativesYet": "No relatives added yet.",
+  "addFirstRelativeHint": "Tap the + button above to add your first relative.",
+  "addRelativeEmptyButton": "Add Relative",
+  "deleteRelativeTooltip": "Delete {relativeName}",
+   "@deleteRelativeTooltip": {
+    "description": "Tooltip for the delete icon next to a relative's name.",
+    "placeholders": {
+      "relativeName": { "type": "String", "example": "John Doe" }
+    }
+  },
+  "editRelativeDialogTitle": "Edit Relative",
+  "saveChangesButton": "Save Changes",
+  "relativeUpdatedSuccess": "Relative updated successfully!",
+  "relativeUpdatedError": "Failed to update relative.",
+  "editRelativeTooltip": "Edit {relativeName}",
+  "@editRelativeTooltip": {
+    "description": "Tooltip for the edit icon next to a relative's name.",
+    "placeholders": {
+      "relativeName": { "type": "String", "example": "John Doe" }
+    }
+  },
+   "relationFather": "Father",
+  "relationMother": "Mother",
+  "relationSon": "Son",
+  "relationDaughter": "Daughter",
+  "relationBrother": "Brother",
+  "relationSister": "Sister",
+  "relationGrandfather": "Grandfather",
+  "relationGrandmother": "Grandmother",
+  "relationFriend": "Friend",
+  "relationSpouse": "Spouse",
+  "relationPartner": "Partner",
+  "relationGuardian": "Guardian",
+  "relationDoctor": "Doctor",
+  "relationCaregiver": "Caregiver",
+  "relationOther": "Other",
+  "sectionDeviceManagement": "Device Management",
+  "sectionNetwork": "Network",
+  "sectionNotifications": "Notifications",
+  "noDeviceConnected": "No Device Connected",
+  "connectPrompt": "Connect via \"Change Device\"",
+  "disconnectButton": "Disconnect",
+  "changeForgetDevice": "Change / Forget Device",
+  "connectDeviceFirstSnackbar": "Connect to device first.",
+  "noEmail": "No Email"
 }

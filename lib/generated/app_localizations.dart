@@ -322,6 +322,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This is general information, not medical advice. Consult a doctor for professional guidance.'**
   String get healthDisclaimer;
+
+  /// No description provided for @relativesScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Relatives'**
+  String get relativesScreenTitle;
+
+  /// No description provided for @addRelativeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Relative'**
+  String get addRelativeTooltip;
+
+  /// No description provided for @addRelativeDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Relative'**
+  String get addRelativeDialogTitle;
+
+  /// No description provided for @relativeNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get relativeNameLabel;
+
+  /// No description provided for @relativeNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter relative\'s full name'**
+  String get relativeNameHint;
+
+  /// No description provided for @relativeNameValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name'**
+  String get relativeNameValidation;
+
+  /// No description provided for @relationshipLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship'**
+  String get relationshipLabel;
+
+  /// No description provided for @relationshipHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Relationship'**
+  String get relationshipHint;
+
+  /// No description provided for @relationshipValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a relationship'**
+  String get relationshipValidation;
+
+  /// No description provided for @addRelativeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Relative'**
+  String get addRelativeButton;
+
+  /// No description provided for @deleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteButton;
+
+  /// No description provided for @deleteRelativeConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Deletion'**
+  String get deleteRelativeConfirmationTitle;
+
+  /// Snackbar message shown after successfully deleting a relative.
+  ///
+  /// In en, this message translates to:
+  /// **'Relative \'{relativeName}\' deleted.'**
+  String relativeDeletedSnackbar(String relativeName);
+
+  /// No description provided for @pleaseLoginRelatives.
+  ///
+  /// In en, this message translates to:
+  /// **'Please login to manage relatives.'**
+  String get pleaseLoginRelatives;
+
+  /// No description provided for @noRelativesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No relatives added yet.'**
+  String get noRelativesYet;
+
+  /// No description provided for @addFirstRelativeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the + button above to add your first relative.'**
+  String get addFirstRelativeHint;
+
+  /// No description provided for @addRelativeEmptyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Relative'**
+  String get addRelativeEmptyButton;
+
+  /// Tooltip for the delete icon next to a relative's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {relativeName}'**
+  String deleteRelativeTooltip(String relativeName);
+
+  /// No description provided for @editRelativeDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Relative'**
+  String get editRelativeDialogTitle;
+
+  /// No description provided for @saveChangesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get saveChangesButton;
+
+  /// No description provided for @relativeUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Relative updated successfully!'**
+  String get relativeUpdatedSuccess;
+
+  /// No description provided for @relativeUpdatedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update relative.'**
+  String get relativeUpdatedError;
+
+  /// Tooltip for the edit icon next to a relative's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {relativeName}'**
+  String editRelativeTooltip(String relativeName);
+
+  /// No description provided for @relationFather.
+  ///
+  /// In en, this message translates to:
+  /// **'Father'**
+  String get relationFather;
+
+  /// No description provided for @relationMother.
+  ///
+  /// In en, this message translates to:
+  /// **'Mother'**
+  String get relationMother;
+
+  /// No description provided for @relationSon.
+  ///
+  /// In en, this message translates to:
+  /// **'Son'**
+  String get relationSon;
+
+  /// No description provided for @relationDaughter.
+  ///
+  /// In en, this message translates to:
+  /// **'Daughter'**
+  String get relationDaughter;
+
+  /// No description provided for @relationBrother.
+  ///
+  /// In en, this message translates to:
+  /// **'Brother'**
+  String get relationBrother;
+
+  /// No description provided for @relationSister.
+  ///
+  /// In en, this message translates to:
+  /// **'Sister'**
+  String get relationSister;
+
+  /// No description provided for @relationGrandfather.
+  ///
+  /// In en, this message translates to:
+  /// **'Grandfather'**
+  String get relationGrandfather;
+
+  /// No description provided for @relationGrandmother.
+  ///
+  /// In en, this message translates to:
+  /// **'Grandmother'**
+  String get relationGrandmother;
+
+  /// No description provided for @relationFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend'**
+  String get relationFriend;
+
+  /// No description provided for @relationSpouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Spouse'**
+  String get relationSpouse;
+
+  /// No description provided for @relationPartner.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner'**
+  String get relationPartner;
+
+  /// No description provided for @relationGuardian.
+  ///
+  /// In en, this message translates to:
+  /// **'Guardian'**
+  String get relationGuardian;
+
+  /// No description provided for @relationDoctor.
+  ///
+  /// In en, this message translates to:
+  /// **'Doctor'**
+  String get relationDoctor;
+
+  /// No description provided for @relationCaregiver.
+  ///
+  /// In en, this message translates to:
+  /// **'Caregiver'**
+  String get relationCaregiver;
+
+  /// No description provided for @relationOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get relationOther;
+
+  /// No description provided for @sectionDeviceManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Device Management'**
+  String get sectionDeviceManagement;
+
+  /// No description provided for @sectionNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get sectionNetwork;
+
+  /// No description provided for @sectionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get sectionNotifications;
+
+  /// No description provided for @noDeviceConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'No Device Connected'**
+  String get noDeviceConnected;
+
+  /// No description provided for @connectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect via \"Change Device\"'**
+  String get connectPrompt;
+
+  /// No description provided for @disconnectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnectButton;
+
+  /// No description provided for @changeForgetDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Change / Forget Device'**
+  String get changeForgetDevice;
+
+  /// No description provided for @connectDeviceFirstSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to device first.'**
+  String get connectDeviceFirstSnackbar;
+
+  /// No description provided for @noEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'No Email'**
+  String get noEmail;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

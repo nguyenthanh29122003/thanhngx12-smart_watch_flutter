@@ -141,14 +141,14 @@ class SettingsScreen extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500)), // Dịch 'Name' nếu null
-                subtitle: Text(authUser.email ?? 'No Email'),
+                subtitle: Text(authUser.email ?? l10n.noEmail),
               ),
               const Divider(height: 1),
             ],
 
             // --- Device Management Section ---
-            _buildSectionTitle(
-                context, 'Device Management'), // Hàm helper tạo tiêu đề
+            _buildSectionTitle(context,
+                l10n.sectionDeviceManagement), // Hàm helper tạo tiêu đề
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               leading: Icon(
@@ -160,7 +160,7 @@ class SettingsScreen extends StatelessWidget {
                   ? (connectedDevice.platformName.isNotEmpty
                       ? connectedDevice.platformName
                       : 'ESP32 Wearable')
-                  : 'No Device Connected'),
+                  : l10n.noDeviceConnected),
               subtitle: Text(connectedDevice?.remoteId.toString() ??
                   'Connect via "Change Device"'),
               trailing: isConnected
@@ -212,7 +212,7 @@ class SettingsScreen extends StatelessWidget {
             const Divider(height: 1),
 
             // --- Network Configuration Section ---
-            _buildSectionTitle(context, 'Network'),
+            _buildSectionTitle(context, l10n.sectionNetwork),
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               leading: const Icon(Icons.wifi_password_outlined),
@@ -275,13 +275,13 @@ class SettingsScreen extends StatelessWidget {
 
             // --- Notifications Placeholder ---
             // --- Notifications Section --- // <<< CẬP NHẬT PHẦN NÀY
-            _buildSectionTitle(context, "Notifications"), // Dịch ''
+            _buildSectionTitle(context, l10n.sectionNotifications), // Dịch ''
             SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               title:
                   Text("Enable Health Alerts"), // Dịch 'Enable Health Alerts'
-              subtitle: Text(
-                  "Receive notifications..."), // Dịch 'Receive notifications...'
+              subtitle:
+                  Text(l10n.connectPrompt), // Dịch 'Receive notifications...'
               // --- Lấy value từ provider ---
               value: notificationsAreEnabled,
               // --- Gọi hàm update từ provider khi thay đổi ---

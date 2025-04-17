@@ -31,28 +31,23 @@ class RelativesProvider with ChangeNotifier {
       print(
         "[RelativesProvider] User logged in (${user.uid}), setting up relatives stream.",
       );
-      _relativesStream = _firestoreService
-          .getRelatives(user.uid)
-          .map(
-            (snapshot) =>
-                snapshot
-                    .docs // Chuyển QuerySnapshot thành List<DocumentSnapshot>
-                    .map((doc) {
-                      try {
-                        return Relative.fromSnapshot(
-                          doc,
-                        ); // Chuyển DocumentSnapshot thành Relative object
-                      } catch (e) {
-                        print(
-                          "!!! Error parsing relative data for doc ${doc.id}: $e",
-                        );
-                        return null; // Bỏ qua bản ghi lỗi
-                      }
-                    })
-                    .whereType<
-                      Relative
-                    >() // Lọc bỏ các giá trị null (do lỗi parse)
-                    .toList(),
+      _relativesStream = _firestoreService.getRelatives(user.uid).map(
+            (snapshot) => snapshot
+                .docs // Chuyển QuerySnapshot thành List<DocumentSnapshot>
+                .map((doc) {
+                  try {
+                    return Relative.fromSnapshot(
+                      doc,
+                    ); // Chuyển DocumentSnapshot thành Relative object
+                  } catch (e) {
+                    print(
+                      "!!! Error parsing relative data for doc ${doc.id}: $e",
+                    );
+                    return null; // Bỏ qua bản ghi lỗi
+                  }
+                })
+                .whereType<Relative>() // Lọc bỏ các giá trị null (do lỗi parse)
+                .toList(),
           );
     } else {
       print("[RelativesProvider] User logged out, clearing relatives stream.");
@@ -94,23 +89,53 @@ class RelativesProvider with ChangeNotifier {
   // Hàm xóa người thân (ví dụ)
   Future<bool> deleteRelative(String relativeId) async {
     final user = _authService.currentUser;
-    if (user == null) return false;
-    print("[RelativesProvider] Deleting relative: $relativeId");
-    try {
-      await _firestoreService.firestoreInstance
-          .collection('users')
-          .doc(user.uid)
-          .collection('relatives')
-          .doc(relativeId)
-          .delete();
-      print("[RelativesProvider] Relative deleted successfully.");
-      return true;
-    } catch (e) {
-      print("!!! [RelativesProvider] Error deleting relative: $e");
+    if (user == null) {
+      print("[RelativesProvider] Cannot delete relative: User not logged in.");
       return false;
+    }
+    print(
+        "[RelativesProvider] Deleting relative: $relativeId for user ${user.uid}");
+    try {
+      // <<< GỌI HÀM TỪ FIRESTORE SERVICE >>>
+      await _firestoreService.deleteRelative(user.uid, relativeId);
+      print("[RelativesProvider] Relative deleted successfully via service.");
+      // Không cần notifyListeners() vì StreamBuilder sẽ tự cập nhật
+      return true; // Trả về true khi thành công
+    } catch (e) {
+      print("!!! [RelativesProvider] Error deleting relative via service: $e");
+      return false; // Trả về false khi thất bại
     }
   }
 
-  // Dispose không cần thiết vì stream được quản lý bởi FirestoreService
-  // và listener auth tự hủy khi provider dispose
+// <<< THÊM HÀM CẬP NHẬT >>>
+  Future<bool> updateRelative(
+      String relativeId, String newName, String newRelationship) async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      print("[RelativesProvider] Cannot update relative: User not logged in.");
+      return false;
+    }
+    if (newName.trim().isEmpty || newRelationship.trim().isEmpty) {
+      print(
+          "[RelativesProvider] Cannot update relative: Name or relationship is empty.");
+      return false;
+    }
+
+    print(
+        "[RelativesProvider] Updating relative $relativeId: Name=$newName, Relationship=$newRelationship");
+    try {
+      final Map<String, dynamic> updatedData = {
+        'name': newName.trim(),
+        'relationship': newRelationship.trim(),
+      };
+      // Gọi hàm service để cập nhật
+      await _firestoreService.updateRelative(user.uid, relativeId, updatedData);
+      print("[RelativesProvider] Relative updated successfully via service.");
+      // Không cần notifyListeners() vì StreamBuilder sẽ tự cập nhật
+      return true; // Thành công
+    } catch (e) {
+      print("!!! [RelativesProvider] Error updating relative via service: $e");
+      return false; // Thất bại
+    }
+  }
 }
