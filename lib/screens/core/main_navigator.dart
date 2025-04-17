@@ -12,10 +12,10 @@ class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
 
   @override
-  State<MainNavigator> createState() => _MainNavigatorState();
+  State<MainNavigator> createState() => MainNavigatorState();
 }
 
-class _MainNavigatorState extends State<MainNavigator> {
+class MainNavigatorState extends State<MainNavigator> {
   int _selectedIndex = 0; // Index của tab đang được chọn
 
   // Danh sách các màn hình tương ứng với các tab
@@ -33,6 +33,20 @@ class _MainNavigatorState extends State<MainNavigator> {
     });
   }
 
+  void navigateTo(int index) {
+    print("[MainNavigator] navigateTo called with index: $index");
+    if (index >= 0 &&
+        index < _widgetOptions.length &&
+        index != _selectedIndex) {
+      _onItemTapped(index); // Gọi hàm xử lý nhấn tab nội bộ
+    } else if (index == _selectedIndex) {
+      print("[MainNavigator] Already on tab $index.");
+    } else {
+      print("[MainNavigator] Invalid index $index for navigation.");
+    }
+  }
+
+  // <<< ----------------------------------------------- >>>
   @override
   Widget build(BuildContext context) {
     print(

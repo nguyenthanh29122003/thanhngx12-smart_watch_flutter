@@ -26,6 +26,9 @@ import 'screens/splash_screen.dart';
 import 'screens/device/device_select_screen.dart';
 import 'services/notification_service.dart'; // <<< THÊM IMPORT NÀY
 
+final GlobalKey<MainNavigatorState> mainNavigatorKey =
+    GlobalKey<MainNavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
