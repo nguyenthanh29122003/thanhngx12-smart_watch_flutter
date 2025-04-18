@@ -410,4 +410,47 @@ class AppLocalizationsVi extends AppLocalizations {
   String loginFailedError(String errorDetails) {
     return 'Đăng nhập Thất bại: $errorDetails';
   }
+
+  @override
+  String get signUpTitle => 'Đăng ký';
+
+  @override
+  String get displayNameLabel => 'Tên hiển thị';
+
+  @override
+  String get displayNameValidation => 'Vui lòng nhập tên của bạn';
+
+  @override
+  String get confirmPasswordLabel => 'Xác nhận Mật khẩu';
+
+  @override
+  String get confirmPasswordValidationEmpty => 'Vui lòng xác nhận mật khẩu';
+
+  @override
+  String get confirmPasswordValidationMatch => 'Mật khẩu không khớp';
+
+  @override
+  String get signUpButton => 'Đăng ký';
+
+  @override
+  String get loginPrompt => 'Đã có tài khoản? Đăng nhập';
+
+  @override
+  String get resetPasswordDialogTitle => 'Đặt lại Mật khẩu';
+
+  @override
+  String get enterYourEmailHint => 'Nhập email tài khoản của bạn';
+
+  @override
+  String get sendResetEmailButton => 'Gửi Email Đặt lại';
+
+  @override
+  String resetEmailSentSuccess(String email) {
+    return 'Email đặt lại mật khẩu đã được gửi đến $email. Vui lòng kiểm tra hộp thư đến (và thư mục spam).';
+  }
+
+  @override
+  String resetEmailSentError(String errorDetails) {
+    return 'Gửi email đặt lại thất bại: $errorDetails';
+  }
 }

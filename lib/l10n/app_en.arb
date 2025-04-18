@@ -180,5 +180,20 @@
   "loginFailedError": "Login Failed: {errorDetails}",
    "@loginFailedError": {
      "placeholders": { "errorDetails": { "type": "String", "example": "Invalid credentials" } }
-  }
+  },
+  "signUpTitle": "Sign Up",
+  "displayNameLabel": "Display Name",
+  "displayNameValidation": "Please enter your name",
+  "confirmPasswordLabel": "Confirm Password",
+  "confirmPasswordValidationEmpty": "Please confirm your password",
+  "confirmPasswordValidationMatch": "Passwords do not match",
+  "signUpButton": "Sign Up",
+  "loginPrompt": "Already have an account? Login",
+  "resetPasswordDialogTitle": "Reset Password",
+  "enterYourEmailHint": "Enter your account email",
+  "sendResetEmailButton": "Send Reset Email",
+  "resetEmailSentSuccess": "Password reset email sent to {email}. Please check your inbox (and spam folder).",
+  "@resetEmailSentSuccess": { "placeholders": { "email": { "type": "String" } } },
+  "resetEmailSentError": "Failed to send reset email: {errorDetails}",
+   "@resetEmailSentError": { "placeholders": { "errorDetails": { "type": "String" } } }
 }

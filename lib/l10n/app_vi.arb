@@ -129,5 +129,18 @@
   "signInWithGoogleButton": "Đăng nhập với Google",
   "signUpPrompt": "Chưa có tài khoản? Đăng ký",
   "forgotPasswordPrompt": "Quên mật khẩu?",
-  "loginFailedError": "Đăng nhập Thất bại: {errorDetails}"
+  "loginFailedError": "Đăng nhập Thất bại: {errorDetails}",
+  "signUpTitle": "Đăng ký",
+  "displayNameLabel": "Tên hiển thị",
+  "displayNameValidation": "Vui lòng nhập tên của bạn",
+  "confirmPasswordLabel": "Xác nhận Mật khẩu",
+  "confirmPasswordValidationEmpty": "Vui lòng xác nhận mật khẩu",
+  "confirmPasswordValidationMatch": "Mật khẩu không khớp",
+  "signUpButton": "Đăng ký",
+  "loginPrompt": "Đã có tài khoản? Đăng nhập",
+  "resetPasswordDialogTitle": "Đặt lại Mật khẩu",
+  "enterYourEmailHint": "Nhập email tài khoản của bạn",
+  "sendResetEmailButton": "Gửi Email Đặt lại",
+  "resetEmailSentSuccess": "Email đặt lại mật khẩu đã được gửi đến {email}. Vui lòng kiểm tra hộp thư đến (và thư mục spam).",
+  "resetEmailSentError": "Gửi email đặt lại thất bại: {errorDetails}"
 }

@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  FirebaseAuth get firebaseAuth => _firebaseAuth;
 
   // --- Stream để theo dõi trạng thái đăng nhập ---
   // Trả về User? (có thể null nếu chưa đăng nhập) khi trạng thái thay đổi
@@ -19,11 +20,11 @@ class AuthService {
     String password,
   ) async {
     try {
-      UserCredential userCredential = await _firebaseAuth
-          .signInWithEmailAndPassword(
-            email: email.trim(), // Trim để loại bỏ khoảng trắng thừa
-            password: password,
-          );
+      UserCredential userCredential =
+          await _firebaseAuth.signInWithEmailAndPassword(
+        email: email.trim(), // Trim để loại bỏ khoảng trắng thừa
+        password: password,
+      );
       return userCredential;
     } on FirebaseAuthException catch (e) {
       // Xử lý các lỗi cụ thể (ví dụ: sai mật khẩu, không tìm thấy user)
@@ -43,11 +44,11 @@ class AuthService {
     String password,
   ) async {
     try {
-      UserCredential userCredential = await _firebaseAuth
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          );
+      UserCredential userCredential =
+          await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
       // Bạn có thể thực hiện các hành động khác sau khi đăng ký thành công
       // Ví dụ: gửi email xác thực, tạo hồ sơ người dùng trong Firestore
       // await userCredential.user?.sendEmailVerification();
@@ -134,16 +135,22 @@ class AuthService {
     }
   }
 
-  // --- (Tùy chọn) Gửi email đặt lại mật khẩu ---
+  // --- Gửi email đặt lại mật khẩu ---
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
-      print("Password reset email sent to $email");
+      await _firebaseAuth.sendPasswordResetEmail(
+          email: email.trim()); // <<< Thêm trim()
+      print("Password reset email sent successfully to $email");
     } on FirebaseAuthException catch (e) {
-      print("Error sending password reset email: ${e.code} - ${e.message}");
-      // throw AuthException(e.code);
+      // Ném lại lỗi để Provider xử lý và map thành message dễ hiểu
+      print(
+          "Error sending password reset email (AuthService): ${e.code} - ${e.message}");
+      throw e; // <<< Quan trọng: Ném lại lỗi
     } catch (e) {
-      print("An unexpected error occurred sending password reset email: $e");
+      print(
+          "An unexpected error occurred sending password reset email (AuthService): $e");
+      // Ném lại lỗi chung
+      throw Exception("Failed to send password reset email."); // Hoặc throw e;
     }
   }
 }

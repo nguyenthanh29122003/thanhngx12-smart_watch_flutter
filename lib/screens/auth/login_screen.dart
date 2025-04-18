@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart'; // Import AuthProvider
 import '../../generated/app_localizations.dart';
+import 'signup_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,12 +17,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>(); // Key để quản lý Form
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _resetEmailController = TextEditingController();
   // bool _isLoading = false; // <<< ĐÃ XÓA BIẾN NÀY
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _resetEmailController.dispose();
     super.dispose();
   }
 
@@ -83,6 +87,80 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       // Nếu thành công, AuthWrapper sẽ tự động điều hướng
     }
+  }
+
+  // <<< HÀM MỚI ĐỂ HIỂN THỊ DIALOG QUÊN MẬT KHẨU >>>
+  Future<void> _showForgotPasswordDialog() async {
+    final formKeyDialog = GlobalKey<FormState>(); // Key riêng cho form dialog
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    _resetEmailController.clear(); // Xóa email cũ trong dialog (nếu có)
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n
+              .resetPasswordDialogTitle), // TODO: Thêm key 'resetPasswordDialogTitle'
+          content: Form(
+            key: formKeyDialog,
+            child: TextFormField(
+              controller: _resetEmailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: l10n.emailLabel, // Dùng lại key email label
+                hintText: l10n
+                    .enterYourEmailHint, // TODO: Thêm key 'enterYourEmailHint'
+                prefixIcon: const Icon(Icons.email_outlined),
+              ),
+              validator: (value) {
+                if (value == null ||
+                    value.trim().isEmpty ||
+                    !value.contains('@')) {
+                  return l10n.emailValidation; // Dùng lại key validation
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel), // Dùng lại key cancel
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKeyDialog.currentState?.validate() ?? false) {
+                  final email = _resetEmailController.text.trim();
+                  // Đóng dialog trước khi gọi hàm async
+                  Navigator.of(dialogContext).pop();
+                  // Gọi hàm từ provider
+                  bool success =
+                      await authProvider.sendPasswordResetEmail(email);
+                  // Hiển thị SnackBar kết quả (kiểm tra mounted của context gốc)
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(success
+                                ? l10n.resetEmailSentSuccess(
+                                    email) // TODO: Thêm key 'resetEmailSentSuccess' với placeholder {email}
+                                : l10n.resetEmailSentError(authProvider
+                                    .lastErrorMessage) // TODO: Thêm key 'resetEmailSentError' với placeholder {errorDetails}
+                            ),
+                        backgroundColor:
+                            success ? Colors.green : Colors.redAccent,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Text(l10n
+                  .sendResetEmailButton), // TODO: Thêm key 'sendResetEmailButton'
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -192,22 +270,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: isLoadingFromProvider
                       ? null
                       : () {
-                          // Vô hiệu hóa khi đang loading
-                          // TODO: Điều hướng đến màn hình đăng ký (SignUpScreen)
-                          print("Navigate to Sign Up");
+                          // <<< ĐIỀU HƯỚNG ĐẾN SIGNUPSCREEN >>>
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const SignUpScreen()),
+                          );
                         },
-                  child: Text(l10n.signUpPrompt),
+                  child: Text(l10n.signUpPrompt), // Đã dịch
                 ),
                 // --- Link Quên mật khẩu ---
                 TextButton(
-                  onPressed: isLoadingFromProvider
-                      ? null
-                      : () {
-                          // Vô hiệu hóa khi đang loading
-                          // TODO: Hiển thị dialog/màn hình quên mật khẩu
-                          print("Forgot Password?");
-                        },
-                  child: Text(l10n.forgotPasswordPrompt),
+                  onPressed:
+                      isLoadingFromProvider ? null : _showForgotPasswordDialog,
+                  child: Text(l10n.forgotPasswordPrompt), // Đã dịch
                 ),
               ],
             ),

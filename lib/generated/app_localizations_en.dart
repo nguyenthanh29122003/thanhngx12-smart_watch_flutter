@@ -410,4 +410,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String loginFailedError(String errorDetails) {
     return 'Login Failed: $errorDetails';
   }
+
+  @override
+  String get signUpTitle => 'Sign Up';
+
+  @override
+  String get displayNameLabel => 'Display Name';
+
+  @override
+  String get displayNameValidation => 'Please enter your name';
+
+  @override
+  String get confirmPasswordLabel => 'Confirm Password';
+
+  @override
+  String get confirmPasswordValidationEmpty => 'Please confirm your password';
+
+  @override
+  String get confirmPasswordValidationMatch => 'Passwords do not match';
+
+  @override
+  String get signUpButton => 'Sign Up';
+
+  @override
+  String get loginPrompt => 'Already have an account? Login';
+
+  @override
+  String get resetPasswordDialogTitle => 'Reset Password';
+
+  @override
+  String get enterYourEmailHint => 'Enter your account email';
+
+  @override
+  String get sendResetEmailButton => 'Send Reset Email';
+
+  @override
+  String resetEmailSentSuccess(String email) {
+    return 'Password reset email sent to $email. Please check your inbox (and spam folder).';
+  }
+
+  @override
+  String resetEmailSentError(String errorDetails) {
+    return 'Failed to send reset email: $errorDetails';
+  }
 }

@@ -868,6 +868,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Login Failed: {errorDetails}'**
   String loginFailedError(String errorDetails);
+
+  /// No description provided for @signUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get signUpTitle;
+
+  /// No description provided for @displayNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get displayNameLabel;
+
+  /// No description provided for @displayNameValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your name'**
+  String get displayNameValidation;
+
+  /// No description provided for @confirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmPasswordLabel;
+
+  /// No description provided for @confirmPasswordValidationEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your password'**
+  String get confirmPasswordValidationEmpty;
+
+  /// No description provided for @confirmPasswordValidationMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get confirmPasswordValidationMatch;
+
+  /// No description provided for @signUpButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get signUpButton;
+
+  /// No description provided for @loginPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Login'**
+  String get loginPrompt;
+
+  /// No description provided for @resetPasswordDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPasswordDialogTitle;
+
+  /// No description provided for @enterYourEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your account email'**
+  String get enterYourEmailHint;
+
+  /// No description provided for @sendResetEmailButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Reset Email'**
+  String get sendResetEmailButton;
+
+  /// No description provided for @resetEmailSentSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset email sent to {email}. Please check your inbox (and spam folder).'**
+  String resetEmailSentSuccess(String email);
+
+  /// No description provided for @resetEmailSentError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send reset email: {errorDetails}'**
+  String resetEmailSentError(String errorDetails);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
