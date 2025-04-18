@@ -8,7 +8,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 
 import '../../app_constants.dart';
 import '../../providers/dashboard_provider.dart'; // <<< THÊM IMPORT NÀY
-// import '../../providers/ble_provider.dart'; // <<< KHÔNG CẦN NỮA
+import '../../generated/app_localizations.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -127,6 +127,7 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
   // Hàm lưu mục tiêu vào SharedPreferences
   Future<void> _saveStepGoalToPrefs(int newGoal) async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(AppConstants.prefKeyDailyStepGoal, newGoal);
@@ -135,9 +136,9 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
           _currentStepGoal = newGoal; // Cập nhật state cục bộ ngay lập tức
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('New step goal saved!'),
-              backgroundColor: Colors.green), // TODO: Dịch
+          SnackBar(
+              content: Text(l10n.goalSavedSuccess),
+              backgroundColor: Colors.green),
         );
         print("[GoalsScreen] Saved step goal to Prefs: $newGoal");
       }
@@ -145,9 +146,9 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
       print("!!! [GoalsScreen] Error saving step goal to Prefs: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Failed to save new goal.'),
-              backgroundColor: Colors.redAccent), // TODO: Dịch
+          SnackBar(
+              content: Text(l10n.goalSavedError),
+              backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -156,13 +157,14 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
   // Hàm hiển thị dialog để đặt mục tiêu mới
   Future<void> _showSetGoalDialog() async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
     _goalDialogController.text = _currentStepGoal.toString();
 
     int? newGoal = await showDialog<int>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Set Daily Step Goal'), // TODO: Dịch
+        title: Text(l10n.setGoalDialogTitle),
         contentPadding: const EdgeInsets.all(20.0),
         content: Form(
           key: formKey,
@@ -173,18 +175,18 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(7),
             ],
-            decoration: const InputDecoration(
-              labelText: 'New Goal (e.g., 10000)', // TODO: Dịch
+            decoration: InputDecoration(
+              labelText: l10n.newGoalLabel,
               prefixIcon: Icon(Icons.flag_outlined),
               border: OutlineInputBorder(),
             ),
             validator: (value) {
               if (value == null || value.isEmpty)
-                return 'Please enter a number'; // TODO: Dịch
+                return l10n.pleaseEnterNumber; // TODO: Dịch
               final number = int.tryParse(value);
-              if (number == null) return 'Invalid number'; // TODO: Dịch
-              if (number <= 0) return 'Goal must be > 0'; // TODO: Dịch
-              if (number > 99999) return 'Goal seems too high!'; // TODO: Dịch
+              if (number == null) return l10n.invalidNumber;
+              if (number <= 0) return l10n.goalGreaterThanZero;
+              if (number > 99999) return l10n.goalTooHigh;
               return null;
             },
           ),
@@ -192,7 +194,7 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'), // TODO: Dịch
+            child: Text(l10n.cancel), // TODO: Dịch
           ),
           ElevatedButton(
             onPressed: () {
@@ -201,7 +203,7 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
                 Navigator.of(dialogContext).pop(enteredGoal);
               }
             },
-            child: const Text('Save Goal'), // TODO: Dịch
+            child: Text(l10n.saveGoalButton),
           ),
         ],
       ),
@@ -278,12 +280,13 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
     final bool goalAchieved = progressPercent >= 1.0;
     final int remainingSteps =
         (_currentStepGoal - _todaySteps).clamp(0, _currentStepGoal);
+    final l10n = AppLocalizations.of(context)!;
 
     // Trạng thái loading tổng thể (cho cả mục tiêu và tính toán bước)
     final bool isLoading = _isLoadingGoal || _isLoadingTodaySteps;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Goals')), // TODO: Dịch
+      appBar: AppBar(title: Text(l10n.goalsTitle)), // TODO: Dịch
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -313,14 +316,14 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Daily Step Goal',
+                              Text(l10n.dailyStepGoalCardTitle,
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleLarge), // TODO: Dịch
                               IconButton(
                                 icon: Icon(Icons.edit_note,
                                     color: Theme.of(context).primaryColor),
-                                tooltip: 'Set New Goal', // TODO: Dịch
+                                tooltip: l10n.setNewGoalTooltip, // TODO: Dịch
                                 onPressed: _showSetGoalDialog,
                               ),
                             ],
@@ -383,8 +386,9 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
                           // --- Thông báo phụ ---
                           Text(
                             goalAchieved
-                                ? 'Goal Achieved! Great job! 🎉' // TODO: Dịch
-                                : '$remainingSteps steps remaining', // <<< Sử dụng remainingSteps
+                                ? l10n.goalAchievedMessage // <<< DÙNG KEY
+                                : l10n.goalRemainingMessage(
+                                    '$remainingSteps'), // <<< Sử dụng remainingSteps
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -405,9 +409,8 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.timer_outlined),
-                      title: const Text("Activity Time Goal"), // TODO: Dịch
-                      subtitle: const Text(
-                          "Progress: ... / ... minutes"), // TODO: Dịch
+                      title: Text(l10n.activityTimeGoalTitle),
+                      subtitle: Text(l10n.activityTimeGoalProgress),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {/* ... */},
                     ),

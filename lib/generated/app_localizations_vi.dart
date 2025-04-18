@@ -584,4 +584,120 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get enableBluetoothIOS => 'Vui lòng bật Bluetooth trong cài đặt hệ thống.';
+
+  @override
+  String get dailyStepGoalCardTitle => 'Mục tiêu Bước chân Ngày';
+
+  @override
+  String get setNewGoalTooltip => 'Đặt Mục tiêu Mới';
+
+  @override
+  String get stepsUnit => 'bước';
+
+  @override
+  String get goalAchievedMessage => 'Đã đạt Mục tiêu! Làm tốt lắm! 🎉';
+
+  @override
+  String goalRemainingMessage(String remainingSteps) {
+    return 'Còn lại $remainingSteps bước';
+  }
+
+  @override
+  String get setGoalDialogTitle => 'Đặt Mục tiêu Bước chân Hàng ngày';
+
+  @override
+  String get newGoalLabel => 'Mục tiêu Mới (VD: 10000)';
+
+  @override
+  String get pleaseEnterNumber => 'Vui lòng nhập một số';
+
+  @override
+  String get invalidNumber => 'Số không hợp lệ';
+
+  @override
+  String get goalGreaterThanZero => 'Mục tiêu phải > 0';
+
+  @override
+  String get goalTooHigh => 'Mục tiêu có vẻ quá cao!';
+
+  @override
+  String get saveGoalButton => 'Lưu Mục tiêu';
+
+  @override
+  String get goalSavedSuccess => 'Đã lưu mục tiêu bước mới!';
+
+  @override
+  String get goalSavedError => 'Lưu mục tiêu mới thất bại.';
+
+  @override
+  String get activityTimeGoalTitle => 'Mục tiêu Thời gian Hoạt động';
+
+  @override
+  String get activityTimeGoalProgress => 'Tiến độ: ... / ... phút';
+
+  @override
+  String get calculatingStepsStatus => 'Đang tính số bước...';
+
+  @override
+  String get enableHealthAlerts => 'Bật Cảnh báo Sức khỏe';
+
+  @override
+  String get receiveAbnormalNotifications => 'Nhận thông báo khi chỉ số bất thường';
+
+  @override
+  String get loadingMessage => 'Đang tải...';
+
+  @override
+  String get notificationChannelHealthAlertsName => 'Cảnh báo Sức khỏe';
+
+  @override
+  String get notificationChannelHealthAlertsDesc => 'Thông báo khi chỉ số sức khỏe bất thường';
+
+  @override
+  String get notificationChannelHrHighName => 'Cảnh báo Nhịp tim Cao';
+
+  @override
+  String get notificationChannelHrHighDesc => 'Cảnh báo khi nhịp tim quá cao';
+
+  @override
+  String get notificationChannelHrLowName => 'Cảnh báo Nhịp tim Thấp';
+
+  @override
+  String get notificationChannelHrLowDesc => 'Cảnh báo khi nhịp tim quá thấp';
+
+  @override
+  String get notificationChannelSpo2LowName => 'Cảnh báo SpO2 Thấp';
+
+  @override
+  String get notificationChannelSpo2LowDesc => 'Cảnh báo khi mức SpO2 quá thấp';
+
+  @override
+  String get notificationChannelTestName => 'Thông báo Kiểm tra';
+
+  @override
+  String get notificationChannelTestDesc => 'Kênh để kiểm tra thông báo thủ công';
+
+  @override
+  String get alertHrHighTitle => 'Cảnh báo Nhịp tim Cao!';
+
+  @override
+  String alertHrHighBody(int hrValue, int threshold) {
+    return 'Nhịp tim hiện tại là $hrValue bpm, cao hơn ngưỡng $threshold bpm.';
+  }
+
+  @override
+  String get alertHrLowTitle => 'Cảnh báo Nhịp tim Thấp!';
+
+  @override
+  String alertHrLowBody(int hrValue, int threshold) {
+    return 'Nhịp tim hiện tại là $hrValue bpm, thấp hơn ngưỡng $threshold bpm.';
+  }
+
+  @override
+  String get alertSpo2LowTitle => 'Cảnh báo SpO2 Thấp!';
+
+  @override
+  String alertSpo2LowBody(int spo2Value, int threshold) {
+    return 'SpO2 hiện tại là $spo2Value%, thấp hơn ngưỡng $threshold%.';
+  }
 }

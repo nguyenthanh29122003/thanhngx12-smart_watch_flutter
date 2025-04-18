@@ -49,7 +49,7 @@ class BleService {
 
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _healthCharacteristic;
-  BluetoothCharacteristic? _wifiCharacteristic;
+  BluetoothCharacteristic? _writeCharacteristic;
 
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionStateSubscription;
@@ -355,7 +355,7 @@ class BleService {
     _connectionStateSubscription = null;
 
     _healthCharacteristic = null;
-    _wifiCharacteristic = null;
+    _writeCharacteristic = null;
 
     final deviceBeforeDisconnectId = _connectedDevice?.remoteId;
     if (clearDevice || !isError) {
@@ -400,7 +400,7 @@ class BleService {
     }
 
     _healthCharacteristic = null;
-    _wifiCharacteristic = null;
+    _writeCharacteristic = null;
     bool foundTargetService = false;
 
     for (var service in services) {
@@ -427,7 +427,7 @@ class BleService {
           if (char.uuid.toString().toLowerCase() ==
               AppConstants.wifiConfigCharacteristicUUID.toLowerCase()) {
             if (char.properties.write) {
-              _wifiCharacteristic = char;
+              _writeCharacteristic = char;
               print("+++     Stored WiFi Characteristic (Write OK)");
             } else {
               print(
@@ -555,6 +555,36 @@ class BleService {
   }
   // ----------------------------------------------
 
+  // --- HÀM MỚI: Thực hiện ghi dữ liệu byte vào Write Characteristic ---
+  Future<bool> writeDataToDevice(List<int> dataToWrite) async {
+    // Kiểm tra xem đã kết nối và đã tìm thấy write characteristic chưa
+    if (_writeCharacteristic == null) {
+      print(
+          "!!! BleService Error: Write Characteristic is null! Cannot write.");
+      _updateStatus(BleConnectionStatus.error,
+          "Write characteristic missing"); // Cập nhật trạng thái lỗi
+      return false;
+    }
+    if (connectionStatus.value != BleConnectionStatus.connected) {
+      print("!!! BleService Error: Device not connected. Cannot write.");
+      return false; // Không cần cập nhật status vì đã là disconnected/error
+    }
+
+    try {
+      // Ghi dữ liệu (ưu tiên có response)
+      print(
+          "[BleService] Writing ${dataToWrite.length} bytes to ${_writeCharacteristic!.uuid}...");
+      await _writeCharacteristic!.write(dataToWrite, withoutResponse: false);
+      print("[BleService] Successfully wrote data.");
+      return true; // Ghi thành công
+    } catch (e) {
+      print("!!! BleService Error writing data: $e");
+      _updateStatus(BleConnectionStatus.error,
+          "Write failed: $e"); // Cập nhật trạng thái lỗi
+      return false; // Ghi thất bại
+    }
+  }
+
   Future<bool> sendWifiConfig(String ssid, String password) async {
     if (connectionStatus.value != BleConnectionStatus.connected ||
         _connectedDevice == null) {
@@ -563,7 +593,7 @@ class BleService {
     }
 
     BluetoothCharacteristic? charToWrite =
-        _wifiCharacteristic; // Ưu tiên dùng char đã lưu
+        _writeCharacteristic; // Ưu tiên dùng char đã lưu
 
     if (charToWrite == null) {
       // Nếu chưa lưu, thử khám phá lại
@@ -579,7 +609,7 @@ class BleService {
                   AppConstants.wifiConfigCharacteristicUUID.toLowerCase()) {
                 if (char.properties.write) {
                   charToWrite = char;
-                  _wifiCharacteristic = char; // Lưu lại
+                  _writeCharacteristic = char; // Lưu lại
                   print(
                     "Found and stored writable WiFi Config Characteristic.",
                   );

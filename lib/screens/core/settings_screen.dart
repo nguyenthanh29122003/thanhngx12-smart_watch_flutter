@@ -279,9 +279,9 @@ class SettingsScreen extends StatelessWidget {
             SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               title:
-                  Text("Enable Health Alerts"), // Dịch 'Enable Health Alerts'
-              subtitle:
-                  Text(l10n.connectPrompt), // Dịch 'Receive notifications...'
+                  Text(l10n.enableHealthAlerts), // Dịch 'Enable Health Alerts'
+              subtitle: Text(l10n
+                  .receiveAbnormalNotifications), // Dịch 'Receive notifications...'
               // --- Lấy value từ provider ---
               value: notificationsAreEnabled,
               // --- Gọi hàm update từ provider khi thay đổi ---

@@ -1204,6 +1204,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enable Bluetooth in system settings.'**
   String get enableBluetoothIOS;
+
+  /// No description provided for @dailyStepGoalCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Step Goal'**
+  String get dailyStepGoalCardTitle;
+
+  /// No description provided for @setNewGoalTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Set New Goal'**
+  String get setNewGoalTooltip;
+
+  /// No description provided for @stepsUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'steps'**
+  String get stepsUnit;
+
+  /// No description provided for @goalAchievedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal Achieved! Great job! 🎉'**
+  String get goalAchievedMessage;
+
+  /// No description provided for @goalRemainingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{remainingSteps} steps remaining'**
+  String goalRemainingMessage(String remainingSteps);
+
+  /// No description provided for @setGoalDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Daily Step Goal'**
+  String get setGoalDialogTitle;
+
+  /// No description provided for @newGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New Goal (e.g., 10000)'**
+  String get newGoalLabel;
+
+  /// No description provided for @pleaseEnterNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a number'**
+  String get pleaseEnterNumber;
+
+  /// No description provided for @invalidNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid number'**
+  String get invalidNumber;
+
+  /// No description provided for @goalGreaterThanZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal must be > 0'**
+  String get goalGreaterThanZero;
+
+  /// No description provided for @goalTooHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal seems too high!'**
+  String get goalTooHigh;
+
+  /// No description provided for @saveGoalButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Goal'**
+  String get saveGoalButton;
+
+  /// No description provided for @goalSavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'New step goal saved!'**
+  String get goalSavedSuccess;
+
+  /// No description provided for @goalSavedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save new goal.'**
+  String get goalSavedError;
+
+  /// No description provided for @activityTimeGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Time Goal'**
+  String get activityTimeGoalTitle;
+
+  /// No description provided for @activityTimeGoalProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress: ... / ... minutes'**
+  String get activityTimeGoalProgress;
+
+  /// No description provided for @calculatingStepsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating steps...'**
+  String get calculatingStepsStatus;
+
+  /// No description provided for @enableHealthAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Health Alerts'**
+  String get enableHealthAlerts;
+
+  /// No description provided for @receiveAbnormalNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive notifications for abnormal readings'**
+  String get receiveAbnormalNotifications;
+
+  /// No description provided for @loadingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loadingMessage;
+
+  /// No description provided for @notificationChannelHealthAlertsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Alerts'**
+  String get notificationChannelHealthAlertsName;
+
+  /// No description provided for @notificationChannelHealthAlertsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for abnormal health readings'**
+  String get notificationChannelHealthAlertsDesc;
+
+  /// No description provided for @notificationChannelHrHighName.
+  ///
+  /// In en, this message translates to:
+  /// **'High Heart Rate Alerts'**
+  String get notificationChannelHrHighName;
+
+  /// No description provided for @notificationChannelHrHighDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts when heart rate is too high'**
+  String get notificationChannelHrHighDesc;
+
+  /// No description provided for @notificationChannelHrLowName.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Heart Rate Alerts'**
+  String get notificationChannelHrLowName;
+
+  /// No description provided for @notificationChannelHrLowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts when heart rate is too low'**
+  String get notificationChannelHrLowDesc;
+
+  /// No description provided for @notificationChannelSpo2LowName.
+  ///
+  /// In en, this message translates to:
+  /// **'Low SpO2 Alerts'**
+  String get notificationChannelSpo2LowName;
+
+  /// No description provided for @notificationChannelSpo2LowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts when SpO2 level is too low'**
+  String get notificationChannelSpo2LowDesc;
+
+  /// No description provided for @notificationChannelTestName.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Notifications'**
+  String get notificationChannelTestName;
+
+  /// No description provided for @notificationChannelTestDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel for testing notifications manually'**
+  String get notificationChannelTestDesc;
+
+  /// No description provided for @alertHrHighTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'High Heart Rate Alert!'**
+  String get alertHrHighTitle;
+
+  /// No description provided for @alertHrHighBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Current heart rate is {hrValue} bpm, above threshold {threshold} bpm.'**
+  String alertHrHighBody(int hrValue, int threshold);
+
+  /// No description provided for @alertHrLowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Heart Rate Alert!'**
+  String get alertHrLowTitle;
+
+  /// No description provided for @alertHrLowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Current heart rate is {hrValue} bpm, below threshold {threshold} bpm.'**
+  String alertHrLowBody(int hrValue, int threshold);
+
+  /// No description provided for @alertSpo2LowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low SpO2 Alert!'**
+  String get alertSpo2LowTitle;
+
+  /// No description provided for @alertSpo2LowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Current SpO2 is {spo2Value}%, below threshold {threshold}%.'**
+  String alertSpo2LowBody(int spo2Value, int threshold);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

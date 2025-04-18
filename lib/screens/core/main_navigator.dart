@@ -52,31 +52,32 @@ class MainNavigatorState extends State<MainNavigator> {
     print(
       "MainNavigator build triggered. SelectedIndex: $_selectedIndex",
     ); // Debug log
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       // Hiển thị màn hình tương ứng với index đang được chọn
       body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
       // Thanh điều hướng dưới cùng
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: l10n.dashboardTitle,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
-            label: 'Relatives',
+            label: l10n.relativesTitle,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.flag_outlined),
             activeIcon: Icon(Icons.flag),
-            label: 'Goals',
+            label: l10n.goalsTitle,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
-            label: 'Settings',
+            label: l10n.settingsTitle,
           ),
         ],
         currentIndex: _selectedIndex,
