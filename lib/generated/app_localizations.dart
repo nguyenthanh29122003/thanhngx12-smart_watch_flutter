@@ -946,6 +946,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to send reset email: {errorDetails}'**
   String resetEmailSentError(String errorDetails);
+
+  /// No description provided for @wifiConfigInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the WiFi network details for your ESP32 device.'**
+  String get wifiConfigInstruction;
+
+  /// No description provided for @wifiSsidLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi Network Name (SSID)'**
+  String get wifiSsidLabel;
+
+  /// No description provided for @wifiSsidHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., MyHomeWiFi'**
+  String get wifiSsidHint;
+
+  /// No description provided for @wifiSsidValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the WiFi network name'**
+  String get wifiSsidValidation;
+
+  /// No description provided for @wifiPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi Password'**
+  String get wifiPasswordLabel;
+
+  /// No description provided for @wifiPasswordValidationLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password should be at least 8 characters'**
+  String get wifiPasswordValidationLength;
+
+  /// No description provided for @wifiOpenNetworkCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'This is an open network (no password)'**
+  String get wifiOpenNetworkCheckbox;
+
+  /// No description provided for @sendWifiConfigButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Configuration'**
+  String get sendWifiConfigButton;
+
+  /// No description provided for @deviceNotConnectedToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Device must be connected to send configuration.'**
+  String get deviceNotConnectedToSend;
+
+  /// No description provided for @wifiConfigSentSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi configuration sent!'**
+  String get wifiConfigSentSuccess;
+
+  /// No description provided for @wifiConfigSentError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send configuration.'**
+  String get wifiConfigSentError;
+
+  /// No description provided for @wifiConfigDeviceNotConnectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Device not connected. Please connect first.'**
+  String get wifiConfigDeviceNotConnectedError;
+
+  /// No description provided for @scanDevicesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan for Devices'**
+  String get scanDevicesButton;
+
+  /// No description provided for @stopScanButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Scan'**
+  String get stopScanButton;
+
+  /// No description provided for @scanningTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning...'**
+  String get scanningTooltip;
+
+  /// No description provided for @scanTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan for devices'**
+  String get scanTooltip;
+
+  /// No description provided for @scanningStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning for devices...'**
+  String get scanningStatus;
+
+  /// No description provided for @statusDisconnectedScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected. Tap scan.'**
+  String get statusDisconnectedScan;
+
+  /// No description provided for @statusConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get statusConnecting;
+
+  /// No description provided for @statusSettingUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Setting up...'**
+  String get statusSettingUp;
+
+  /// No description provided for @statusConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected!'**
+  String get statusConnected;
+
+  /// No description provided for @statusErrorPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Error. Check permissions/BT.'**
+  String get statusErrorPermissions;
+
+  /// No description provided for @statusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get statusUnknown;
+
+  /// No description provided for @noDevicesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices found.'**
+  String get noDevicesFound;
+
+  /// No description provided for @ensureDeviceNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Ensure your device is powered on and nearby.'**
+  String get ensureDeviceNearby;
+
+  /// No description provided for @pullToScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull down to scan again.'**
+  String get pullToScan;
+
+  /// No description provided for @availableDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Devices'**
+  String get availableDevices;
+
+  /// No description provided for @unknownDeviceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Device'**
+  String get unknownDeviceName;
+
+  /// No description provided for @deviceIdPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'ID:'**
+  String get deviceIdPrefix;
+
+  /// No description provided for @connectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get connectButton;
+
+  /// No description provided for @connectingStatusDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get connectingStatusDevice;
+
+  /// No description provided for @enableBluetoothPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable Bluetooth to scan for devices.'**
+  String get enableBluetoothPrompt;
+
+  /// No description provided for @permissionRequiredPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth and Location permissions are required to find nearby devices. Please grant permissions in app settings.'**
+  String get permissionRequiredPrompt;
+
+  /// No description provided for @permissionDeniedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Required permissions were denied. Please grant permissions in settings.'**
+  String get permissionDeniedSnackbar;
+
+  /// No description provided for @connectionFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection Failed'**
+  String get connectionFailedTitle;
+
+  /// No description provided for @connectionFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to connect to {deviceName}. Please ensure it\'s nearby and try again.'**
+  String connectionFailedMessage(String deviceName);
+
+  /// No description provided for @connectionFailedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to connect to the device. Please try again.'**
+  String get connectionFailedSnackbar;
+
+  /// No description provided for @connectionTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection timed out. Please try again.'**
+  String get connectionTimeout;
+
+  /// No description provided for @deviceDisconnectedUnexpectedly.
+  ///
+  /// In en, this message translates to:
+  /// **'Device disconnected unexpectedly.'**
+  String get deviceDisconnectedUnexpectedly;
+
+  /// No description provided for @bluetoothRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth Required'**
+  String get bluetoothRequiredTitle;
+
+  /// No description provided for @bluetoothRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This app requires Bluetooth to be enabled to scan for devices.'**
+  String get bluetoothRequiredMessage;
+
+  /// No description provided for @turnOnButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn On'**
+  String get turnOnButton;
+
+  /// No description provided for @enableBluetoothIOS.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable Bluetooth in system settings.'**
+  String get enableBluetoothIOS;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

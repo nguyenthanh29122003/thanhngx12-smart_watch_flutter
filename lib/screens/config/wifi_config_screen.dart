@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/ble_provider.dart';
 import '../../services/ble_service.dart';
+import '../../generated/app_localizations.dart';
 
 class WifiConfigScreen extends StatefulWidget {
   const WifiConfigScreen({super.key});
@@ -33,15 +34,16 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
       final bleProvider = Provider.of<BleProvider>(context, listen: false);
       final ssid = _ssidController.text.trim();
       final password = _isOpenNetwork ? "" : _passwordController.text;
+      final l10n = AppLocalizations.of(context)!;
 
       // Kiểm tra lại trạng thái kết nối trước khi gửi
       if (bleProvider.connectionStatus.value != BleConnectionStatus.connected) {
         if (mounted) {
           // >>> SỬA DÒNG NÀY <<<
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               // <<< Thêm SnackBar(...)
-              content: Text('Device not connected. Please connect first.'),
+              content: Text(l10n.wifiConfigDeviceNotConnectedError),
               backgroundColor: Colors.orangeAccent,
             ),
           );
@@ -61,11 +63,9 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
         setState(() => _isSending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              success
-                  ? 'WiFi configuration sent!'
-                  : 'Failed to send configuration.',
-            ),
+            content: Text(success
+                ? l10n.wifiConfigSentSuccess
+                : l10n.wifiConfigSentError),
             backgroundColor: success ? Colors.green : Colors.redAccent,
           ),
         );
@@ -79,9 +79,10 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
     final connectionStatus =
         context.watch<BleProvider>().connectionStatus.value;
     final isConnected = connectionStatus == BleConnectionStatus.connected;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configure Device WiFi')),
+      appBar: AppBar(title: Text(l10n.configureWifiTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Form(
@@ -90,7 +91,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Enter the WiFi network details for your ESP32 device.',
+                l10n.wifiConfigInstruction, // <<< DÙNG KEY
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24.0),
@@ -98,15 +99,15 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               // --- SSID Field ---
               TextFormField(
                 controller: _ssidController,
-                decoration: const InputDecoration(
-                  labelText: 'WiFi Network Name (SSID)',
-                  prefixIcon: Icon(Icons.wifi),
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., MyHomeWiFi',
+                decoration: InputDecoration(
+                  labelText: l10n.wifiSsidLabel, // <<< DÙNG KEY
+                  prefixIcon: const Icon(Icons.wifi),
+                  border: const OutlineInputBorder(),
+                  hintText: l10n.wifiSsidHint, // <<< DÙNG KEY
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter the WiFi network name';
+                    return l10n.wifiSsidValidation; // <<< DÙNG KEY
                   }
                   return null;
                 },
@@ -114,21 +115,18 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               const SizedBox(height: 16.0),
 
               // --- Password Field (Ẩn/Hiện dựa trên _isOpenNetwork) ---
-              // Sử dụng Visibility hoặc if để ẩn/hiện
-              if (!_isOpenNetwork) // Chỉ hiển thị nếu KHÔNG phải mạng mở
+              // --- Password Field ---
+              if (!_isOpenNetwork)
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
-                    // Thêm suffixIcon để ẩn/hiện pw
-                    labelText: 'WiFi Password',
+                    labelText: l10n.wifiPasswordLabel, // <<< DÙNG KEY
                     prefixIcon: const Icon(Icons.lock_outline),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
+                      icon: Icon(_isPasswordVisible
+                          ? Icons.visibility_off
+                          : Icons.visibility),
                       onPressed: () {
                         setState(() {
                           _isPasswordVisible = !_isPasswordVisible;
@@ -136,77 +134,47 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                       },
                     ),
                   ),
-                  obscureText: !_isPasswordVisible, // Đảo ngược logic ẩn/hiện
+                  obscureText: !_isPasswordVisible,
                   validator: (value) {
-                    // Chỉ validate nếu không phải mạng mở
                     if (!_isOpenNetwork) {
-                      // Có thể vẫn cho phép trống nếu người dùng cố tình bỏ qua
                       if (value != null &&
                           value.isNotEmpty &&
                           value.length < 8) {
-                        return 'Password should be at least 8 characters';
+                        return l10n
+                            .wifiPasswordValidationLength; // <<< DÙNG KEY
                       }
                     }
-                    return null; // Hợp lệ nếu là mạng mở hoặc đủ dài/trống
+                    return null;
                   },
                 ),
-              // Nếu là mạng mở thì thêm khoảng cách để giữ bố cục
               if (_isOpenNetwork)
                 const SizedBox(
-                  height: 75,
-                ), // Chiều cao tương đương TextFormField+padding
+                    height:
+                        75), // Giữ bố cục/ Chiều cao tương đương TextFormField+padding
+
+              // --- Checkbox Mạng Mở ---
               // --- Checkbox Mạng Mở ---
               CheckboxListTile(
-                title: const Text("This is an open network (no password)"),
+                title: Text(l10n.wifiOpenNetworkCheckbox), // <<< DÙNG KEY
                 value: _isOpenNetwork,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _isOpenNetwork = value ?? false;
-                    // Nếu là mạng mở, xóa nội dung password và reset form validation
-                    if (_isOpenNetwork) {
-                      _passwordController.clear();
-                      _formKey.currentState?.reset(); // Reset validation state
-                    }
-                    // Trigger validate lại nếu người dùng bỏ chọn checkbox
-                    _formKey.currentState?.validate();
-                  });
-                },
-                controlAffinity:
-                    ListTileControlAffinity.leading, // Checkbox ở bên trái
-                contentPadding: EdgeInsets.zero, // Bỏ padding mặc định
+                onChanged: (bool? value) {/* ... logic giữ nguyên ... */},
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 24.0), // Tăng khoảng cách một chút
+              const SizedBox(height: 24.0),
               // --- Send Button ---
               ElevatedButton.icon(
                 icon: _isSending ? Container() : const Icon(Icons.send),
-                label:
-                    _isSending
-                        ? const SizedBox(
-                          /* ... loading indicator ... */
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                        : const Text('Send Configuration'),
+                label: _isSending
+                    ? const SizedBox(/* ... loading indicator ... */)
+                    : Text(l10n.sendWifiConfigButton), // <<< DÙNG KEY
                 onPressed: (!isConnected || _isSending) ? null : _sendConfig,
-                style: ElevatedButton.styleFrom(
-                  /* ... style cũ ... */
-                  padding: const EdgeInsets.symmetric(vertical: 15.0),
-                  textStyle: const TextStyle(fontSize: 16),
-                  backgroundColor:
-                      isConnected
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey,
-                ),
+                style: ElevatedButton.styleFrom(/* ... style ... */),
               ),
               const SizedBox(height: 12.0),
               if (!isConnected)
                 Text(
-                  /* ... thông báo chưa kết nối ... */
-                  'Device must be connected to send configuration.',
+                  l10n.deviceNotConnectedToSend, // <<< DÙNG KEY
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),

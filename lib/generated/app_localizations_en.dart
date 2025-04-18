@@ -453,4 +453,135 @@ class AppLocalizationsEn extends AppLocalizations {
   String resetEmailSentError(String errorDetails) {
     return 'Failed to send reset email: $errorDetails';
   }
+
+  @override
+  String get wifiConfigInstruction => 'Enter the WiFi network details for your ESP32 device.';
+
+  @override
+  String get wifiSsidLabel => 'WiFi Network Name (SSID)';
+
+  @override
+  String get wifiSsidHint => 'e.g., MyHomeWiFi';
+
+  @override
+  String get wifiSsidValidation => 'Please enter the WiFi network name';
+
+  @override
+  String get wifiPasswordLabel => 'WiFi Password';
+
+  @override
+  String get wifiPasswordValidationLength => 'Password should be at least 8 characters';
+
+  @override
+  String get wifiOpenNetworkCheckbox => 'This is an open network (no password)';
+
+  @override
+  String get sendWifiConfigButton => 'Send Configuration';
+
+  @override
+  String get deviceNotConnectedToSend => 'Device must be connected to send configuration.';
+
+  @override
+  String get wifiConfigSentSuccess => 'WiFi configuration sent!';
+
+  @override
+  String get wifiConfigSentError => 'Failed to send configuration.';
+
+  @override
+  String get wifiConfigDeviceNotConnectedError => 'Device not connected. Please connect first.';
+
+  @override
+  String get scanDevicesButton => 'Scan for Devices';
+
+  @override
+  String get stopScanButton => 'Stop Scan';
+
+  @override
+  String get scanningTooltip => 'Scanning...';
+
+  @override
+  String get scanTooltip => 'Scan for devices';
+
+  @override
+  String get scanningStatus => 'Scanning for devices...';
+
+  @override
+  String get statusDisconnectedScan => 'Disconnected. Tap scan.';
+
+  @override
+  String get statusConnecting => 'Connecting...';
+
+  @override
+  String get statusSettingUp => 'Setting up...';
+
+  @override
+  String get statusConnected => 'Connected!';
+
+  @override
+  String get statusErrorPermissions => 'Error. Check permissions/BT.';
+
+  @override
+  String get statusUnknown => 'Unknown';
+
+  @override
+  String get noDevicesFound => 'No devices found.';
+
+  @override
+  String get ensureDeviceNearby => 'Ensure your device is powered on and nearby.';
+
+  @override
+  String get pullToScan => 'Pull down to scan again.';
+
+  @override
+  String get availableDevices => 'Available Devices';
+
+  @override
+  String get unknownDeviceName => 'Unknown Device';
+
+  @override
+  String get deviceIdPrefix => 'ID:';
+
+  @override
+  String get connectButton => 'Connect';
+
+  @override
+  String get connectingStatusDevice => 'Connecting...';
+
+  @override
+  String get enableBluetoothPrompt => 'Please enable Bluetooth to scan for devices.';
+
+  @override
+  String get permissionRequiredPrompt => 'Bluetooth and Location permissions are required to find nearby devices. Please grant permissions in app settings.';
+
+  @override
+  String get permissionDeniedSnackbar => 'Required permissions were denied. Please grant permissions in settings.';
+
+  @override
+  String get connectionFailedTitle => 'Connection Failed';
+
+  @override
+  String connectionFailedMessage(String deviceName) {
+    return 'Failed to connect to $deviceName. Please ensure it\'s nearby and try again.';
+  }
+
+  @override
+  String get connectionFailedSnackbar => 'Failed to connect to the device. Please try again.';
+
+  @override
+  String get connectionTimeout => 'Connection timed out. Please try again.';
+
+  @override
+  String get deviceDisconnectedUnexpectedly => 'Device disconnected unexpectedly.';
+
+  @override
+  String get bluetoothRequiredTitle => 'Bluetooth Required';
+
+  @override
+  String get bluetoothRequiredMessage => 'This app requires Bluetooth to be enabled to scan for devices.';
+
+  @override
+  String get turnOnButton => 'Turn On';
+
+  @override
+  String get enableBluetoothIOS => 'Please enable Bluetooth in system settings.';
 }

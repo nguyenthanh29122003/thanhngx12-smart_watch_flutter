@@ -1,6 +1,8 @@
+// lib/screens/core/chatbot_screen.dart
 import 'package:flutter/material.dart';
 import '../../generated/app_localizations.dart';
 import '../../services/open_router_service.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -11,48 +13,39 @@ class ChatbotScreen extends StatefulWidget {
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _imageUrlController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
 
   void _sendMessage() async {
-    final messageText = _messageController.text;
-    final imageUrl = _imageUrlController.text;
+    final messageText = _messageController.text.trim(); // <<< Thêm trim()
 
-    if (messageText.isEmpty && imageUrl.isEmpty) {
+    // Chỉ kiểm tra messageText
+    if (messageText.isEmpty) {
       return;
     }
+
+    final l10n = AppLocalizations.of(context)!; // Lấy l10n
 
     final userMessage = {
       'role': 'user',
       'content': messageText,
-      'imageUrl': imageUrl,
     };
 
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
       _messageController.clear();
-      _imageUrlController.clear();
     });
 
     try {
       final service = OpenRouterService();
-      String response;
-      if (imageUrl.isNotEmpty) {
-        response = await service.analyzeImage(
-          imageUrl,
-          messageText.isEmpty ? 'Describe this image.' : messageText,
-        );
-      } else {
-        response = await service.getHealthAdvice(messageText);
-      }
+      // <<< CHỈ CÒN GỌI getHealthAdvice >>>
+      String response = await service.getHealthAdvice(messageText);
 
       setState(() {
         _messages.add({
           'role': 'assistant',
           'content': response,
-          'imageUrl': '',
         });
         _isLoading = false;
       });
@@ -60,8 +53,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       setState(() {
         _messages.add({
           'role': 'assistant',
-          'content': '${AppLocalizations.of(context)!.errorSendingMessage}: $e',
-          'imageUrl': '',
+          'content': l10n.errorSendingMessage, // Đã dùng l10n
         });
         _isLoading = false;
       });
@@ -69,20 +61,29 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.chatbotTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.chatbotTitle)),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(8.0),
+              reverse: true,
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final message = _messages[index];
+                final reversedIndex = _messages.length - 1 - index;
+                final message = _messages[reversedIndex];
                 final isUser = message['role'] == 'user';
+
                 return Align(
                   alignment:
                       isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -93,25 +94,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       color: isUser ? Colors.blue[100] : Colors.grey[200],
                       borderRadius: BorderRadius.circular(12.0),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (message['imageUrl'].toString().isNotEmpty)
-                          Image.network(
-                            message['imageUrl'].toString(),
-                            height: 100,
-                            width: 100,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Text('Invalid image URL'),
+                    child: isUser
+                        ? Text(
+                            message['content'].toString(),
+                            style: TextStyle(color: Colors.blue[900]),
+                          )
+                        : MarkdownBody(
+                            data: message['content'].toString(),
+                            selectable: true,
                           ),
-                        Text(
-                          message['content'].toString(),
-                          style: TextStyle(
-                            color: isUser ? Colors.blue[900] : Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 );
               },
@@ -122,30 +113,24 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                TextField(
-                  controller: _imageUrlController,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)!.imageUrlLabel,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8.0),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _messageController,
                         decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context)!.enterMessage,
+                          hintText: l10n.enterMessage, // Đã dịch
                           border: const OutlineInputBorder(),
                         ),
+                        textCapitalization:
+                            TextCapitalization.sentences, // Tự viết hoa đầu câu
                         onSubmitted: (_) => _sendMessage(),
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.send),
                       onPressed: _isLoading ? null : _sendMessage,
-                      tooltip: AppLocalizations.of(context)!.sendMessage,
+                      tooltip: l10n.sendMessage, // Đã dịch
                     ),
                   ],
                 ),
@@ -165,12 +150,5 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _imageUrlController.dispose();
-    super.dispose();
   }
 }

@@ -453,4 +453,135 @@ class AppLocalizationsVi extends AppLocalizations {
   String resetEmailSentError(String errorDetails) {
     return 'Gửi email đặt lại thất bại: $errorDetails';
   }
+
+  @override
+  String get wifiConfigInstruction => 'Nhập thông tin mạng WiFi cho thiết bị ESP32 của bạn.';
+
+  @override
+  String get wifiSsidLabel => 'Tên mạng WiFi (SSID)';
+
+  @override
+  String get wifiSsidHint => 'VD: MyHomeWiFi';
+
+  @override
+  String get wifiSsidValidation => 'Vui lòng nhập tên mạng WiFi';
+
+  @override
+  String get wifiPasswordLabel => 'Mật khẩu WiFi';
+
+  @override
+  String get wifiPasswordValidationLength => 'Mật khẩu cần ít nhất 8 ký tự';
+
+  @override
+  String get wifiOpenNetworkCheckbox => 'Đây là mạng mở (không có mật khẩu)';
+
+  @override
+  String get sendWifiConfigButton => 'Gửi Cấu hình';
+
+  @override
+  String get deviceNotConnectedToSend => 'Cần kết nối thiết bị để gửi cấu hình.';
+
+  @override
+  String get wifiConfigSentSuccess => 'Đã gửi cấu hình WiFi!';
+
+  @override
+  String get wifiConfigSentError => 'Gửi cấu hình thất bại.';
+
+  @override
+  String get wifiConfigDeviceNotConnectedError => 'Thiết bị chưa kết nối. Vui lòng kết nối trước.';
+
+  @override
+  String get scanDevicesButton => 'Quét Thiết bị';
+
+  @override
+  String get stopScanButton => 'Dừng Quét';
+
+  @override
+  String get scanningTooltip => 'Đang quét...';
+
+  @override
+  String get scanTooltip => 'Quét thiết bị';
+
+  @override
+  String get scanningStatus => 'Đang quét thiết bị...';
+
+  @override
+  String get statusDisconnectedScan => 'Đã ngắt kết nối. Nhấn quét.';
+
+  @override
+  String get statusConnecting => 'Đang kết nối...';
+
+  @override
+  String get statusSettingUp => 'Đang thiết lập...';
+
+  @override
+  String get statusConnected => 'Đã kết nối!';
+
+  @override
+  String get statusErrorPermissions => 'Lỗi. Kiểm tra quyền/Bluetooth.';
+
+  @override
+  String get statusUnknown => 'Không xác định';
+
+  @override
+  String get noDevicesFound => 'Không tìm thấy thiết bị nào.';
+
+  @override
+  String get ensureDeviceNearby => 'Đảm bảo thiết bị của bạn đã bật và ở gần.';
+
+  @override
+  String get pullToScan => 'Kéo xuống để quét lại.';
+
+  @override
+  String get availableDevices => 'Thiết bị Khả dụng';
+
+  @override
+  String get unknownDeviceName => 'Thiết bị không rõ';
+
+  @override
+  String get deviceIdPrefix => 'ID:';
+
+  @override
+  String get connectButton => 'Kết nối';
+
+  @override
+  String get connectingStatusDevice => 'Đang kết nối...';
+
+  @override
+  String get enableBluetoothPrompt => 'Vui lòng bật Bluetooth để quét thiết bị.';
+
+  @override
+  String get permissionRequiredPrompt => 'Cần cấp quyền Vị trí và Bluetooth để tìm thiết bị xung quanh. Vui lòng cấp quyền trong cài đặt ứng dụng.';
+
+  @override
+  String get permissionDeniedSnackbar => 'Các quyền cần thiết bị từ chối. Vui lòng cấp quyền trong cài đặt.';
+
+  @override
+  String get connectionFailedTitle => 'Kết nối Thất bại';
+
+  @override
+  String connectionFailedMessage(String deviceName) {
+    return 'Không thể kết nối đến $deviceName. Vui lòng đảm bảo thiết bị ở gần và thử lại.';
+  }
+
+  @override
+  String get connectionFailedSnackbar => 'Kết nối thiết bị thất bại. Vui lòng thử lại.';
+
+  @override
+  String get connectionTimeout => 'Kết nối quá thời gian. Vui lòng thử lại.';
+
+  @override
+  String get deviceDisconnectedUnexpectedly => 'Thiết bị đột ngột ngắt kết nối.';
+
+  @override
+  String get bluetoothRequiredTitle => 'Yêu cầu Bluetooth';
+
+  @override
+  String get bluetoothRequiredMessage => 'Ứng dụng này yêu cầu bật Bluetooth để quét thiết bị.';
+
+  @override
+  String get turnOnButton => 'Bật';
+
+  @override
+  String get enableBluetoothIOS => 'Vui lòng bật Bluetooth trong cài đặt hệ thống.';
 }
