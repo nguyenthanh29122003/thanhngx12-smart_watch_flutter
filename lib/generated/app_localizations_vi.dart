@@ -270,4 +270,144 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get noEmail => 'Không có Email';
+
+  @override
+  String welcomeUser(String userName) {
+    return 'Chào mừng, $userName!';
+  }
+
+  @override
+  String get defaultUser => 'Người dùng';
+
+  @override
+  String get bleStatusConnected => 'BLE: Đã kết nối';
+
+  @override
+  String get bleStatusConnecting => 'BLE: Đang kết nối';
+
+  @override
+  String get bleStatusDisconnected => 'BLE: Đã ngắt';
+
+  @override
+  String get bleStatusScanning => 'BLE: Đang quét';
+
+  @override
+  String get bleStatusError => 'BLE: Lỗi';
+
+  @override
+  String get bleStatusUnknown => 'BLE: Không rõ';
+
+  @override
+  String get wifiStatusOn => 'WiFi Bật';
+
+  @override
+  String get wifiStatusOff => 'WiFi Tắt';
+
+  @override
+  String get testNotificationButton => 'Thử Thông báo';
+
+  @override
+  String get testNotificationSent => 'Đã gửi thông báo thử! Kiểm tra hệ thống.';
+
+  @override
+  String get goalProgressTitle => 'Tiến độ Mục tiêu Ngày';
+
+  @override
+  String get goalLoading => 'Đang tải mục tiêu...';
+
+  @override
+  String get stepsCalculating => 'Đang tính số bước...';
+
+  @override
+  String stepsProgress(String steps, String goal) {
+    return 'Bước: $steps / $goal';
+  }
+
+  @override
+  String get errorNavigateGoals => 'Không thể điều hướng đến màn hình Mục tiêu.';
+
+  @override
+  String get realtimeMetricsTitle => 'Chỉ số Thời gian thực';
+
+  @override
+  String get heartRateLabel => 'Nhịp tim';
+
+  @override
+  String get spo2Label => 'SpO2';
+
+  @override
+  String get stepsLabel => 'Số bước';
+
+  @override
+  String get lastUpdatedPrefix => 'Cập nhật:';
+
+  @override
+  String get waitingForData => 'Đã kết nối. Đang chờ dữ liệu...';
+
+  @override
+  String get connectingStatus => 'Đang kết nối...';
+
+  @override
+  String get connectionErrorStatus => 'Lỗi kết nối.';
+
+  @override
+  String get disconnectedStatus => 'Thiết bị đã ngắt kết nối.';
+
+  @override
+  String get hrHistoryTitle => 'Lịch sử Nhịp tim (24 giờ qua)';
+
+  @override
+  String get spo2HistoryTitle => 'Lịch sử SpO₂ (24 giờ qua)';
+
+  @override
+  String get stepsHistoryTitle => 'Số bước Mỗi giờ (24 giờ qua)';
+
+  @override
+  String get chartErrorPrefix => 'Lỗi:';
+
+  @override
+  String get chartCouldNotLoad => 'Không thể tải lịch sử';
+
+  @override
+  String get chartNoDataPeriod => 'Không có dữ liệu lịch sử cho khoảng thời gian này.';
+
+  @override
+  String get chartNoValidHr => 'Không tìm thấy dữ liệu nhịp tim hợp lệ trong khoảng này.';
+
+  @override
+  String chartNoValidSpo2(int minSpo2) {
+    return 'Không tìm thấy dữ liệu SpO₂ hợp lệ (>= $minSpo2%) trong khoảng này.';
+  }
+
+  @override
+  String get chartNoStepsCalculated => 'Không có dữ liệu bước được tính cho khoảng này.';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get emailValidation => 'Vui lòng nhập email hợp lệ';
+
+  @override
+  String get passwordLabel => 'Mật khẩu';
+
+  @override
+  String get passwordValidation => 'Mật khẩu phải có ít nhất 6 ký tự';
+
+  @override
+  String get signInButton => 'Đăng nhập';
+
+  @override
+  String get signInWithGoogleButton => 'Đăng nhập với Google';
+
+  @override
+  String get signUpPrompt => 'Chưa có tài khoản? Đăng ký';
+
+  @override
+  String get forgotPasswordPrompt => 'Quên mật khẩu?';
+
+  @override
+  String loginFailedError(String errorDetails) {
+    return 'Đăng nhập Thất bại: $errorDetails';
+  }
 }

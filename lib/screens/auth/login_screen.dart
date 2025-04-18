@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart'; // Import AuthProvider
+import '../../generated/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Gọi hàm signIn từ AuthProvider
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final l10n = AppLocalizations.of(context)!;
       final success = await authProvider.signInWithEmailAndPassword(
         _emailController.text,
         _passwordController.text,
@@ -48,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
               content: Text(
                 authProvider.lastErrorMessage, // Lấy lỗi cụ thể từ provider
               ),
+              // content: Text(l10n.loginFailedError(authProvider.lastErrorMessage)),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -86,13 +89,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     // Lấy trạng thái loading từ AuthProvider
     // Sử dụng 'watch' để widget này rebuild khi status thay đổi
+    final l10n = AppLocalizations.of(context)!;
     final authProvider = context.watch<AuthProvider>();
     final isLoadingFromProvider =
         authProvider.status == AuthStatus.authenticating;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: Text(l10n.loginTitle),
         automaticallyImplyLeading: false, // Ẩn nút back
       ),
       body: Center(
@@ -117,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null ||
                         value.isEmpty ||
                         !value.contains('@')) {
-                      return 'Please enter a valid email';
+                      return l10n.emailValidation;
                     }
                     return null;
                   },
@@ -127,15 +131,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 // --- Password Field ---
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
+                  decoration: InputDecoration(
+                    labelText: l10n.passwordLabel,
                     prefixIcon: Icon(Icons.lock),
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.isEmpty || value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return l10n.passwordValidation;
                     }
                     return null;
                   },
@@ -153,14 +157,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child:
                       isLoadingFromProvider // >>> CHỈ DỰA VÀO isLoadingFromProvider <<<
                           ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Text('Sign In'),
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(l10n.signInButton),
                 ),
                 const SizedBox(height: 16.0),
 
@@ -170,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'assets/images/google_logo.png',
                     height: 20.0,
                   ),
-                  label: const Text('Sign In with Google'),
+                  label: Text(l10n.signInWithGoogleButton),
                   // >>> CHỈ DỰA VÀO isLoadingFromProvider <<<
                   onPressed: isLoadingFromProvider ? null : _signInWithGoogle,
                   style: ElevatedButton.styleFrom(
@@ -185,27 +189,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // --- Link to Sign Up ---
                 TextButton(
-                  onPressed:
-                      isLoadingFromProvider
-                          ? null
-                          : () {
-                            // Vô hiệu hóa khi đang loading
-                            // TODO: Điều hướng đến màn hình đăng ký (SignUpScreen)
-                            print("Navigate to Sign Up");
-                          },
-                  child: const Text("Don't have an account? Sign Up"),
+                  onPressed: isLoadingFromProvider
+                      ? null
+                      : () {
+                          // Vô hiệu hóa khi đang loading
+                          // TODO: Điều hướng đến màn hình đăng ký (SignUpScreen)
+                          print("Navigate to Sign Up");
+                        },
+                  child: Text(l10n.signUpPrompt),
                 ),
                 // --- Link Quên mật khẩu ---
                 TextButton(
-                  onPressed:
-                      isLoadingFromProvider
-                          ? null
-                          : () {
-                            // Vô hiệu hóa khi đang loading
-                            // TODO: Hiển thị dialog/màn hình quên mật khẩu
-                            print("Forgot Password?");
-                          },
-                  child: const Text("Forgot Password?"),
+                  onPressed: isLoadingFromProvider
+                      ? null
+                      : () {
+                          // Vô hiệu hóa khi đang loading
+                          // TODO: Hiển thị dialog/màn hình quên mật khẩu
+                          print("Forgot Password?");
+                        },
+                  child: Text(l10n.forgotPasswordPrompt),
                 ),
               ],
             ),

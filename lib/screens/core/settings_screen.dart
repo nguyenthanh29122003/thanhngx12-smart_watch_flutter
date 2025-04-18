@@ -161,8 +161,8 @@ class SettingsScreen extends StatelessWidget {
                       ? connectedDevice.platformName
                       : 'ESP32 Wearable')
                   : l10n.noDeviceConnected),
-              subtitle: Text(connectedDevice?.remoteId.toString() ??
-                  'Connect via "Change Device"'),
+              subtitle: Text(
+                  connectedDevice?.remoteId.toString() ?? l10n.connectPrompt),
               trailing: isConnected
                   ? TextButton(
                       child: const Text('Disconnect',
@@ -177,7 +177,7 @@ class SettingsScreen extends StatelessWidget {
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               leading: const Icon(Icons.devices_other_outlined),
-              title: const Text('Change / Forget Device'), // TODO: Dịch
+              title: Text(l10n.changeForgetDevice), // TODO: Dịch
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 // Ngắt kết nối nếu đang kết nối

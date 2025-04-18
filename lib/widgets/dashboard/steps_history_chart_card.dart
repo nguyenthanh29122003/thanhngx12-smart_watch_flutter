@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 // Import HourlyStepsData và DashboardProvider
 import '../../providers/dashboard_provider.dart';
+import '../../generated/app_localizations.dart';
 
 class StepsHistoryChartCard extends StatelessWidget {
   // Bỏ const vì widget này phụ thuộc vào dữ liệu runtime
@@ -16,6 +17,7 @@ class StepsHistoryChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Lắng nghe DashboardProvider
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
@@ -32,23 +34,19 @@ class StepsHistoryChartCard extends StatelessWidget {
           case HistoryStatus.error:
             chartContent = Center(
               child: Text(
-                'Error: ${provider.historyError ?? "Could not load history"}',
+                "${l10n.chartErrorPrefix} ${provider.historyError ?? l10n.chartCouldNotLoad}", // <<< DÙNG KEY
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
                 textAlign: TextAlign.center,
               ),
             );
             break;
           case HistoryStatus.loaded:
-            // Lấy dữ liệu steps đã xử lý từ provider
             final List<HourlyStepsData> hourlySteps = provider.hourlyStepsData;
-
-            // Kiểm tra nếu không có dữ liệu steps (ngay cả khi history gốc có)
             if (hourlySteps.isEmpty) {
-              chartContent = const Center(
-                  child:
-                      Text('No step data calculated for the selected period.'));
+              chartContent = Center(
+                  child: Text(l10n.chartNoStepsCalculated,
+                      textAlign: TextAlign.center)); // <<< DÙNG KEY
             } else {
-              // Tạo biểu đồ cột nếu có dữ liệu
               chartContent = _buildStepsBarChart(context, hourlySteps);
             }
             break;
@@ -64,15 +62,11 @@ class StepsHistoryChartCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hourly Steps (Last 24h)', // Tiêu đề
+                  l10n.stepsHistoryTitle, // <<< DÙNG KEY
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 16),
-                // Container chứa biểu đồ
-                SizedBox(
-                  height: 200, // Chiều cao cố định
-                  child: chartContent,
-                ),
+                SizedBox(height: 200, child: chartContent),
               ],
             ),
           ),

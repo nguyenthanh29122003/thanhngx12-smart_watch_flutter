@@ -25,6 +25,8 @@ import '../../app_constants.dart';
 import '../core/main_navigator.dart'; // Import để có thể tham chiếu State (nếu dùng cách khác)
 import '../../main.dart'; // <<< Import main.dart để lấy mainNavigatorKey (Cách tạm)
 
+import '../../generated/app_localizations.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -181,38 +183,39 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Hàm build chip trạng thái BLE
   Widget _buildBleStatusChip(BleConnectionStatus status) {
+    final l10n = AppLocalizations.of(context)!; // Lấy l10n
     String text;
     Color color;
     IconData icon;
     switch (status) {
       case BleConnectionStatus.connected:
-        text = 'BLE: Connected';
+        text = l10n.bleStatusConnected;
         color = Colors.green;
         icon = Icons.bluetooth_connected;
         break;
       case BleConnectionStatus.connecting:
       case BleConnectionStatus.discovering_services:
-        text = 'BLE: Connecting';
+        text = l10n.bleStatusConnecting;
         color = Colors.orange;
         icon = Icons.bluetooth_searching;
         break;
       case BleConnectionStatus.disconnected:
-        text = 'BLE: Disconnected';
+        text = l10n.bleStatusDisconnected;
         color = Colors.grey;
         icon = Icons.bluetooth_disabled;
         break;
       case BleConnectionStatus.scanning:
-        text = 'BLE: Scanning';
+        text = l10n.bleStatusScanning;
         color = Colors.blue;
         icon = Icons.bluetooth_searching;
         break;
       case BleConnectionStatus.error:
-        text = 'BLE: Error';
+        text = l10n.bleStatusError;
         color = Colors.red;
         icon = Icons.error_outline;
         break;
       default:
-        text = 'BLE: Unknown';
+        text = l10n.bleStatusUnknown;
         color = Colors.grey;
         icon = Icons.bluetooth;
     }
@@ -226,16 +229,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Hàm build chip trạng thái WiFi
   Widget _buildWifiStatusChip(bool? isWifiConnected) {
+    final l10n = AppLocalizations.of(context)!;
     String text;
     Color color;
     IconData icon;
     bool connected = isWifiConnected ?? false;
     if (connected) {
-      text = 'WiFi On';
+      text = l10n.wifiStatusOn;
       color = Colors.teal;
       icon = Icons.wifi;
     } else {
-      text = 'WiFi Off';
+      text = l10n.wifiStatusOff;
       color = Colors.grey;
       icon = Icons.wifi_off;
     }
@@ -326,12 +330,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     final isDeviceConnected = connectionStatus == BleConnectionStatus.connected;
     final bool? espWifiStatus = isDeviceConnected ? latestData?.wifi : null;
 
+    final l10n = AppLocalizations.of(context)!;
+
     // Trạng thái loading chính (chỉ check tải mục tiêu cho đơn giản)
     final bool isLoadingScreen = _isLoadingGoal;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'), // TODO: Dịch
+        title: Text(l10n.dashboardTitle), // TODO: Dịch
         automaticallyImplyLeading: false,
         actions: [
           // Hiển thị Chip WiFi và BLE
@@ -380,14 +386,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: Text(
-                        'Welcome, ${user.displayName ?? user.email ?? 'User'}!', // TODO: Dịch
+                        // <<< DÙNG KEY VÀ PLACEHOLDER >>>
+                        l10n.welcomeUser(
+                            user.displayName ?? user.email ?? l10n.defaultUser),
                         style: Theme.of(context).textTheme.titleLarge,
                         textAlign: TextAlign.center,
                       ),
                     ), // Giữ nguyên UI Lời chào
 
-                  // Nút Test Notification (XÓA KHI HOÀN THIỆN)
-                  // Padding(...),
+                  // Nút Test Notification (Nếu còn giữ)
+                  // Padding(
+                  //   child: ElevatedButton.icon(
+                  //     label: Text(l10n.testNotificationButton), // <<< DÙNG KEY
+                  //     onPressed: () {
+                  //        // ...
+                  //        ScaffoldMessenger.of(context).showSnackBar(
+                  //          SnackBar(content: Text(l10n.testNotificationSent)), // <<< DÙNG KEY
+                  //        );
+                  //     }
+                  //   )
+                  // ),
                   // const SizedBox(height: 20),
 
                   // Widget Chỉ Số Realtime
@@ -399,25 +417,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                     elevation: 2.0,
                     child: ListTile(
                       leading: const Icon(Icons.flag_outlined),
-                      title: const Text('Daily Goal Progress'), // TODO: Dịch
+                      title: Text(l10n.goalProgressTitle), // TODO: Dịch
                       subtitle:
                           _isLoadingTodaySteps // <<< KIỂM TRA LOADING STEPS >>>
                               ? Row(
                                   // Hiển thị indicator nhỏ khi đang tính/chờ
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
+                                  children: [
                                     SizedBox(
                                         width: 12,
                                         height: 12,
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2)),
                                     SizedBox(width: 8),
-                                    Text('Calculating steps...'), // TODO: Dịch
+                                    Text(l10n.stepsCalculating), // TODO: Dịch
                                   ],
                                 )
                               // <<< HIỂN THỊ _todaySteps và _dashboardStepGoal >>>
-                              : Text(
-                                  'Steps: $_todaySteps / $_dashboardStepGoal'), // TODO: Dịch 'Steps:'
+                              : Text(l10n.stepsProgress('$_todaySteps',
+                                  '$_dashboardStepGoal')), // TODO: Dịch 'Steps:'
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         // <<< SỬ DỤNG GLOBAL KEY ĐỂ ĐIỀU HƯỚNG >>>
@@ -430,9 +448,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           print(
                               "!!! [DashboardScreen] Error navigating using GlobalKey: $e");
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Could not navigate to Goals screen.'),
+                            SnackBar(
+                                content: Text(l10n.errorNavigateGoals),
                                 backgroundColor: Colors.orange),
                           );
                         }

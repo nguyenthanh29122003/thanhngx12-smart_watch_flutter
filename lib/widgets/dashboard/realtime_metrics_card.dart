@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/ble_provider.dart'; // Lấy dữ liệu BLE mới nhất
 import '../../services/ble_service.dart'; // Cần enum và model
 import '../../models/health_data.dart'; // Cần model HealthData
+import '../../generated/app_localizations.dart';
 
 class RealtimeMetricsCard extends StatelessWidget {
   const RealtimeMetricsCard({super.key});
@@ -23,6 +24,7 @@ class RealtimeMetricsCard extends StatelessWidget {
     // Chỉ hiển thị trạng thái WiFi nếu thiết bị đang kết nối
     final bool showWifiStatus =
         connectionStatus == BleConnectionStatus.connected;
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       elevation: 4.0,
@@ -39,7 +41,7 @@ class RealtimeMetricsCard extends StatelessWidget {
               children: [
                 // Tiêu đề Card
                 Text(
-                  'Realtime Metrics', // TODO: Dịch
+                  l10n.realtimeMetricsTitle, // <<< DÙNG KEY
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
 
@@ -59,8 +61,8 @@ class RealtimeMetricsCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         isWifiConnected
-                            ? 'WiFi On'
-                            : 'WiFi Off', // Text ngắn gọn hơn
+                            ? l10n.wifiStatusOn
+                            : l10n.wifiStatusOff,
                         // TODO: Dịch
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: isWifiConnected
@@ -94,6 +96,7 @@ class RealtimeMetricsCard extends StatelessWidget {
     HealthData? data,
     String timestamp,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     if (status == BleConnectionStatus.connected) {
       if (data != null) {
         // --- Hiển thị dữ liệu khi có kết nối và data ---
@@ -106,7 +109,7 @@ class RealtimeMetricsCard extends StatelessWidget {
                 _buildMetricDisplay(
                   context: context,
                   icon: Icons.favorite,
-                  label: 'Heart Rate',
+                  label: l10n.heartRateLabel,
                   value: (data.hr >= 0) ? data.hr.toString() : '---',
                   unit: 'bpm',
                   color: Colors.red.shade400,
@@ -114,7 +117,7 @@ class RealtimeMetricsCard extends StatelessWidget {
                 _buildMetricDisplay(
                   context: context,
                   icon: Icons.opacity,
-                  label: 'SpO2',
+                  label: l10n.spo2Label,
                   value: (data.spo2 >= 0) ? data.spo2.toString() : '---',
                   unit: '%',
                   color: Colors.blue.shade400,
@@ -122,7 +125,7 @@ class RealtimeMetricsCard extends StatelessWidget {
                 _buildMetricDisplay(
                   context: context,
                   icon: Icons.directions_walk,
-                  label: 'Steps',
+                  label: l10n.stepsLabel,
                   value: data.steps.toString(),
                   unit: '',
                   color: Colors.orange.shade400,
@@ -132,7 +135,7 @@ class RealtimeMetricsCard extends StatelessWidget {
             const SizedBox(height: 15),
             Center(
               child: Text(
-                'Last updated: $timestamp',
+                "${l10n.lastUpdatedPrefix} $timestamp", // <<< DÙNG KEY
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -140,17 +143,17 @@ class RealtimeMetricsCard extends StatelessWidget {
         );
       } else {
         // --- Có kết nối nhưng chưa có data ---
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20.0),
-            child: Text("Connected. Waiting for first data packet..."),
+            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            child: Text(l10n.waitingForData), // <<< DÙNG KEY
           ),
         );
       }
     } else if (status == BleConnectionStatus.connecting ||
         status == BleConnectionStatus.discovering_services) {
       // --- Đang kết nối ---
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 20.0),
           child: Column(
@@ -158,7 +161,7 @@ class RealtimeMetricsCard extends StatelessWidget {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 10),
-              Text("Connecting..."),
+              Text(l10n.connectingStatus),
             ],
           ),
         ),
@@ -170,8 +173,8 @@ class RealtimeMetricsCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 20.0),
           child: Text(
             status == BleConnectionStatus.error
-                ? 'Connection error.'
-                : 'Device disconnected.',
+                ? l10n.connectionErrorStatus
+                : l10n.disconnectedStatus,
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),

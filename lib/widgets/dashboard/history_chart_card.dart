@@ -6,12 +6,14 @@ import 'package:intl/intl.dart'; // Import để định dạng ngày giờ
 
 import '../../providers/dashboard_provider.dart';
 import '../../models/health_data.dart'; // Cần để truy cập HealthData
+import '../../generated/app_localizations.dart';
 
 class HistoryChartCard extends StatelessWidget {
   const HistoryChartCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Sử dụng Consumer để lắng nghe thay đổi từ DashboardProvider
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
@@ -26,19 +28,19 @@ class HistoryChartCard extends StatelessWidget {
           case HistoryStatus.error:
             chartContent = Center(
               child: Text(
-                'Error: ${provider.historyError ?? "Could not load history"}',
+                // <<< DÙNG KEY >>>
+                "${l10n.chartErrorPrefix} ${provider.historyError ?? l10n.chartCouldNotLoad}",
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
+                textAlign: TextAlign.center, // Thêm canh giữa
               ),
             );
             break;
           case HistoryStatus.loaded:
-            // Kiểm tra xem có dữ liệu không sau khi tải xong
             if (provider.healthHistory.isEmpty) {
-              chartContent = const Center(
-                  child: Text(
-                      'No history data available for the selected period.'));
+              chartContent = Center(
+                  child: Text(l10n.chartNoDataPeriod,
+                      textAlign: TextAlign.center)); // <<< DÙNG KEY
             } else {
-              // Nếu có dữ liệu, tạo biểu đồ
               chartContent = _buildLineChart(context, provider.healthHistory);
             }
             break;
@@ -53,15 +55,11 @@ class HistoryChartCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Heart Rate History (Last 24h)', // Tiêu đề biểu đồ
+                  l10n.hrHistoryTitle, // <<< DÙNG KEY
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 16),
-                // Container để giới hạn chiều cao biểu đồ
-                SizedBox(
-                  height: 200, // Chiều cao cố định cho biểu đồ
-                  child: chartContent, // Hiển thị biểu đồ hoặc trạng thái
-                ),
+                SizedBox(height: 200, child: chartContent),
               ],
             ),
           ),
@@ -72,6 +70,7 @@ class HistoryChartCard extends StatelessWidget {
 
   // --- Hàm xây dựng LineChart ---
   Widget _buildLineChart(BuildContext context, List<HealthData> historyData) {
+    final l10n = AppLocalizations.of(context)!;
     // --- 1. Chuẩn bị dữ liệu cho biểu đồ ---
     List<FlSpot> spots = [];
     List<HealthData> validData = []; // Chỉ lấy dữ liệu hợp lệ (hr > 0)
@@ -81,8 +80,8 @@ class HistoryChartCard extends StatelessWidget {
 
     // Nếu không có dữ liệu hợp lệ nào sau khi lọc
     if (validData.isEmpty) {
-      return const Center(
-          child: Text('No valid heart rate data found in this period.'));
+      return Center(
+          child: Text(l10n.chartNoValidHr, textAlign: TextAlign.center));
     }
 
     // Tìm min/max cho trục Y (HR) từ dữ liệu hợp lệ

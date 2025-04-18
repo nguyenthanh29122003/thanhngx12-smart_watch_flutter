@@ -270,4 +270,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noEmail => 'No Email';
+
+  @override
+  String welcomeUser(String userName) {
+    return 'Welcome, $userName!';
+  }
+
+  @override
+  String get defaultUser => 'User';
+
+  @override
+  String get bleStatusConnected => 'BLE: Connected';
+
+  @override
+  String get bleStatusConnecting => 'BLE: Connecting';
+
+  @override
+  String get bleStatusDisconnected => 'BLE: Disconnected';
+
+  @override
+  String get bleStatusScanning => 'BLE: Scanning';
+
+  @override
+  String get bleStatusError => 'BLE: Error';
+
+  @override
+  String get bleStatusUnknown => 'BLE: Unknown';
+
+  @override
+  String get wifiStatusOn => 'WiFi On';
+
+  @override
+  String get wifiStatusOff => 'WiFi Off';
+
+  @override
+  String get testNotificationButton => 'Test Notification';
+
+  @override
+  String get testNotificationSent => 'Sent test notification! Check system tray.';
+
+  @override
+  String get goalProgressTitle => 'Daily Goal Progress';
+
+  @override
+  String get goalLoading => 'Loading goal...';
+
+  @override
+  String get stepsCalculating => 'Calculating steps...';
+
+  @override
+  String stepsProgress(String steps, String goal) {
+    return 'Steps: $steps / $goal';
+  }
+
+  @override
+  String get errorNavigateGoals => 'Could not navigate to Goals screen.';
+
+  @override
+  String get realtimeMetricsTitle => 'Realtime Metrics';
+
+  @override
+  String get heartRateLabel => 'Heart Rate';
+
+  @override
+  String get spo2Label => 'SpO2';
+
+  @override
+  String get stepsLabel => 'Steps';
+
+  @override
+  String get lastUpdatedPrefix => 'Last updated:';
+
+  @override
+  String get waitingForData => 'Connected. Waiting for first data packet...';
+
+  @override
+  String get connectingStatus => 'Connecting...';
+
+  @override
+  String get connectionErrorStatus => 'Connection error.';
+
+  @override
+  String get disconnectedStatus => 'Device disconnected.';
+
+  @override
+  String get hrHistoryTitle => 'Heart Rate History (Last 24h)';
+
+  @override
+  String get spo2HistoryTitle => 'SpO₂ History (Last 24h)';
+
+  @override
+  String get stepsHistoryTitle => 'Hourly Steps (Last 24h)';
+
+  @override
+  String get chartErrorPrefix => 'Error:';
+
+  @override
+  String get chartCouldNotLoad => 'Could not load history';
+
+  @override
+  String get chartNoDataPeriod => 'No history data available for the selected period.';
+
+  @override
+  String get chartNoValidHr => 'No valid heart rate data found in this period.';
+
+  @override
+  String chartNoValidSpo2(int minSpo2) {
+    return 'No valid SpO₂ data (>= $minSpo2%) found in this period.';
+  }
+
+  @override
+  String get chartNoStepsCalculated => 'No step data calculated for the selected period.';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get emailValidation => 'Please enter a valid email';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordValidation => 'Password must be at least 6 characters';
+
+  @override
+  String get signInButton => 'Sign In';
+
+  @override
+  String get signInWithGoogleButton => 'Sign In with Google';
+
+  @override
+  String get signUpPrompt => 'Don\'t have an account? Sign Up';
+
+  @override
+  String get forgotPasswordPrompt => 'Forgot Password?';
+
+  @override
+  String loginFailedError(String errorDetails) {
+    return 'Login Failed: $errorDetails';
+  }
 }

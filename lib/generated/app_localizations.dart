@@ -604,6 +604,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No Email'**
   String get noEmail;
+
+  /// No description provided for @welcomeUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome, {userName}!'**
+  String welcomeUser(String userName);
+
+  /// No description provided for @defaultUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get defaultUser;
+
+  /// No description provided for @bleStatusConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Connected'**
+  String get bleStatusConnected;
+
+  /// No description provided for @bleStatusConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Connecting'**
+  String get bleStatusConnecting;
+
+  /// No description provided for @bleStatusDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Disconnected'**
+  String get bleStatusDisconnected;
+
+  /// No description provided for @bleStatusScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Scanning'**
+  String get bleStatusScanning;
+
+  /// No description provided for @bleStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Error'**
+  String get bleStatusError;
+
+  /// No description provided for @bleStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE: Unknown'**
+  String get bleStatusUnknown;
+
+  /// No description provided for @wifiStatusOn.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi On'**
+  String get wifiStatusOn;
+
+  /// No description provided for @wifiStatusOff.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi Off'**
+  String get wifiStatusOff;
+
+  /// No description provided for @testNotificationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Notification'**
+  String get testNotificationButton;
+
+  /// No description provided for @testNotificationSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent test notification! Check system tray.'**
+  String get testNotificationSent;
+
+  /// No description provided for @goalProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Goal Progress'**
+  String get goalProgressTitle;
+
+  /// No description provided for @goalLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading goal...'**
+  String get goalLoading;
+
+  /// No description provided for @stepsCalculating.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating steps...'**
+  String get stepsCalculating;
+
+  /// No description provided for @stepsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps: {steps} / {goal}'**
+  String stepsProgress(String steps, String goal);
+
+  /// No description provided for @errorNavigateGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not navigate to Goals screen.'**
+  String get errorNavigateGoals;
+
+  /// No description provided for @realtimeMetricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtime Metrics'**
+  String get realtimeMetricsTitle;
+
+  /// No description provided for @heartRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart Rate'**
+  String get heartRateLabel;
+
+  /// No description provided for @spo2Label.
+  ///
+  /// In en, this message translates to:
+  /// **'SpO2'**
+  String get spo2Label;
+
+  /// No description provided for @stepsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get stepsLabel;
+
+  /// No description provided for @lastUpdatedPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated:'**
+  String get lastUpdatedPrefix;
+
+  /// No description provided for @waitingForData.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected. Waiting for first data packet...'**
+  String get waitingForData;
+
+  /// No description provided for @connectingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get connectingStatus;
+
+  /// No description provided for @connectionErrorStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error.'**
+  String get connectionErrorStatus;
+
+  /// No description provided for @disconnectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Device disconnected.'**
+  String get disconnectedStatus;
+
+  /// No description provided for @hrHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart Rate History (Last 24h)'**
+  String get hrHistoryTitle;
+
+  /// No description provided for @spo2HistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SpO₂ History (Last 24h)'**
+  String get spo2HistoryTitle;
+
+  /// No description provided for @stepsHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hourly Steps (Last 24h)'**
+  String get stepsHistoryTitle;
+
+  /// No description provided for @chartErrorPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Error:'**
+  String get chartErrorPrefix;
+
+  /// No description provided for @chartCouldNotLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load history'**
+  String get chartCouldNotLoad;
+
+  /// No description provided for @chartNoDataPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'No history data available for the selected period.'**
+  String get chartNoDataPeriod;
+
+  /// No description provided for @chartNoValidHr.
+  ///
+  /// In en, this message translates to:
+  /// **'No valid heart rate data found in this period.'**
+  String get chartNoValidHr;
+
+  /// Message shown when no valid SpO2 readings are found in the history.
+  ///
+  /// In en, this message translates to:
+  /// **'No valid SpO₂ data (>= {minSpo2}%) found in this period.'**
+  String chartNoValidSpo2(int minSpo2);
+
+  /// No description provided for @chartNoStepsCalculated.
+  ///
+  /// In en, this message translates to:
+  /// **'No step data calculated for the selected period.'**
+  String get chartNoStepsCalculated;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get emailLabel;
+
+  /// No description provided for @emailValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get emailValidation;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @passwordValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get passwordValidation;
+
+  /// No description provided for @signInButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get signInButton;
+
+  /// No description provided for @signInWithGoogleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In with Google'**
+  String get signInWithGoogleButton;
+
+  /// No description provided for @signUpPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account? Sign Up'**
+  String get signUpPrompt;
+
+  /// No description provided for @forgotPasswordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password?'**
+  String get forgotPasswordPrompt;
+
+  /// No description provided for @loginFailedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Login Failed: {errorDetails}'**
+  String loginFailedError(String errorDetails);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
