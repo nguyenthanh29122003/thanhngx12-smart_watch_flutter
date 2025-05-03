@@ -224,5 +224,25 @@
   "alertHrLowTitle": "Cảnh báo Nhịp tim Thấp!",
   "alertHrLowBody": "Nhịp tim hiện tại là {hrValue} bpm, thấp hơn ngưỡng {threshold} bpm.",
   "alertSpo2LowTitle": "Cảnh báo SpO2 Thấp!",
-  "alertSpo2LowBody": "SpO2 hiện tại là {spo2Value}%, thấp hơn ngưỡng {threshold}%."
+  "alertSpo2LowBody": "SpO2 hiện tại là {spo2Value}%, thấp hơn ngưỡng {threshold}%.",
+  "loginWelcomeTitle": "Chào mừng trở lại!",
+  "@loginWelcomeTitle": {
+    "description": "Tiêu đề chính trên màn hình đăng nhập"
+  },
+  "loginSubtitle": "Đăng nhập để tiếp tục",
+  "@loginSubtitle": {
+    "description": "Phụ đề dưới tiêu đề chính trên màn hình đăng nhập"
+  },
+  "orDividerText": "HOẶC",
+  "@orDividerText": {
+    "description": "Chữ dùng để ngăn cách giữa các phương thức đăng nhập (VD: Email / Google)"
+  },
+  "noAccountPrompt": "Chưa có tài khoản?",
+  "@noAccountPrompt": {
+    "description": "Chữ nhắc người dùng đăng ký nếu chưa có tài khoản"
+  },
+  "signUpLinkText": "Đăng ký ngay",
+  "@signUpLinkText": {
+    "description": "Chữ cho liên kết/nút dẫn người dùng đến màn hình đăng ký"
+  }
 }

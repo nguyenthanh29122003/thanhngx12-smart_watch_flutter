@@ -1420,6 +1420,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current SpO2 is {spo2Value}%, below threshold {threshold}%.'**
   String alertSpo2LowBody(int spo2Value, int threshold);
+
+  /// Main title on the login screen
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome Back!'**
+  String get loginWelcomeTitle;
+
+  /// Subtitle below the main title on the login screen
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue'**
+  String get loginSubtitle;
+
+  /// Text used as a divider between login methods (e.g., Email / Google)
+  ///
+  /// In en, this message translates to:
+  /// **'OR'**
+  String get orDividerText;
+
+  /// Text prompting the user to sign up if they don't have an account
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account?'**
+  String get noAccountPrompt;
+
+  /// The text for the link/button that takes the user to the sign-up screen
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up Now'**
+  String get signUpLinkText;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

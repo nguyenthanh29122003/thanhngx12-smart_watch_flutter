@@ -700,4 +700,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String alertSpo2LowBody(int spo2Value, int threshold) {
     return 'SpO2 hiện tại là $spo2Value%, thấp hơn ngưỡng $threshold%.';
   }
+
+  @override
+  String get loginWelcomeTitle => 'Chào mừng trở lại!';
+
+  @override
+  String get loginSubtitle => 'Đăng nhập để tiếp tục';
+
+  @override
+  String get orDividerText => 'HOẶC';
+
+  @override
+  String get noAccountPrompt => 'Chưa có tài khoản?';
+
+  @override
+  String get signUpLinkText => 'Đăng ký ngay';
 }

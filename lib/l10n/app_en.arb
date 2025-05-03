@@ -284,5 +284,25 @@
   "@alertHrLowBody": { "placeholders": { "hrValue": {"type": "int"}, "threshold": {"type": "int"} } },
   "alertSpo2LowTitle": "Low SpO2 Alert!",
   "alertSpo2LowBody": "Current SpO2 is {spo2Value}%, below threshold {threshold}%.",
-   "@alertSpo2LowBody": { "placeholders": { "spo2Value": {"type": "int"}, "threshold": {"type": "int"} } }
+   "@alertSpo2LowBody": { "placeholders": { "spo2Value": {"type": "int"}, "threshold": {"type": "int"} } },
+   "loginWelcomeTitle": "Welcome Back!",
+  "@loginWelcomeTitle": {
+    "description": "Main title on the login screen"
+  },
+  "loginSubtitle": "Sign in to continue",
+  "@loginSubtitle": {
+    "description": "Subtitle below the main title on the login screen"
+  },
+  "orDividerText": "OR",
+  "@orDividerText": {
+    "description": "Text used as a divider between login methods (e.g., Email / Google)"
+  },
+  "noAccountPrompt": "Don't have an account?",
+  "@noAccountPrompt": {
+    "description": "Text prompting the user to sign up if they don't have an account"
+  },
+  "signUpLinkText": "Sign Up Now",
+  "@signUpLinkText": {
+    "description": "The text for the link/button that takes the user to the sign-up screen"
+  }
 }
