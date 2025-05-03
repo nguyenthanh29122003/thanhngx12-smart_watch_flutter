@@ -119,8 +119,8 @@ class HistoryChartCard extends StatelessWidget {
             color: Colors.redAccent, // Màu đường kẻ
             barWidth: 3, // Độ dày đường kẻ
             isStrokeCapRound: true,
-            dotData:
-                FlDotData(show: false), // Không hiển thị chấm trên điểm dữ liệu
+            dotData: const FlDotData(
+                show: false), // Không hiển thị chấm trên điểm dữ liệu
             belowBarData: BarAreaData(
               // Tô màu khu vực dưới đường kẻ
               show: true,

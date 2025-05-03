@@ -1,7 +1,7 @@
 // lib/services/connectivity_service.dart
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart'; // Cho ValueNotifier (tùy chọn)
+// Cho ValueNotifier (tùy chọn)
 
 // Enum để biểu diễn trạng thái mạng đơn giản hơn (tùy chọn nhưng khuyến nghị)
 enum NetworkStatus { online, offline }

@@ -60,23 +60,23 @@ class MainNavigatorState extends State<MainNavigator> {
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
+            icon: const Icon(Icons.dashboard_outlined),
+            activeIcon: const Icon(Icons.dashboard),
             label: l10n.dashboardTitle,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
+            icon: const Icon(Icons.people_outline),
+            activeIcon: const Icon(Icons.people),
             label: l10n.relativesTitle,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.flag_outlined),
-            activeIcon: Icon(Icons.flag),
+            icon: const Icon(Icons.flag_outlined),
+            activeIcon: const Icon(Icons.flag),
             label: l10n.goalsTitle,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
+            activeIcon: const Icon(Icons.settings),
             label: l10n.settingsTitle,
           ),
         ],
@@ -92,31 +92,31 @@ class MainNavigatorState extends State<MainNavigator> {
         foregroundColor: Colors.white,
         children: [
           SpeedDialChild(
-            child: Icon(Icons.chat),
+            child: const Icon(Icons.chat),
             label: AppLocalizations.of(context)!.chatbotTitle,
             backgroundColor: Colors.blue,
             onTap: () {
               // Điều hướng đến ChatbotScreen
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ChatbotScreen()),
+                MaterialPageRoute(builder: (context) => const ChatbotScreen()),
               );
             },
           ),
           SpeedDialChild(
-            child: Icon(Icons.analytics),
+            child: const Icon(Icons.analytics),
             label: AppLocalizations.of(context)!.predictTitle,
             backgroundColor: Colors.green,
             onTap: () {
               // Placeholder cho chức năng Dự đoán
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
+                const SnackBar(
                     content: Text('Prediction functionality coming soon!')),
               );
             },
           ),
           SpeedDialChild(
-            child: Icon(Icons.bluetooth),
+            child: const Icon(Icons.bluetooth),
             label: AppLocalizations.of(context)!.connectDevice,
             backgroundColor: Colors.orange,
             onTap: () {

@@ -165,7 +165,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             ? Theme.of(context).colorScheme.primaryContainer
                             : Theme.of(context)
                                 .colorScheme
-                                .surfaceVariant, // Màu sắc theme
+                                .surfaceContainerHighest, // Màu sắc theme
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(16.0),
                           topRight: const Radius.circular(16.0),
@@ -181,7 +181,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
                             blurRadius: 3,
-                            offset: Offset(0, 1),
+                            offset: const Offset(0, 1),
                           )
                         ]),
                     constraints: BoxConstraints(
@@ -254,11 +254,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
+                  const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2)),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text("AI is thinking...",
                       style:
                           Theme.of(context).textTheme.bodySmall), // TODO: Dịch
@@ -275,7 +275,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 BoxShadow(
                     blurRadius: 5,
                     color: Colors.black.withOpacity(0.1),
-                    offset: Offset(0, -2))
+                    offset: const Offset(0, -2))
               ],
             ),
             padding: const EdgeInsets.only(

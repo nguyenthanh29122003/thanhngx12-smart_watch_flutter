@@ -159,9 +159,9 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
     if (!mounted) return false; // Kiểm tra mounted
     final l10n = AppLocalizations.of(context)!;
     await Future.delayed(const Duration(milliseconds: 200));
-    if (FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on)
+    if (FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on) {
       return true;
-    else {
+    } else {
       bool? userAllowedTurnOn = await showDialog<bool>(
         // Lưu kết quả dialog
         context: context,
@@ -256,21 +256,22 @@ class _DeviceSelectScreenState extends State<DeviceSelectScreen> {
                   statusText = context.watch<BleProvider>().isScanning.value
                       ? l10n.scanningStatus
                       : l10n.statusDisconnectedScan;
-                  if (context.watch<BleProvider>().isScanning.value)
-                    statusIndicator = LinearProgressIndicator();
+                  if (context.watch<BleProvider>().isScanning.value) {
+                    statusIndicator = const LinearProgressIndicator();
+                  }
                   break;
                 case BleConnectionStatus.scanning:
                   statusText = l10n.scanningStatus;
-                  statusIndicator = LinearProgressIndicator();
+                  statusIndicator = const LinearProgressIndicator();
                   break;
                 case BleConnectionStatus.connecting:
                   statusText = l10n.statusConnecting;
-                  statusIndicator = LinearProgressIndicator();
+                  statusIndicator = const LinearProgressIndicator();
                   statusColor = Colors.orange;
                   break;
                 case BleConnectionStatus.discovering_services:
                   statusText = l10n.statusSettingUp;
-                  statusIndicator = LinearProgressIndicator();
+                  statusIndicator = const LinearProgressIndicator();
                   statusColor = Colors.orange;
                   break;
                 case BleConnectionStatus.connected:

@@ -6,7 +6,6 @@ import '../models/health_data.dart';
 import 'dart:math'; // Cần cho Random
 
 // lib/providers/dashboard_provider.dart
-import 'package:flutter/foundation.dart';
 // ... các import khác ...
 
 // --- Cấu trúc dữ liệu cho số bước mỗi giờ ---

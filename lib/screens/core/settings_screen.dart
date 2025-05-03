@@ -65,7 +65,7 @@ class SettingsScreen extends StatelessWidget {
                               .pop(locale); // Trả về Locale đã chọn
                         },
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
@@ -112,9 +112,9 @@ class SettingsScreen extends StatelessWidget {
 
     // Xác định tên ngôn ngữ hiện tại để hiển thị
     String currentLanguageName = l10n.systemDefault; // Mặc định
-    if (currentLocale?.languageCode == 'en')
+    if (currentLocale?.languageCode == 'en') {
       currentLanguageName = 'English';
-    else if (currentLocale?.languageCode == 'vi')
+    } else if (currentLocale?.languageCode == 'vi')
       currentLanguageName = 'Tiếng Việt';
 
     return Scaffold(
@@ -220,15 +220,16 @@ class SettingsScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 /* ... Logic mở WifiConfigScreen (kiểm tra isConnected) ... */
-                if (isConnected)
+                if (isConnected) {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const WifiConfigScreen()));
-                else
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Connect to device first.'),
                       backgroundColor: Colors.orangeAccent));
+                }
               },
             ),
             const Divider(height: 1),

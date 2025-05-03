@@ -122,7 +122,7 @@ class Spo2HistoryChartCard extends StatelessWidget {
             color: Colors.blue, // <<< THAY ĐỔI: Màu xanh dương cho SpO2
             barWidth: 3,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               color: Colors.blue.withOpacity(0.2), // <<< THAY ĐỔI: Màu nền

@@ -172,8 +172,9 @@ class _RelativesScreenState extends State<RelativesScreen> {
                       final relationship = _selectedRelationshipInDialog!;
                       final bool added = await relativesProvider.addRelative(
                           name, relationship);
-                      if (dialogContext.mounted)
+                      if (dialogContext.mounted) {
                         Navigator.of(dialogContext).pop(added);
+                      }
                     }
                   },
                   child: Text(l10n.addRelativeButton), // Dùng key
@@ -245,8 +246,9 @@ class _RelativesScreenState extends State<RelativesScreen> {
       _selectedRelationshipInDialog = relativeToEdit.relationship;
     } else {
       _selectedRelationshipInDialog = 'Other';
-      if (!_relationshipOptions.contains('Other'))
+      if (!_relationshipOptions.contains('Other')) {
         _relationshipOptions.add('Other');
+      }
     }
 
     bool? success = await showDialog<bool>(
@@ -335,8 +337,9 @@ class _RelativesScreenState extends State<RelativesScreen> {
                       final bool updated =
                           await relativesProvider.updateRelative(
                               relativeToEdit.id, newName, newRelationship);
-                      if (dialogContext.mounted)
+                      if (dialogContext.mounted) {
                         Navigator.of(dialogContext).pop(updated);
+                      }
                     }
                   },
                   child: Text(l10n.saveChangesButton), // <<< DÙNG KEY

@@ -155,12 +155,12 @@ class RealtimeMetricsCard extends StatelessWidget {
       // --- Đang kết nối ---
       return Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20.0),
+          padding: const EdgeInsets.symmetric(vertical: 20.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 10),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 10),
               Text(l10n.connectingStatus),
             ],
           ),

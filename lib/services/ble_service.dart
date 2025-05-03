@@ -119,10 +119,11 @@ class BleService {
       }
     });
 
-    if (!allGranted)
+    if (!allGranted) {
       print("BLE Permissions Denied.");
-    else
+    } else {
       print("All necessary BLE Permissions Granted.");
+    }
     return allGranted;
   }
 
@@ -529,7 +530,7 @@ class BleService {
             // -------------------------------------
 
             _healthDataStreamController.add(data); // Vẫn đẩy data cho UI
-          } on FormatException catch (e) {
+          } on FormatException {
             /* ... log lỗi parse ... */
           } catch (e) {
             /* ... log lỗi khác ... */

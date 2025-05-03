@@ -19,7 +19,7 @@ class AuthProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
 
   Map<String, dynamic>? _userProfileData; // Lưu trữ dữ liệu đọc từ Firestore
-  bool _isLoadingProfile = false; // Trạng thái đang tải profile
+  final bool _isLoadingProfile = false; // Trạng thái đang tải profile
 
   // <<< THÊM GETTER CHO PROFILE DATA >>>
   Map<String, dynamic>? get userProfileData => _userProfileData;
@@ -88,12 +88,8 @@ class AuthProvider with ChangeNotifier {
           .timeout(const Duration(seconds: 5), onTimeout: () {
         throw TimeoutException('Initial auth check timeout');
       });
-      if (firebaseUser != null) {
-        _user = firebaseUser;
-        _updateStatus(AuthStatus.authenticated);
-      } else {
-        _updateStatus(AuthStatus.unauthenticated);
-      }
+      _user = firebaseUser;
+      _updateStatus(AuthStatus.authenticated);
     } catch (e) {
       print("Error checking initial auth state: $e");
       _updateStatus(

@@ -177,12 +177,13 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
             ],
             decoration: InputDecoration(
               labelText: l10n.newGoalLabel,
-              prefixIcon: Icon(Icons.flag_outlined),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.flag_outlined),
+              border: const OutlineInputBorder(),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty)
+              if (value == null || value.isEmpty) {
                 return l10n.pleaseEnterNumber; // TODO: Dịch
+              }
               final number = int.tryParse(value);
               if (number == null) return l10n.invalidNumber;
               if (number <= 0) return l10n.goalGreaterThanZero;
@@ -221,8 +222,9 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
     if (dashboardProvider.historyStatus == HistoryStatus.loading ||
         dashboardProvider.historyStatus == HistoryStatus.initial) {
       print("[GoalsScreen] Waiting for DashboardProvider to load history...");
-      if (mounted)
+      if (mounted) {
         setState(() => _isLoadingTodaySteps = true); // Đảm bảo vẫn là loading
+      }
       return;
     }
 
@@ -376,8 +378,9 @@ class _GoalsScreenState extends State<GoalsScreen> with WidgetsBindingObserver {
                                       Theme.of(context).primaryColorDark
                                     ],
                             ),
-                            backgroundColor:
-                                Theme.of(context).colorScheme.surfaceVariant,
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                             animation: true,
                             animateFromLastPercent: true,
                             animationDuration: 600,

@@ -47,7 +47,7 @@ class HealthData {
       parsedTimestamp = DateTime.now().toUtc();
     }
 
-    T _parseNum<T extends num>(dynamic value, T defaultValue) {
+    T parseNum<T extends num>(dynamic value, T defaultValue) {
       if (value is num) {
         if (defaultValue is double) return value.toDouble() as T;
         if (defaultValue is int) return value.toInt() as T;
@@ -56,17 +56,17 @@ class HealthData {
     }
 
     return HealthData(
-      ax: _parseNum(json['ax'], 0.0),
-      ay: _parseNum(json['ay'], 0.0),
-      az: _parseNum(json['az'], 0.0),
-      gx: _parseNum(json['gx'], 0.0),
-      gy: _parseNum(json['gy'], 0.0),
-      gz: _parseNum(json['gz'], 0.0),
-      steps: _parseNum(json['steps'], 0),
-      hr: _parseNum(json['hr'], -1),
-      spo2: _parseNum(json['spo2'], -1),
-      ir: _parseNum(json['ir'], 0),
-      red: _parseNum(json['red'], 0),
+      ax: parseNum(json['ax'], 0.0),
+      ay: parseNum(json['ay'], 0.0),
+      az: parseNum(json['az'], 0.0),
+      gx: parseNum(json['gx'], 0.0),
+      gy: parseNum(json['gy'], 0.0),
+      gz: parseNum(json['gz'], 0.0),
+      steps: parseNum(json['steps'], 0),
+      hr: parseNum(json['hr'], -1),
+      spo2: parseNum(json['spo2'], -1),
+      ir: parseNum(json['ir'], 0),
+      red: parseNum(json['red'], 0),
       wifi: (json['wifi'] as bool?) ?? false,
       timestamp: parsedTimestamp, // Đã là UTC
     );
@@ -117,14 +117,16 @@ class HealthData {
             isUtc: true); // Hoặc dùng DateTime.now().toUtc() nếu muốn
 
     // Hàm helper parse số, trả về giá trị mặc định nếu null hoặc sai kiểu
-    T _parseNum<T extends num>(dynamic value, T defaultValue) {
+    T parseNum<T extends num>(dynamic value, T defaultValue) {
       if (value == null) return defaultValue;
       if (value is String) {
         // Xử lý nếu lỡ lưu thành String
-        if (defaultValue is double)
+        if (defaultValue is double) {
           return (double.tryParse(value) ?? defaultValue) as T;
-        if (defaultValue is int)
+        }
+        if (defaultValue is int) {
           return (int.tryParse(value) ?? defaultValue) as T;
+        }
       }
       if (value is num) {
         if (defaultValue is double) return value.toDouble() as T;
@@ -134,17 +136,17 @@ class HealthData {
     }
 
     return HealthData(
-      ax: _parseNum(map['ax'], 0.0),
-      ay: _parseNum(map['ay'], 0.0),
-      az: _parseNum(map['az'], 0.0),
-      gx: _parseNum(map['gx'], 0.0),
-      gy: _parseNum(map['gy'], 0.0),
-      gz: _parseNum(map['gz'], 0.0),
-      steps: _parseNum(map['steps'], 0),
-      hr: _parseNum(map['hr'], -1), // Giữ -1 nếu không có hoặc null
-      spo2: _parseNum(map['spo2'], -1), // Giữ -1 nếu không có hoặc null
-      ir: _parseNum(map['ir'], 0),
-      red: _parseNum(map['red'], 0),
+      ax: parseNum(map['ax'], 0.0),
+      ay: parseNum(map['ay'], 0.0),
+      az: parseNum(map['az'], 0.0),
+      gx: parseNum(map['gx'], 0.0),
+      gy: parseNum(map['gy'], 0.0),
+      gz: parseNum(map['gz'], 0.0),
+      steps: parseNum(map['steps'], 0),
+      hr: parseNum(map['hr'], -1), // Giữ -1 nếu không có hoặc null
+      spo2: parseNum(map['spo2'], -1), // Giữ -1 nếu không có hoặc null
+      ir: parseNum(map['ir'], 0),
+      red: parseNum(map['red'], 0),
       wifi: (map['wifi'] as bool?) ?? false,
       timestamp: timestampUTC, // Sử dụng DateTime UTC đã parse
     );

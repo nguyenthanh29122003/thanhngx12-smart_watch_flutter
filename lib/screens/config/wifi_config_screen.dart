@@ -18,7 +18,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
   final _passwordController = TextEditingController();
   bool _isSending = false;
   bool _isPasswordVisible = false; // Để ẩn/hiện mật khẩu
-  bool _isOpenNetwork = false; // Trạng thái checkbox mạng mở
+  final bool _isOpenNetwork = false; // Trạng thái checkbox mạng mở
 
   @override
   void dispose() {

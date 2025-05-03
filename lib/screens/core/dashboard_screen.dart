@@ -221,9 +221,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     return Chip(
       avatar: Icon(icon, color: Colors.white, size: 18),
-      label: Text(text, style: TextStyle(color: Colors.white)),
+      label: Text(text, style: const TextStyle(color: Colors.white)),
       backgroundColor: color,
-      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
     ); // Giữ nguyên phần UI của Chip
   }
 
@@ -261,8 +261,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         dashboardProvider.historyStatus == HistoryStatus.initial) {
       print(
           "[DashboardScreen] Waiting for DashboardProvider to load history for step calculation...");
-      if (!_isLoadingTodaySteps)
+      if (!_isLoadingTodaySteps) {
         setStateIfMounted(() => _isLoadingTodaySteps = true);
+      }
       return;
     }
 
@@ -280,9 +281,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     print(
         "[DashboardScreen] Calculating today's steps using DashboardProvider data...");
-    if (!_isLoadingTodaySteps)
+    if (!_isLoadingTodaySteps) {
       setStateIfMounted(
           () => _isLoadingTodaySteps = true); // Đặt loading trước khi tính
+    }
 
     final List<HourlyStepsData> hourlyStepsList =
         dashboardProvider.hourlyStepsData;
@@ -424,12 +426,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   // Hiển thị indicator nhỏ khi đang tính/chờ
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    SizedBox(
+                                    const SizedBox(
                                         width: 12,
                                         height: 12,
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2)),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: 8),
                                     Text(l10n.stepsCalculating), // TODO: Dịch
                                   ],
                                 )

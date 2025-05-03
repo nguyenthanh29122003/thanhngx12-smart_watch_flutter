@@ -85,8 +85,9 @@ class StepsHistoryChartCard extends StatelessWidget {
     double maxY = (maxHourlySteps / 50).ceil() * 50.0;
     if (maxHourlySteps > 0 && maxY == 0) maxY = 50;
     if (maxHourlySteps == 0) maxY = 50;
-    if (maxY < 100 && maxHourlySteps > 20)
+    if (maxY < 100 && maxHourlySteps > 20) {
       maxY = (maxHourlySteps / 20).ceil() * 20.0;
+    }
 
     // --- TÍNH TOÁN INTERVAL CHO TRỤC Y TRƯỚC ---
     final double yInterval = (maxY / 4) >= 10 ? (maxY / 4).floorToDouble() : 10;

@@ -323,12 +323,14 @@ class NotificationService {
     if (!_initialized) return;
     try {
       await _flutterLocalNotificationsPlugin.cancel(id);
-      if (kDebugMode)
+      if (kDebugMode) {
         print("[NotificationService] Notification cancelled (ID: $id).");
+      }
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             "!!! [NotificationService] Failed to cancel notification (ID: $id): $e");
+      }
     }
   }
 
@@ -337,12 +339,14 @@ class NotificationService {
     if (!_initialized) return;
     try {
       await _flutterLocalNotificationsPlugin.cancelAll();
-      if (kDebugMode)
+      if (kDebugMode) {
         print("[NotificationService] All notifications cancelled.");
+      }
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             "!!! [NotificationService] Failed to cancel all notifications: $e");
+      }
     }
   }
 }

@@ -145,7 +145,7 @@ class AuthService {
       // Ném lại lỗi để Provider xử lý và map thành message dễ hiểu
       print(
           "Error sending password reset email (AuthService): ${e.code} - ${e.message}");
-      throw e; // <<< Quan trọng: Ném lại lỗi
+      rethrow; // <<< Quan trọng: Ném lại lỗi
     } catch (e) {
       print(
           "An unexpected error occurred sending password reset email (AuthService): $e");
