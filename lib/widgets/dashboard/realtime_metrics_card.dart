@@ -2,152 +2,211 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../providers/ble_provider.dart'; // Lấy dữ liệu BLE mới nhất
-import '../../services/ble_service.dart'; // Cần enum và model
+import '../../providers/ble_provider.dart'; // Lấy dữ liệu BLE mới nhất và Notifier
+import '../../services/ble_service.dart'; // Cần enum BleConnectionStatus
 import '../../models/health_data.dart'; // Cần model HealthData
-import '../../generated/app_localizations.dart';
+import '../../generated/app_localizations.dart'; // Import l10n
 
 class RealtimeMetricsCard extends StatelessWidget {
   const RealtimeMetricsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Lắng nghe BleProvider để lấy dữ liệu mới nhất
+    // Sử dụng watch để lắng nghe cả BleProvider (cho status và data)
     final bleProvider = context.watch<BleProvider>();
-    final latestData = bleProvider.latestHealthData;
     final connectionStatus = bleProvider.connectionStatus.value;
+    final latestData =
+        bleProvider.latestHealthData; // Dùng để lấy timestamp và các giá trị
     final DateFormat formatter = DateFormat('HH:mm:ss - dd/MM');
-    final bool isWifiConnected = latestData?.wifi ?? false;
     final String timestampStr = latestData != null
         ? formatter.format(latestData.timestamp.toLocal())
         : '--:--:--';
-    // Chỉ hiển thị trạng thái WiFi nếu thiết bị đang kết nối
+    // Chỉ hiển thị trạng thái WiFi nếu thiết bị đang kết nối BLE
     final bool showWifiStatus =
         connectionStatus == BleConnectionStatus.connected;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!; // Lấy đối tượng dịch
 
     return Card(
       elevation: 4.0,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0)), // Thêm bo góc
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // <<< SỬ DỤNG ROW CHO TIÊU ĐỀ VÀ TRẠNG THÁI WIFI >>>
+            // --- Hàng Tiêu đề và Trạng thái WiFi ---
             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween, // Đẩy 2 phần tử ra 2 đầu
-              crossAxisAlignment: CrossAxisAlignment.start, // Canh lề trên
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Tiêu đề Card
                 Text(
-                  l10n.realtimeMetricsTitle, // <<< DÙNG KEY
-                  style: Theme.of(context).textTheme.titleLarge,
+                  l10n.realtimeMetricsTitle, // Đã dịch
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w600), // Đậm hơn chút
                 ),
 
-                // Trạng thái WiFi (chỉ hiển thị khi kết nối)
-                if (showWifiStatus) // <<< CHỈ HIỂN THỊ KHI KẾT NỐI BLE >>>
-                  Row(
-                    // Dùng Row nhỏ để nhóm icon và text WiFi
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isWifiConnected ? Icons.wifi : Icons.wifi_off,
-                        size: 18, // Kích thước icon nhỏ hơn chút
-                        color: isWifiConnected
-                            ? Colors.teal
-                            : Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isWifiConnected
-                            ? l10n.wifiStatusOn
-                            : l10n.wifiStatusOff,
-                        // TODO: Dịch
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isWifiConnected
+                // Trạng thái WiFi (Lắng nghe Notifier từ Provider)
+                if (showWifiStatus)
+                  ValueListenableBuilder<bool?>(
+                    valueListenable: bleProvider
+                        .deviceWifiStatusNotifier, // Lắng nghe notifier
+                    builder: (context, isWifiOn, child) {
+                      bool connected = isWifiOn ??
+                          false; // Mặc định false nếu null (chưa nhận status)
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            // Thêm Tooltip giải thích
+                            message: connected
+                                ? "Device WiFi Connected"
+                                : "Device WiFi Disconnected", // TODO: Dịch tooltip
+                            child: Icon(
+                              connected ? Icons.wifi : Icons.wifi_off,
+                              size: 18,
+                              color: connected
                                   ? Colors.teal
                                   : Colors.grey.shade600,
-                              // fontWeight: FontWeight.w500,
                             ),
-                      ),
-                    ],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            connected
+                                ? l10n.wifiStatusOn
+                                : l10n.wifiStatusOff, // Đã dịch
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                    color: connected
+                                        ? Colors.teal
+                                        : Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500 // Đậm hơn chút
+                                    ),
+                          ),
+                        ],
+                      );
+                    },
                   )
                 else
                   const SizedBox
-                      .shrink(), // Hoặc không hiển thị gì nếu không kết nối
+                      .shrink(), // Không hiển thị gì nếu không kết nối BLE
               ],
             ),
-            // ------------------------------------------------
+            const SizedBox(height: 20), // Tăng khoảng cách
 
-            const SizedBox(height: 15), // Khoảng cách giữa tiêu đề và nội dung
-            // Nội dung dựa trên trạng thái kết nối (Hàm _buildContent không cần thay đổi)
-            _buildContent(context, connectionStatus, latestData, timestampStr),
+            // --- Nội dung chính dựa trên trạng thái kết nối ---
+            _buildContent(
+                context, connectionStatus, latestData, timestampStr, l10n),
           ],
         ),
       ),
     );
   }
 
-  // Widget con để xây dựng nội dung dựa trên trạng thái
+  // --- Widget xây dựng nội dung chính (Hiển thị Metrics hoặc Trạng thái) ---
   Widget _buildContent(
     BuildContext context,
     BleConnectionStatus status,
-    HealthData? data,
-    String timestamp,
+    HealthData? data, // Dữ liệu HealthData mới nhất (có thể null)
+    String timestamp, // Timestamp đã định dạng
+    AppLocalizations l10n, // Đối tượng dịch
   ) {
-    final l10n = AppLocalizations.of(context)!;
     if (status == BleConnectionStatus.connected) {
       if (data != null) {
-        // --- Hiển thị dữ liệu khi có kết nối và data ---
+        // --- Đã Kết nối và Có Dữ liệu ---
+        // Chuyển đổi áp suất sang hPa và làm tròn
+        final String pressureHpa = data.pressure != null
+            ? (data.pressure! / 100).round().toString()
+            : '---';
+        // Định dạng nhiệt độ (1 chữ số thập phân)
+        final String temperatureStr = data.temperature != null
+            ? data.temperature!.toStringAsFixed(1)
+            : '---';
+
         return Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // <<< SỬ DỤNG WRAP ĐỂ TỰ ĐỘNG XUỐNG DÒNG NẾU KHÔNG ĐỦ CHỖ >>>
+            Wrap(
+              alignment:
+                  WrapAlignment.spaceBetween, // Căn đều khoảng cách ngang
+              crossAxisAlignment: WrapCrossAlignment.start,
+              runSpacing: 24.0, // Khoảng cách dọc giữa các hàng
+              spacing: 16.0, // Khoảng cách ngang tối thiểu giữa các item
               children: [
                 _buildMetricDisplay(
-                  context: context,
-                  icon: Icons.favorite,
-                  label: l10n.heartRateLabel,
-                  value: (data.hr >= 0) ? data.hr.toString() : '---',
-                  unit: 'bpm',
-                  color: Colors.red.shade400,
-                ),
+                    context: context,
+                    icon: Icons.favorite,
+                    label: l10n.heartRateLabel,
+                    value: (data.hr >= 0) ? data.hr.toString() : '---',
+                    unit: 'bpm',
+                    color: Colors.red.shade400),
                 _buildMetricDisplay(
-                  context: context,
-                  icon: Icons.opacity,
-                  label: l10n.spo2Label,
-                  value: (data.spo2 >= 0) ? data.spo2.toString() : '---',
-                  unit: '%',
-                  color: Colors.blue.shade400,
-                ),
+                    context: context,
+                    icon: Icons.opacity,
+                    label: l10n.spo2Label,
+                    value: (data.spo2 >= 0) ? data.spo2.toString() : '---',
+                    unit: '%',
+                    color: Colors.blue.shade400),
                 _buildMetricDisplay(
-                  context: context,
-                  icon: Icons.directions_walk,
-                  label: l10n.stepsLabel,
-                  value: data.steps.toString(),
-                  unit: '',
-                  color: Colors.orange.shade400,
-                ),
+                    context: context,
+                    icon: Icons.directions_walk,
+                    label: l10n.stepsLabel,
+                    value: data.steps.toString(),
+                    unit: l10n.stepsUnit,
+                    color: Colors.orange.shade400), // Thêm đơn vị steps
+                _buildMetricDisplay(
+                    context: context,
+                    icon: Icons.thermostat,
+                    label: l10n.temperatureLabel,
+                    value: temperatureStr,
+                    unit: l10n.tempUnit,
+                    color: Colors.amber.shade700),
+                _buildMetricDisplay(
+                    context: context,
+                    icon: Icons.speed_outlined,
+                    label: l10n.pressureLabel,
+                    value: pressureHpa,
+                    unit: l10n.pressureUnitHpa,
+                    color: Colors.purple.shade400),
               ],
             ),
-            const SizedBox(height: 15),
+            // ---------------------------------------------------------
+            const SizedBox(height: 20), // Tăng khoảng cách
             Center(
+              // Timestamp
               child: Text(
-                "${l10n.lastUpdatedPrefix} $timestamp", // <<< DÙNG KEY
-                style: Theme.of(context).textTheme.bodySmall,
+                "${l10n.lastUpdatedPrefix} $timestamp", // Đã dịch
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey[600]), // Màu nhạt hơn
               ),
             ),
           ],
         );
       } else {
-        // --- Có kết nối nhưng chưa có data ---
+        // --- Đã kết nối nhưng chưa có dữ liệu ---
         return Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Text(l10n.waitingForData), // <<< DÙNG KEY
-          ),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 30.0), // Tăng padding
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(
+                          Theme.of(context).primaryColor)),
+                  const SizedBox(height: 12),
+                  Text(l10n.waitingForData,
+                      style: TextStyle(color: Colors.grey[700])), // Đã dịch
+                ],
+              )),
         );
       }
     } else if (status == BleConnectionStatus.connecting ||
@@ -155,66 +214,98 @@ class RealtimeMetricsCard extends StatelessWidget {
       // --- Đang kết nối ---
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0),
+          padding: const EdgeInsets.symmetric(vertical: 30.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const CircularProgressIndicator(),
-              const SizedBox(height: 10),
-              Text(l10n.connectingStatus),
+              const SizedBox(height: 12),
+              Text(l10n.connectingStatusDevice,
+                  style: TextStyle(color: Colors.orange.shade800)), // Đã dịch
             ],
           ),
         ),
       );
     } else {
       // --- Ngắt kết nối hoặc Lỗi ---
+      String message = status == BleConnectionStatus.error
+          ? l10n.connectionErrorStatus // Đã dịch
+          : l10n.disconnectedStatus; // Đã dịch
+      IconData icon = status == BleConnectionStatus.error
+          ? Icons.error_outline
+          : Icons.bluetooth_disabled;
+      Color color = status == BleConnectionStatus.error
+          ? Theme.of(context).colorScheme.error
+          : Colors.grey.shade600;
+
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0),
-          child: Text(
-            status == BleConnectionStatus.error
-                ? l10n.connectionErrorStatus
-                : l10n.disconnectedStatus,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        ),
+            padding: const EdgeInsets.symmetric(vertical: 30.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 40, color: color),
+                const SizedBox(height: 12),
+                Text(message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: color)),
+              ],
+            )),
       );
     }
   }
 
-  // Widget helper hiển thị chỉ số (giữ nguyên từ DashboardScreen cũ)
+  // --- Widget helper để hiển thị từng chỉ số ---
   Widget _buildMetricDisplay({
     required BuildContext context,
     required IconData icon,
-    required String label,
+    required String label, // Label đã được dịch
     required String value,
-    required String unit,
+    required String unit, // Đơn vị đã được dịch (nếu có)
     Color? color,
   }) {
-    // ... (code hàm này giữ nguyên) ...
     final primaryColor = color ?? Theme.of(context).primaryColor;
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min, // Quan trọng khi dùng Wrap
+      crossAxisAlignment:
+          CrossAxisAlignment.center, // Căn giữa theo chiều ngang
       children: [
-        Icon(icon, size: 36.0, color: primaryColor),
-        const SizedBox(height: 8.0),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+        Icon(icon,
+            size: 32.0, color: primaryColor), // Kích thước icon nhỏ hơn chút
+        const SizedBox(height: 6.0),
+        Row(
+          // Nhóm giá trị và đơn vị
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.baseline, // Căn baseline cho đẹp
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              value,
+              style: textTheme.headlineSmall?.copyWith(
+                // Dùng headlineSmall
+                fontWeight: FontWeight.w600, // Bớt đậm hơn
                 color: primaryColor,
               ),
+            ),
+            if (unit.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 2.0), // Khoảng cách nhỏ
+                child: Text(
+                  unit,
+                  style: textTheme.bodySmall?.copyWith(
+                      color:
+                          primaryColor.withOpacity(0.8)), // Đơn vị mờ hơn chút
+                ),
+              ),
+          ],
         ),
-        if (unit.isNotEmpty)
-          Text(
-            unit,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: primaryColor),
-          ),
-        const SizedBox(height: 4.0),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 2.0), // Giảm khoảng cách
+        Text(label,
+            style: textTheme.bodyMedium
+                ?.copyWith(color: Colors.grey[700])), // Label màu xám hơn
       ],
     );
   }

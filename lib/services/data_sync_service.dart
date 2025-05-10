@@ -80,35 +80,34 @@ class DataSyncService {
       );
     }
   }
-  // ---------------------------------
 
+  // ---------------------------------
   Future<void> syncOfflineData() async {
-    // ... (Nội dung hàm syncOfflineData giữ nguyên như code bạn đã có) ...
     if (_isSyncing) {
-      /* ... */
+      print("[DataSyncService] Sync already in progress. Skipping.");
       return;
     }
     if (!_connectivityService.isOnline()) {
-      /* ... */
+      print("[DataSyncService] No network connection. Skipping sync.");
       return;
     }
     final currentUser = _authService.currentUser;
     if (currentUser == null) {
-      /* ... */
+      print("[DataSyncService] User not logged in. Skipping sync.");
       return;
     }
 
     _isSyncing = true;
     print(
-      "[DataSyncService] Starting offline data sync for user: ${currentUser.uid}",
-    );
+        "[DataSyncService] Starting offline data sync for user: ${currentUser.uid}");
 
     try {
       int totalSyncedInThisRun = 0;
       bool hasMoreData = true;
-      const int batchLimit = 100; // Đổi thành const
+      const int batchLimit = 100; // Giới hạn số lượng documents mỗi batch
 
       while (hasMoreData && _connectivityService.isOnline()) {
+        // Kiểm tra mạng mỗi vòng lặp
         final unsyncedRecords = await _localDbService.getUnsyncedHealthRecords(
           limit: batchLimit,
         );
@@ -116,73 +115,114 @@ class DataSyncService {
         if (unsyncedRecords.isEmpty) {
           hasMoreData = false;
           print("[DataSyncService] No more unsynced records found.");
-          break;
+          break; // Thoát vòng lặp while
         }
 
         print(
-          "[DataSyncService] Found ${unsyncedRecords.length} records to sync.",
-        );
+            "[DataSyncService] Found ${unsyncedRecords.length} records to sync in this batch.");
         final WriteBatch batch = _firestoreService.firestoreInstance.batch();
-        final List<int> recordIdsInBatch = [];
+        final List<int> recordIdsInBatch = []; // Lưu ID của SQLite để xóa sau
 
         for (final recordMap in unsyncedRecords) {
           final recordId = recordMap[LocalDbService.columnId] as int?;
           if (recordId == null) {
-            print("!!! Skipping record with null ID");
+            print("!!! [DataSyncService] Skipping record with null local ID");
             continue;
           }
+
           try {
+            // 1. Tạo HealthData object từ dữ liệu SQLite
             final healthData = HealthData.fromDbMap(recordMap);
-            final firestoreData = healthData.toJsonForFirestore();
-            final docRef =
-                _firestoreService.firestoreInstance
-                    .collection(AppConstants.usersCollection)
-                    .doc(currentUser.uid)
-                    .collection(AppConstants.healthDataSubcollection)
-                    .doc();
-            batch.set(docRef, firestoreData);
+
+            // <<< SỬA PHẦN CHUẨN BỊ DATA CHO FIRESTORE >>>
+            // 2. Tạo Map dữ liệu cho Firestore từ HealthData object
+            //    Bắt đầu bằng Map từ toJsonForFirestore (không có recordedAt)
+            final Map<String, dynamic> dataForFirestore =
+                healthData.toJsonForFirestore();
+
+            // 3. Thêm trường 'recordedAt' vào Map, lấy từ timestamp của HealthData
+            //    Đảm bảo timestamp này là UTC
+            dataForFirestore['recordedAt'] =
+                Timestamp.fromDate(healthData.timestamp.toUtc());
+            // -------------------------------------------------
+
+            // 4. Tạo tham chiếu document mới trên Firestore
+            //    Dùng .doc() để Firestore tự tạo ID duy nhất
+            final docRef = _firestoreService.firestoreInstance
+                .collection(AppConstants.usersCollection)
+                .doc(currentUser.uid)
+                .collection(AppConstants.healthDataSubcollection)
+                .doc(); // ID mới tự động
+
+            // 5. Thêm lệnh set vào WriteBatch
+            batch.set(docRef, dataForFirestore); // Dùng Map đã chuẩn bị đầy đủ
+
+            // 6. Thêm ID của bản ghi SQLite vào danh sách để xóa sau
             recordIdsInBatch.add(recordId);
           } catch (e) {
-            print("!!! Error processing record ID $recordId: $e");
+            // Lỗi khi xử lý một bản ghi cụ thể (ví dụ: parse lỗi - ít xảy ra vì đã lưu)
+            print(
+                "!!! [DataSyncService] Error processing local record ID $recordId during sync prep: $e");
+            // Có thể bỏ qua bản ghi này hoặc dừng toàn bộ batch tùy chiến lược
           }
         }
 
+        // Chỉ commit và xóa nếu batch có dữ liệu và có ID để xóa
         if (recordIdsInBatch.isNotEmpty) {
           try {
             print(
-              "[DataSyncService] Committing batch (${recordIdsInBatch.length} records)...",
-            );
-            await batch.commit();
-            print("[DataSyncService] Batch committed.");
-            final deletedCount = await _localDbService.deleteRecordsByIds(
-              recordIdsInBatch,
-            );
-            if (deletedCount > 0) {
+                "[DataSyncService] Committing Firestore batch (${recordIdsInBatch.length} records)...");
+            await batch.commit(); // Gửi batch lên Firestore
+            print("[DataSyncService] Batch committed successfully.");
+
+            // Xóa các bản ghi đã đồng bộ thành công khỏi SQLite
+            final deletedCount =
+                await _localDbService.deleteRecordsByIds(recordIdsInBatch);
+            // Hoặc nếu chỉ muốn đánh dấu:
+            // final updatedCount = await _localDbService.markRecordsAsSynced(recordIdsInBatch);
+
+            if (deletedCount >= 0) {
+              // Hàm delete trả về số hàng bị xóa (>=0)
               totalSyncedInThisRun += deletedCount;
               print(
-                "[DataSyncService] Deleted $deletedCount synced records locally.",
-              );
+                  "[DataSyncService] Deleted $deletedCount synced records locally.");
+              // Nếu số lượng xóa ít hơn số lượng trong batch -> có lỗi tiềm ẩn
+              if (deletedCount < recordIdsInBatch.length) {
+                print(
+                    "!!! [DataSyncService] Warning: Deleted count ($deletedCount) is less than batch size (${recordIdsInBatch.length}). Some local records might not have been deleted.");
+              }
             } else {
-              print("!!! Failed to delete local records for batch.");
-              hasMoreData = false; // Stop if local delete fails
+              // Hàm delete trả về -1 nếu có lỗi
+              print(
+                  "!!! [DataSyncService] Error deleting local records for batch (returned $deletedCount). Stopping sync.");
+              hasMoreData = false; // Dừng nếu xóa lỗi
             }
           } catch (e) {
-            print("!!! Error committing Firestore batch: $e");
-            hasMoreData = false; // Stop sync cycle on Firestore error
+            // Lỗi khi commit batch lên Firestore
+            print("!!! [DataSyncService] Error committing Firestore batch: $e");
+            hasMoreData =
+                false; // Dừng đồng bộ nếu không ghi được lên Firestore
           }
         } else {
-          print("[DataSyncService] Batch empty, stopping.");
+          // Không có bản ghi hợp lệ nào trong batch này để xử lý
+          print(
+              "[DataSyncService] Batch was empty after processing records. Stopping.");
           hasMoreData = false;
         }
-      }
+
+        // Delay nhỏ giữa các batch để tránh quá tải (tùy chọn)
+        if (hasMoreData)
+          await Future.delayed(const Duration(milliseconds: 200));
+      } // Kết thúc while(hasMoreData)
+
       print(
-        "[DataSyncService] Sync cycle finished. Total synced: $totalSyncedInThisRun",
-      );
+          "[DataSyncService] Sync cycle finished. Total records processed in this run: $totalSyncedInThisRun");
     } catch (e) {
-      print("!!! Error during sync process: $e");
+      // Lỗi chung trong quá trình đồng bộ (ví dụ: lỗi đọc SQLite ban đầu)
+      print("!!! [DataSyncService] Error during overall sync process: $e");
     } finally {
-      _isSyncing = false;
-      print("[DataSyncService] Sync flag reset.");
+      _isSyncing = false; // Luôn reset cờ syncing
+      print("[DataSyncService] Sync flag reset to false.");
     }
   }
 

@@ -681,25 +681,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alertHrHighTitle => 'High Heart Rate Alert!';
 
   @override
-  String alertHrHighBody(int hrValue, int threshold) {
+  String alertHrHighBody(Object hrValue, Object threshold) {
     return 'Current heart rate is $hrValue bpm, above threshold $threshold bpm.';
   }
+
+  @override
+  String get channelNameHrHigh => 'High Heart Rate Alerts';
 
   @override
   String get alertHrLowTitle => 'Low Heart Rate Alert!';
 
   @override
-  String alertHrLowBody(int hrValue, int threshold) {
+  String alertHrLowBody(Object hrValue, Object threshold) {
     return 'Current heart rate is $hrValue bpm, below threshold $threshold bpm.';
   }
+
+  @override
+  String get channelNameHrLow => 'Low Heart Rate Alerts';
 
   @override
   String get alertSpo2LowTitle => 'Low SpO2 Alert!';
 
   @override
-  String alertSpo2LowBody(int spo2Value, int threshold) {
+  String alertSpo2LowBody(Object spo2Value, Object threshold) {
     return 'Current SpO2 is $spo2Value%, below threshold $threshold%.';
   }
+
+  @override
+  String get channelNameSpo2Low => 'Low SpO2 Alerts';
 
   @override
   String get loginWelcomeTitle => 'Welcome Back!';
@@ -715,4 +724,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signUpLinkText => 'Sign Up Now';
+
+  @override
+  String get temperatureLabel => 'Temperature';
+
+  @override
+  String get pressureLabel => 'Pressure';
+
+  @override
+  String get tempUnit => '°C';
+
+  @override
+  String get pressureUnitHpa => 'hPa';
 }

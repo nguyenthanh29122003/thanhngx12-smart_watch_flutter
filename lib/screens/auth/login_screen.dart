@@ -199,7 +199,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   // Thay bằng logo của bạn nếu có
-                  const FlutterLogo(size: 80),
+                  Image.asset(
+                    'assets/images/app_logo.png',
+                    width: 80,
+                    height: 80,
+                  ),
                   const SizedBox(height: 24.0),
 
                   // <<< SỬ DỤNG KEY >>>

@@ -221,10 +221,13 @@
   "notificationChannelTestDesc": "Kênh để kiểm tra thông báo thủ công",
   "alertHrHighTitle": "Cảnh báo Nhịp tim Cao!",
   "alertHrHighBody": "Nhịp tim hiện tại là {hrValue} bpm, cao hơn ngưỡng {threshold} bpm.",
+  "channelNameHrHigh": "Cảnh báo Nhịp tim Cao",
   "alertHrLowTitle": "Cảnh báo Nhịp tim Thấp!",
   "alertHrLowBody": "Nhịp tim hiện tại là {hrValue} bpm, thấp hơn ngưỡng {threshold} bpm.",
+  "channelNameHrLow": "Cảnh báo Nhịp tim Thấp",
   "alertSpo2LowTitle": "Cảnh báo SpO2 Thấp!",
   "alertSpo2LowBody": "SpO2 hiện tại là {spo2Value}%, thấp hơn ngưỡng {threshold}%.",
+  "channelNameSpo2Low": "Cảnh báo SpO2 Thấp",
   "loginWelcomeTitle": "Chào mừng trở lại!",
   "@loginWelcomeTitle": {
     "description": "Tiêu đề chính trên màn hình đăng nhập"
@@ -244,5 +247,10 @@
   "signUpLinkText": "Đăng ký ngay",
   "@signUpLinkText": {
     "description": "Chữ cho liên kết/nút dẫn người dùng đến màn hình đăng ký"
-  }
+  },
+  "temperatureLabel": "Nhiệt độ",
+  "pressureLabel": "Áp suất",
+  "tempUnit": "°C",
+  "pressureUnitHpa": "hPa",
+  "connectingStatusDevice": "Đang kết nối..."
 }

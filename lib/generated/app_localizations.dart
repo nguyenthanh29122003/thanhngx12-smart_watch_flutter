@@ -1395,7 +1395,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Current heart rate is {hrValue} bpm, above threshold {threshold} bpm.'**
-  String alertHrHighBody(int hrValue, int threshold);
+  String alertHrHighBody(Object hrValue, Object threshold);
+
+  /// No description provided for @channelNameHrHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High Heart Rate Alerts'**
+  String get channelNameHrHigh;
 
   /// No description provided for @alertHrLowTitle.
   ///
@@ -1407,7 +1413,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Current heart rate is {hrValue} bpm, below threshold {threshold} bpm.'**
-  String alertHrLowBody(int hrValue, int threshold);
+  String alertHrLowBody(Object hrValue, Object threshold);
+
+  /// No description provided for @channelNameHrLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Heart Rate Alerts'**
+  String get channelNameHrLow;
 
   /// No description provided for @alertSpo2LowTitle.
   ///
@@ -1419,7 +1431,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Current SpO2 is {spo2Value}%, below threshold {threshold}%.'**
-  String alertSpo2LowBody(int spo2Value, int threshold);
+  String alertSpo2LowBody(Object spo2Value, Object threshold);
+
+  /// No description provided for @channelNameSpo2Low.
+  ///
+  /// In en, this message translates to:
+  /// **'Low SpO2 Alerts'**
+  String get channelNameSpo2Low;
 
   /// Main title on the login screen
   ///
@@ -1450,6 +1468,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign Up Now'**
   String get signUpLinkText;
+
+  /// No description provided for @temperatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get temperatureLabel;
+
+  /// No description provided for @pressureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pressure'**
+  String get pressureLabel;
+
+  /// No description provided for @tempUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'°C'**
+  String get tempUnit;
+
+  /// No description provided for @pressureUnitHpa.
+  ///
+  /// In en, this message translates to:
+  /// **'hPa'**
+  String get pressureUnitHpa;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

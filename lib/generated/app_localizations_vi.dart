@@ -681,25 +681,34 @@ class AppLocalizationsVi extends AppLocalizations {
   String get alertHrHighTitle => 'Cảnh báo Nhịp tim Cao!';
 
   @override
-  String alertHrHighBody(int hrValue, int threshold) {
+  String alertHrHighBody(Object hrValue, Object threshold) {
     return 'Nhịp tim hiện tại là $hrValue bpm, cao hơn ngưỡng $threshold bpm.';
   }
+
+  @override
+  String get channelNameHrHigh => 'Cảnh báo Nhịp tim Cao';
 
   @override
   String get alertHrLowTitle => 'Cảnh báo Nhịp tim Thấp!';
 
   @override
-  String alertHrLowBody(int hrValue, int threshold) {
+  String alertHrLowBody(Object hrValue, Object threshold) {
     return 'Nhịp tim hiện tại là $hrValue bpm, thấp hơn ngưỡng $threshold bpm.';
   }
+
+  @override
+  String get channelNameHrLow => 'Cảnh báo Nhịp tim Thấp';
 
   @override
   String get alertSpo2LowTitle => 'Cảnh báo SpO2 Thấp!';
 
   @override
-  String alertSpo2LowBody(int spo2Value, int threshold) {
+  String alertSpo2LowBody(Object spo2Value, Object threshold) {
     return 'SpO2 hiện tại là $spo2Value%, thấp hơn ngưỡng $threshold%.';
   }
+
+  @override
+  String get channelNameSpo2Low => 'Cảnh báo SpO2 Thấp';
 
   @override
   String get loginWelcomeTitle => 'Chào mừng trở lại!';
@@ -715,4 +724,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get signUpLinkText => 'Đăng ký ngay';
+
+  @override
+  String get temperatureLabel => 'Nhiệt độ';
+
+  @override
+  String get pressureLabel => 'Áp suất';
+
+  @override
+  String get tempUnit => '°C';
+
+  @override
+  String get pressureUnitHpa => 'hPa';
 }

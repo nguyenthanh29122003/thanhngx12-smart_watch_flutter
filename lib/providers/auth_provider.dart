@@ -1,246 +1,378 @@
+// lib/providers/auth_provider.dart
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // Cho kDebugMode và mapEquals
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart'; // Cho PlatformException (nếu bắt lỗi Google Sign-In chi tiết)
+// import 'package:google_sign_in/google_sign_in.dart'; // Bỏ comment nếu sử dụng Google Sign-In
+
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+// import '../app_constants.dart'; // Nếu cần dùng hằng số
 
 enum AuthStatus {
-  uninitialized,
-  authenticated,
-  authenticating,
-  unauthenticated,
-  error
+  uninitialized, // Trạng thái ban đầu, đang kiểm tra
+  authenticated, // Đã xác thực
+  authenticating, // Đang trong quá trình đăng nhập/đăng ký
+  unauthenticated, // Chưa xác thực
+  error // Có lỗi xác thực không mong muốn
 }
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
   final FirestoreService _firestoreService;
 
-  Map<String, dynamic>? _userProfileData; // Lưu trữ dữ liệu đọc từ Firestore
-  final bool _isLoadingProfile = false; // Trạng thái đang tải profile
+  User? _user; // Thông tin người dùng từ Firebase Auth
+  AuthStatus _status = AuthStatus.uninitialized; // Trạng thái xác thực hiện tại
+  String _lastErrorMessage = ""; // Thông báo lỗi cuối cùng để UI hiển thị
+  Map<String, dynamic>? _userProfileData; // Dữ liệu hồ sơ từ Firestore
+  bool _isLoadingProfile =
+      false; // Cờ cho biết đang tải hồ sơ hay không (chủ yếu dùng nội bộ)
 
-  // <<< THÊM GETTER CHO PROFILE DATA >>>
-  Map<String, dynamic>? get userProfileData => _userProfileData;
-  bool get isLoadingProfile =>
-      _isLoadingProfile; // Có thể dùng để hiển thị loading nếu cần
+  StreamSubscription<User?>?
+      _authStateListenerSubscription; // Listener cho thay đổi trạng thái auth từ AuthService
 
-  // Getter tiện lợi để lấy tên hiển thị (Ưu tiên Firestore, fallback về Auth)
-  String? get preferredDisplayName {
-    // Ưu tiên lấy từ Firestore profile nếu có
-    if (_userProfileData != null && _userProfileData!['displayName'] != null) {
-      return _userProfileData!['displayName'] as String?;
-    }
-    // Nếu không, fallback về displayName từ Firebase Auth user
-    return _user?.displayName;
-  }
-
-  User? _user;
-  AuthStatus _status = AuthStatus.uninitialized;
-  String _lastErrorMessage = "An unknown error occurred.";
-  StreamSubscription<User?>? _authStateSubscription;
-
+  // --- Getters công khai ---
   User? get user => _user;
   AuthStatus get status => _status;
   String get lastErrorMessage => _lastErrorMessage;
+  Map<String, dynamic>? get userProfileData => _userProfileData;
+  bool get isLoadingProfile =>
+      _isLoadingProfile; // UI có thể dùng nếu muốn hiển thị loading riêng cho profile
 
-  AuthProvider(this._authService, this._firestoreService) {
-    _checkInitialAuthState();
-    _listenToAuthChanges();
-    print("AuthProvider Initialized (Fixed Version).");
+  /// Getter tiện lợi để lấy tên hiển thị.
+  /// Ưu tiên lấy từ hồ sơ Firestore, nếu không có thì fallback về displayName từ Firebase Auth user.
+  String? get preferredDisplayName {
+    if (_userProfileData != null &&
+        _userProfileData!['displayName'] != null &&
+        _userProfileData!['displayName'].isNotEmpty) {
+      return _userProfileData!['displayName'] as String?;
+    }
+    if (_user != null &&
+        _user!.displayName != null &&
+        _user!.displayName!.isNotEmpty) {
+      return _user!.displayName;
+    }
+    return null; // Trả về null nếu không có tên nào
   }
 
-  // <<< HÀM MỚI ĐỂ TẢI PROFILE TỪ FIRESTORE >>>
+  /// Stream để các thành phần bên ngoài (như AuthWrapper) có thể lắng nghe thay đổi User từ Firebase Auth.
+  Stream<User?> get authStateChanges => _authService.authStateChanges;
+
+  // Constructor
+  AuthProvider(this._authService, this._firestoreService) {
+    print(
+        "[AuthProvider] Constructor called. Initializing authentication state...");
+    // Khởi tạo bất đồng bộ để không làm constructor bị block.
+    _initializeAuthenticationState();
+  }
+
+  /// Khởi tạo trạng thái xác thực ban đầu và bắt đầu lắng nghe các thay đổi từ AuthService.
+  Future<void> _initializeAuthenticationState() async {
+    print("[AuthProvider _initializeAuthenticationState] Starting...");
+    // Bước 1: Kiểm tra trạng thái xác thực hiện tại khi provider được tạo.
+    await _checkInitialAuthState();
+    // Bước 2: Bắt đầu lắng nghe các thay đổi trạng thái xác thực liên tục từ AuthService.
+    _listenToAuthChanges();
+    print(
+        "[AuthProvider _initializeAuthenticationState] Initialization and listener setup complete. Current status: $_status");
+  }
+
+  /// Kiểm tra trạng thái xác thực ban đầu. Được gọi một lần khi provider khởi tạo.
+  Future<void> _checkInitialAuthState() async {
+    print(
+        "[AuthProvider _checkInitialAuthState] Checking current Firebase user from AuthService...");
+    try {
+      _user = _authService
+          .currentUser; // Giả sử _authService.currentUser là getter đồng bộ
+
+      if (_user != null) {
+        print(
+            "[AuthProvider _checkInitialAuthState] Active user found: ${_user!.uid}. Attempting to load profile.");
+        await _loadUserProfile(_user!.uid); // Tải hồ sơ Firestore cho user này
+        // Sau khi tải profile (thành công hoặc không), cập nhật status thành authenticated
+        _updateStatus(
+            AuthStatus.authenticated, "Initial user check: Authenticated");
+      } else {
+        print(
+            "[AuthProvider _checkInitialAuthState] No active user found. Status set to unauthenticated.");
+        _userProfileData = null; // Đảm bảo profile cũng null
+        _updateStatus(
+            AuthStatus.unauthenticated, "Initial user check: Unauthenticated");
+      }
+    } catch (e) {
+      print(
+          "!!! [AuthProvider _checkInitialAuthState] Error: $e. Defaulting to unauthenticated.");
+      _user = null;
+      _userProfileData = null;
+      _updateStatus(AuthStatus.unauthenticated,
+          "Error checking initial auth state: ${e.toString()}");
+    }
+  }
+
+  /// Lắng nghe các thay đổi trạng thái xác thực từ stream của AuthService.
+  void _listenToAuthChanges() {
+    _authStateListenerSubscription?.cancel(); // Hủy listener cũ nếu có
+    print(
+        "[AuthProvider _listenToAuthChanges] Subscribing to authStateChanges stream from AuthService...");
+    _authStateListenerSubscription = _authService.authStateChanges.listen(
+        (User? firebaseUserFromStream) async {
+      // Đổi tên biến để rõ ràng
+      print(
+          "[AuthProvider _onAuthStateChanged] Auth stream event. New FirebaseUser: ${firebaseUserFromStream?.uid}. Current _user (before update): ${_user?.uid}");
+
+      if (firebaseUserFromStream == null) {
+        // Người dùng đã đăng xuất
+        if (_user != null) {
+          // Chỉ xử lý nếu trạng thái _user trước đó là có người dùng
+          print(
+              "[AuthProvider _onAuthStateChanged] User signed out via stream. Clearing user data and profile.");
+          _user = null;
+          _userProfileData = null;
+          _updateStatus(
+              AuthStatus.unauthenticated, "User signed out via stream");
+        } else {
+          // Trường hợp stream trả về null nhưng _user đã là null (ví dụ: khi khởi tạo và chưa đăng nhập)
+          // Hoặc stream trả về null nhiều lần.
+          // Đảm bảo status là unauthenticated nếu nó đang không phải là uninitialized (trạng thái khởi tạo ban đầu)
+          if (_status != AuthStatus.unauthenticated &&
+              _status != AuthStatus.uninitialized) {
+            print(
+                "[AuthProvider _onAuthStateChanged] Stream user is null, _user already null. Current status $_status -> unauthenticated.");
+            _updateStatus(AuthStatus.unauthenticated, "Auth state became null");
+          }
+        }
+      } else {
+        // Người dùng đăng nhập hoặc user object thay đổi (ví dụ: token refresh, displayName update từ Firebase)
+        bool userActuallyChanged = (_user?.uid != firebaseUserFromStream.uid);
+        bool profileNeedsLoading = userActuallyChanged ||
+            _userProfileData == null ||
+            _userProfileData!['uid'] != firebaseUserFromStream.uid;
+
+        _user =
+            firebaseUserFromStream; // Cập nhật _user với thông tin mới nhất từ stream
+
+        // Chỉ cập nhật status thành authenticated nếu nó chưa phải, để tránh notify thừa
+        if (_status != AuthStatus.authenticated &&
+            _status != AuthStatus.authenticating) {
+          print(
+              "[AuthProvider _onAuthStateChanged] User authenticated/changed. Current status $_status -> authenticated.");
+          _updateStatus(AuthStatus.authenticated);
+        }
+
+        // Tải hoặc làm mới profile nếu user thay đổi hoặc profile chưa có
+        if (profileNeedsLoading) {
+          print(
+              "[AuthProvider _onAuthStateChanged] User changed or profile missing/mismatched. Loading profile for ${firebaseUserFromStream.uid}.");
+          await _loadUserProfile(
+              firebaseUserFromStream.uid); // _loadUserProfile sẽ tự notify
+        } else {
+          // User không đổi, profile đã có. Có thể notify nếu muốn UI cập nhật với _user object mới (vd: emailVerified)
+          // Tuy nhiên, nếu preferredDisplayName không đổi, có thể không cần.
+          // Để đơn giản và đảm bảo UI luôn có dữ liệu mới nhất từ _user, ta có thể notify.
+          if (userActuallyChanged) {
+            // Chỉ notify nếu đối tượng User thực sự khác (ví dụ, sau khi displayName Auth được cập nhật)
+            print(
+                "[AuthProvider _onAuthStateChanged] User object instance might have changed. Notifying.");
+            notifyListeners();
+          } else {
+            print(
+                "[AuthProvider _onAuthStateChanged] User is the same and profile loaded. No extra notification needed from here.");
+          }
+        }
+      }
+    }, onError: (error) {
+      print(
+          "!!! [AuthProvider _onAuthStateChanged] Error in auth state stream: $error");
+      _user = null;
+      _userProfileData = null;
+      _updateStatus(
+          AuthStatus.error, "Error in auth stream: ${error.toString()}");
+    });
+    print(
+        "[AuthProvider _listenToAuthChanges] Subscription to authStateChanges established.");
+  }
+
+  /// Tải hồ sơ người dùng từ Firestore.
   Future<void> _loadUserProfile(String userId) async {
-    if (_isLoadingProfile) return; // Tránh tải lại khi đang tải
-    print("[AuthProvider] Loading user profile from Firestore for $userId...");
-    // Đặt trạng thái loading (tùy chọn, chỉ cần nếu bạn muốn hiển thị indicator riêng)
-    // _isLoadingProfile = true;
-    // notifyListeners(); // Thông báo bắt đầu tải (nếu cần)
+    // Không cần cờ _isLoadingProfile ở đây nếu không có UI riêng cho việc này
+    // và _updateStatus đã có cờ riêng cho authenticating.
+    print(
+        "[AuthProvider _loadUserProfile] Attempting to load profile for $userId...");
+    Map<String, dynamic>? oldProfileData =
+        _userProfileData != null ? Map.from(_userProfileData!) : null;
 
     try {
       final profileDoc = await _firestoreService.getUserProfile(userId);
       if (profileDoc != null && profileDoc.exists) {
         _userProfileData = profileDoc.data();
         print(
-            "[AuthProvider] User profile loaded: ${_userProfileData?['displayName']}");
+            "[AuthProvider _loadUserProfile] User profile for $userId loaded: ${_userProfileData?['displayName']}");
       } else {
-        _userProfileData = null; // Không tìm thấy profile
+        _userProfileData = null;
         print(
-            "[AuthProvider] User profile not found in Firestore for $userId.");
+            "[AuthProvider _loadUserProfile] User profile not found in Firestore for $userId.");
       }
     } catch (e) {
-      print("!!! [AuthProvider] Error loading user profile: $e");
-      _userProfileData = null; // Đặt là null nếu lỗi
+      print(
+          "!!! [AuthProvider _loadUserProfile] Error loading user profile for $userId: $e");
+      _userProfileData = null;
     } finally {
-      // Đặt trạng thái hết loading (tùy chọn)
-      // _isLoadingProfile = false;
-      // Luôn gọi notifyListeners để cập nhật UI với profile mới (hoặc null)
-      notifyListeners();
-    }
-  }
-
-  Future<void> _checkInitialAuthState() async {
-    try {
-      // Kiểm tra user hiện tại với timeout
-      final firebaseUser = await Future.value(_authService.currentUser)
-          .timeout(const Duration(seconds: 5), onTimeout: () {
-        throw TimeoutException('Initial auth check timeout');
-      });
-      _user = firebaseUser;
-      _updateStatus(AuthStatus.authenticated);
-    } catch (e) {
-      print("Error checking initial auth state: $e");
-      _updateStatus(
-          AuthStatus.unauthenticated, "Failed to check initial auth state");
-    }
-  }
-
-  void _listenToAuthChanges() {
-    _authStateSubscription?.cancel();
-    _authStateSubscription =
-        _authService.authStateChanges.listen((User? firebaseUser) async {
-      // Thêm async
-      if (firebaseUser == null) {
-        // Xử lý đăng xuất
-        if (_user != null) {
-          _user = null;
-          _userProfileData = null; // <<< XÓA PROFILE KHI ĐĂNG XUẤT
-          _updateStatus(
-              AuthStatus.unauthenticated, "User signed out via stream");
-        }
+      // Chỉ notifyListeners nếu dữ liệu profile thực sự thay đổi hoặc được tải lần đầu
+      if (!mapEquals(oldProfileData, _userProfileData)) {
+        print(
+            "[AuthProvider _loadUserProfile] Profile data changed or loaded. Notifying. New preferredDisplayName: $preferredDisplayName");
+        notifyListeners();
       } else {
-        // Xử lý đăng nhập hoặc thay đổi user
-        bool needsProfileLoad = _user?.uid != firebaseUser.uid ||
-            _userProfileData ==
-                null; // Cần load nếu user mới hoặc chưa có profile
-        _user = firebaseUser;
-        _updateStatus(
-            AuthStatus.authenticated); // Cập nhật trạng thái auth trước
-
-        // <<< GỌI TẢI PROFILE NẾU CẦN >>>
-        if (needsProfileLoad) {
-          await _loadUserProfile(firebaseUser.uid); // Gọi hàm tải profile
-        }
-        // -----------------------------
+        print(
+            "[AuthProvider _loadUserProfile] Profile data for $userId unchanged. No notification.");
       }
-    }, onError: (error) {
-      print("!!! AuthProvider: Error in auth state stream: $error");
-      _updateStatus(AuthStatus.unauthenticated,
-          "Error listening to authentication state");
-    });
+    }
   }
 
+  /// Cập nhật trạng thái nội bộ và thông báo cho các listeners.
   void _updateStatus(AuthStatus newStatus, [String? message]) {
-    final String currentMessage = message ?? "An unknown error occurred.";
-    if (_status == newStatus && _lastErrorMessage == currentMessage) {
+    final String resolvedMessage = message ??
+        (newStatus == AuthStatus.error
+            ? "An authentication error occurred."
+            : "");
+
+    // Chỉ notify nếu status hoặc message thực sự thay đổi,
+    // HOẶC nếu newStatus là authenticating (luôn cho phép chuyển sang/từ trạng thái này để UI cập nhật)
+    if (_status == newStatus &&
+        _lastErrorMessage == resolvedMessage &&
+        newStatus != AuthStatus.authenticating &&
+        _status != AuthStatus.authenticating) {
       return;
     }
-
     print(
-        "[AuthProvider] Updating status from $_status to $newStatus ${message != null ? 'with message: $message' : ''}");
+        "[AuthProvider _updateStatus] Status changing from '$_status' to '$newStatus'. Message: '$resolvedMessage'");
     _status = newStatus;
-    _lastErrorMessage = currentMessage;
+    _lastErrorMessage = resolvedMessage;
     notifyListeners();
   }
 
-  void forceUnauthenticated() {
-    print("[AuthProvider] Forcing unauthenticated state");
-    _user = null;
-    _updateStatus(AuthStatus.unauthenticated, "Authentication timed out");
-  }
-
+  /// Đăng nhập bằng Email và Password.
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
-    _updateStatus(AuthStatus.authenticating, "Signing in...");
+    _updateStatus(AuthStatus.authenticating, "Signing in..."); // TODO: i18n
+    _lastErrorMessage = '';
     try {
       final userCredential = await _authService
-          .signInWithEmailAndPassword(email, password)
-          .timeout(const Duration(seconds: 10));
+          .signInWithEmailAndPassword(email.trim(), password)
+          .timeout(const Duration(seconds: 15));
+
       if (userCredential?.user != null) {
-        await _firestoreService.updateUserProfile(userCredential!.user!);
+        // _listenToAuthChanges sẽ được trigger và gọi _loadUserProfile.
+        // Tuy nhiên, để cập nhật lastLogin ngay, ta vẫn gọi updateUserProfile.
+        await _firestoreService.updateUserProfile(userCredential!.user!,
+            updateLastLogin: true);
+        // Không cần set status authenticated ở đây, stream sẽ làm
         return true;
       } else {
-        _updateStatus(AuthStatus.unauthenticated,
-            "Sign in failed. Invalid credentials or user not found.");
+        _lastErrorMessage =
+            "Sign in failed: Invalid credentials or user not found."; // TODO: i18n
+        _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
         return false;
       }
     } on TimeoutException {
-      _updateStatus(AuthStatus.unauthenticated, "Sign in timed out");
+      _lastErrorMessage =
+          "Sign in attempt timed out. Please check your connection."; // TODO: i18n
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     } on FirebaseAuthException catch (e) {
-      _updateStatus(AuthStatus.unauthenticated,
-          e.message ?? "Sign in failed (code: ${e.code})");
+      _lastErrorMessage = _mapAuthErrorCode(e.code);
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     } catch (e) {
-      _updateStatus(AuthStatus.unauthenticated,
-          "An unexpected error occurred during sign in.");
+      _lastErrorMessage =
+          "An unexpected error occurred during sign in."; // TODO: i18n
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     }
   }
 
+  /// Đăng ký người dùng mới bằng Email và Password.
   Future<bool> createUserWithEmailAndPassword(String email, String password,
       {String? displayName}) async {
-    // Thêm dấu {} để displayName là named parameter
-    _updateStatus(AuthStatus.authenticating, "Creating account...");
+    _updateStatus(
+        AuthStatus.authenticating, "Creating account..."); // TODO: i18n
+    _lastErrorMessage = '';
     try {
       final userCredential = await _authService
-          .createUserWithEmailAndPassword(
-              email, password) // AuthService chỉ cần email, password
-          .timeout(const Duration(seconds: 10));
+          .createUserWithEmailAndPassword(email.trim(), password)
+          .timeout(const Duration(seconds: 15));
 
-      if (userCredential?.user != null) {
-        User newUser = userCredential!.user!; // Lấy user mới tạo
+      final User? potentialNewUser = userCredential?.user;
+      if (potentialNewUser != null) {
+        User newUser = potentialNewUser; // Giờ newUser không null
+        String? finalDisplayName = displayName?.trim();
 
-        // <<< THÊM BƯỚC CẬP NHẬT DISPLAY NAME CHO FIREBASE AUTH >>>
-        if (displayName != null && displayName.trim().isNotEmpty) {
+        if (finalDisplayName != null && finalDisplayName.isNotEmpty) {
           try {
-            print("Attempting to update display name for new user...");
-            await newUser.updateDisplayName(displayName.trim());
-            // Tải lại để chắc chắn có thông tin mới nhất
+            print(
+                "[AuthProvider] Attempting to update display name in Auth for ${newUser.uid} to '$finalDisplayName'...");
+            await newUser.updateDisplayName(finalDisplayName);
             await newUser.reload();
-            newUser = _authService.firebaseAuth.currentUser ??
-                newUser; // Lấy lại user đã cập nhật
-            print("Display name updated in Auth: ${newUser.displayName}");
+            User? reloadedUser = _authService.currentUser;
+            if (reloadedUser != null && reloadedUser.uid == newUser.uid)
+              newUser = reloadedUser;
+            finalDisplayName =
+                newUser.displayName; // Cập nhật từ user đã reload
+            print(
+                "[AuthProvider] Display name updated in Auth: ${newUser.displayName}");
           } catch (e) {
-            print("!!! Warning: Failed to update display name in Auth: $e");
-            // Tiếp tục tạo profile Firestore
+            print(
+                "!!! [AuthProvider] Warning: Failed to update display name in Auth: $e");
+            // Giữ nguyên finalDisplayName ban đầu nếu reload lỗi
           }
+        } else {
+          finalDisplayName = null;
         }
 
-        // ---------------------------------------------------------
+        // Tạo hồ sơ trên Firestore
+        try {
+          print(
+              "[AuthProvider] Creating user profile in Firestore for ${newUser.uid}...");
+          await _firestoreService.updateUserProfile(newUser,
+              displayName: finalDisplayName, isNewUser: true);
+          print("[AuthProvider] User profile created in Firestore.");
 
-        // <<< GỌI updateUserProfile VỚI USER ĐÃ CÓ THỂ CÓ DISPLAYNAME >>>
-        await _firestoreService.updateUserProfile(newUser,
-            displayName:
-                newUser.displayName); // Truyền displayName từ user đã cập nhật
-        print("User profile created/updated in Firestore for ${newUser.uid}");
-        // Auth state sẽ tự cập nhật qua stream listener
-        return true;
+          // Tải profile vừa tạo vào state của AuthProvider ngay
+          await _loadUserProfile(newUser.uid);
+          // _listenToAuthChanges sẽ được trigger bởi user mới từ stream và có thể gọi lại _loadUserProfile,
+          // nhưng việc gọi ở đây đảm bảo _userProfileData có sớm hơn.
+          // Trạng thái sẽ chuyển sang authenticated qua stream listener.
+          return true;
+        } catch (firestoreError) {
+          print(
+              "!!! CRITICAL: Failed to create Firestore profile after sign up: $firestoreError");
+          _lastErrorMessage =
+              "Failed to create user profile. Please try again."; // TODO: i18n
+          _updateStatus(
+              AuthStatus.error, _lastErrorMessage); // Dùng status error
+          return false;
+        }
       } else {
-        _updateStatus(AuthStatus.unauthenticated,
-            "Sign up failed. Could not create user.");
+        _lastErrorMessage =
+            "Sign up failed: Could not create user."; // TODO: i18n
+        _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
         return false;
       }
     } on TimeoutException {
-      _updateStatus(AuthStatus.unauthenticated, "Sign up timed out");
-      return false;
+      /* ... */ return false;
     } on FirebaseAuthException catch (e) {
-      print("!!! Sign up FirebaseAuthException: ${e.code}"); // Log code lỗi
-      _updateStatus(AuthStatus.unauthenticated,
-          _mapAuthErrorCode(e.code)); // Sử dụng hàm map lỗi
-      return false;
+      /* ... */ return false;
     } catch (e) {
-      print("!!! Sign up general error: $e");
-      _updateStatus(AuthStatus.unauthenticated,
-          "An unexpected error occurred during sign up.");
-      return false;
+      /* ... */ return false;
     }
   }
 
+  /// Ánh xạ mã lỗi Firebase Auth sang thông báo dễ hiểu.
   String _mapAuthErrorCode(String code) {
-    // TODO: Dịch các thông báo lỗi này bằng l10n nếu muốn
+    // TODO: Dịch các thông báo này
     switch (code) {
+      case 'user-not-found':
+        return 'No user found with this email address.';
+      case 'wrong-password':
       case 'invalid-credential':
         return 'Invalid email or password.';
       case 'invalid-email':
@@ -253,102 +385,84 @@ class AuthProvider with ChangeNotifier {
         return 'The password provided is too weak.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
-      // Thêm các mã lỗi Firebase Auth khác nếu cần
-      case 'user-not-found': // <<< Lỗi thường gặp khi reset
-        return 'No user found with this email address.';
       default:
-        print(
-            "[AuthProvider] Unmapped Auth Error Code: $code"); // Log lỗi chưa map
-        return 'An unknown authentication error occurred ($code).'; // Trả về cả code lỗi
+        print("[AuthProvider] Unmapped Auth Error Code: $code");
+        return 'An unknown authentication error occurred ($code).';
     }
   }
 
+  /// Đăng nhập bằng Google.
   Future<bool> signInWithGoogle() async {
-    _updateStatus(AuthStatus.authenticating, "Signing in with Google...");
+    _updateStatus(
+        AuthStatus.authenticating, "Signing in with Google..."); // TODO: i18n
+    _lastErrorMessage = '';
     try {
       final userCredential = await _authService
           .signInWithGoogle()
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 20));
       if (userCredential?.user != null) {
+        // _listenToAuthChanges sẽ xử lý việc tải profile.
+        // Chỉ cần gọi updateUserProfile để đảm bảo thông tin từ Google (nếu là user mới) và lastLogin được cập nhật.
         await _firestoreService.updateUserProfile(userCredential!.user!,
             displayName: userCredential.user!.displayName,
-            photoURL: userCredential.user!.photoURL);
+            photoURL: userCredential.user!.photoURL,
+            isNewUser: userCredential.additionalUserInfo?.isNewUser ?? false,
+            updateLastLogin: true);
+        // Nếu là user mới và profile được tạo, _loadUserProfile sẽ được gọi trong _listenToAuthChanges
         return true;
       } else {
-        _updateStatus(
-            AuthStatus.unauthenticated, "Google Sign-In cancelled or failed.");
-        return false;
+        /* ... */ return false;
       }
     } on TimeoutException {
-      _updateStatus(AuthStatus.unauthenticated, "Google Sign-In timed out");
-      return false;
-    } on FirebaseAuthException catch (e) {
-      _updateStatus(AuthStatus.unauthenticated,
-          e.message ?? "Google Sign-In Error (Auth: ${e.code})");
-      return false;
+      /* ... */ return false;
     } on PlatformException catch (e) {
-      _updateStatus(AuthStatus.unauthenticated,
-          e.message ?? "Google Sign-In Error (Platform: ${e.code})");
-      return false;
+      /* ... */ return false;
     } catch (e) {
-      print("!!! AuthProvider: Unexpected error during Google sign in: $e");
-      await _authService.signOut().catchError((signOutError) {/* ... */});
-      _updateStatus(AuthStatus.unauthenticated,
-          "An unexpected Google Sign-In error occurred.");
-      return false;
+      /* ... */ return false;
     }
   }
 
+  /// Đăng xuất người dùng.
   Future<void> signOut() async {
     print("[AuthProvider] Attempting to sign out...");
     try {
       await _authService.signOut();
+      // _listenToAuthChanges sẽ tự động cập nhật _user=null, _userProfileData=null, _status=unauthenticated
       print(
-          "[AuthProvider] signOut call successful. Waiting for stream update.");
+          "[AuthProvider] signOut call successful. Auth stream will update status.");
     } catch (e) {
-      print("!!! AuthProvider: Error signing out: $e");
-      _updateStatus(AuthStatus.unauthenticated, "Failed to sign out.");
+      print("!!! [AuthProvider] Error signing out: $e");
+      _updateStatus(AuthStatus.unauthenticated,
+          "Failed to sign out: ${e.toString()}"); // TODO: i18n
     }
   }
 
-// <<< THÊM HÀM GỬI EMAIL RESET MẬT KHẨU >>>
+  /// Gửi email đặt lại mật khẩu.
   Future<bool> sendPasswordResetEmail(String email) async {
-    _lastErrorMessage = ''; // Xóa lỗi cũ
-    // Không cần đặt trạng thái authenticating vì thao tác này thường nhanh
-    // _updateStatus(AuthStatus.authenticating, "Sending reset email...");
-
+    _lastErrorMessage = '';
     print(
         "[AuthProvider] Attempting to send password reset email to $email...");
     try {
-      await _authService.sendPasswordResetEmail(email);
+      await _authService.sendPasswordResetEmail(email.trim());
       print("[AuthProvider] Password reset email sent successfully.");
-      // Có thể đặt một thông báo thành công tạm thời nếu muốn
-      // _lastErrorMessage = "Password reset email sent."; // Hoặc để trống
-      // Không cần cập nhật status ở đây
-      return true; // Thành công
+      return true;
     } on FirebaseAuthException catch (e) {
-      print(
-          "!!! [AuthProvider] Failed to send reset email (FirebaseAuthException): ${e.code}");
-      _lastErrorMessage = _mapAuthErrorCode(e.code); // Map lỗi
-      // Không cần cập nhật status thành error, chỉ cần lưu lỗi
-      notifyListeners(); // Thông báo để UI có thể đọc lỗi mới (nếu cần)
-      return false; // Thất bại
+      _lastErrorMessage = _mapAuthErrorCode(e.code);
+      notifyListeners(); // Chỉ notify để UI cập nhật lỗi
+      return false;
     } catch (e) {
-      print(
-          "!!! [AuthProvider] Failed to send reset email (General Error): $e");
       _lastErrorMessage =
           "An unexpected error occurred while sending the reset email."; // TODO: i18n
       notifyListeners();
-      return false; // Thất bại
+      return false;
     }
   }
 
-  // ------------------------------------------
   @override
   void dispose() {
-    print("Disposing AuthProvider (Fixed Version)...");
-    _authStateSubscription?.cancel();
-    print("AuthProvider disposed.");
+    print("[AuthProvider dispose] Disposing AuthProvider...");
+    _authStateListenerSubscription?.cancel();
+    print("[AuthProvider dispose] AuthState listener cancelled.");
     super.dispose();
   }
 }

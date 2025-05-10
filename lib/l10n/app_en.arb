@@ -278,13 +278,16 @@
   "notificationChannelTestDesc": "Channel for testing notifications manually",
   "alertHrHighTitle": "High Heart Rate Alert!",
   "alertHrHighBody": "Current heart rate is {hrValue} bpm, above threshold {threshold} bpm.",
-  "@alertHrHighBody": { "placeholders": { "hrValue": {"type": "int"}, "threshold": {"type": "int"} } },
+  "@alertHrHighBody": { "placeholders": { "hrValue": {}, "threshold": {} } },
+  "channelNameHrHigh": "High Heart Rate Alerts",
   "alertHrLowTitle": "Low Heart Rate Alert!",
   "alertHrLowBody": "Current heart rate is {hrValue} bpm, below threshold {threshold} bpm.",
-  "@alertHrLowBody": { "placeholders": { "hrValue": {"type": "int"}, "threshold": {"type": "int"} } },
+  "@alertHrLowBody": { "placeholders": { "hrValue": {}, "threshold": {} } },
+  "channelNameHrLow": "Low Heart Rate Alerts",
   "alertSpo2LowTitle": "Low SpO2 Alert!",
   "alertSpo2LowBody": "Current SpO2 is {spo2Value}%, below threshold {threshold}%.",
-   "@alertSpo2LowBody": { "placeholders": { "spo2Value": {"type": "int"}, "threshold": {"type": "int"} } },
+  "@alertSpo2LowBody": { "placeholders": { "spo2Value": {}, "threshold": {} } },
+  "channelNameSpo2Low": "Low SpO2 Alerts",
    "loginWelcomeTitle": "Welcome Back!",
   "@loginWelcomeTitle": {
     "description": "Main title on the login screen"
@@ -304,5 +307,10 @@
   "signUpLinkText": "Sign Up Now",
   "@signUpLinkText": {
     "description": "The text for the link/button that takes the user to the sign-up screen"
-  }
+  },
+  "temperatureLabel": "Temperature",
+  "pressureLabel": "Pressure",
+  "tempUnit": "°C",
+  "pressureUnitHpa": "hPa",
+  "connectingStatusDevice": "Connecting..."
 }

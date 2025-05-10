@@ -17,32 +17,80 @@ class FirestoreService {
     User user, {
     String? displayName,
     String? photoURL,
+    bool isNewUser = false, // <<< Tham số để biết đây là user mới tạo
+    bool updateLastLogin =
+        false, // <<< Tham số để chỉ định có cập nhật lastLogin không
   }) async {
-    // Sử dụng Map để chứa dữ liệu, có thể mở rộng sau này
-    final Map<String, dynamic> userData = {
-      'uid': user.uid,
-      'email': user.email,
-      // Chỉ cập nhật displayName nếu được cung cấp và khác giá trị hiện tại
-      if (displayName != null && displayName.isNotEmpty)
-        'displayName': displayName,
-      // Chỉ cập nhật photoURL nếu được cung cấp và khác giá trị hiện tại
-      if (photoURL != null && photoURL.isNotEmpty) 'photoURL': photoURL,
-      'lastLogin':
-          FieldValue.serverTimestamp(), // Cập nhật thời gian đăng nhập cuối
-      'createdAt': FieldValue
-          .serverTimestamp(), // Chỉ ghi khi tạo mới (dùng set với merge:false)
-    };
+    // Map chứa dữ liệu sẽ được ghi/cập nhật lên Firestore
+    final Map<String, dynamic> userDataToSet = {};
+
+    // Luôn thêm uid và email (nếu có)
+    userDataToSet['uid'] = user.uid;
+    if (user.email != null) {
+      userDataToSet['email'] = user.email;
+    }
+
+    // Chỉ thêm/cập nhật displayName nếu được cung cấp và không rỗng
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      userDataToSet['displayName'] = displayName.trim();
+    } else if (isNewUser &&
+        (user.displayName == null || user.displayName!.isEmpty)) {
+      // Nếu là user mới và không có displayName nào được cung cấp (kể cả từ Auth object)
+      // thì không thêm trường displayName để tránh ghi giá trị null/rỗng không cần thiết
+    } else if (isNewUser &&
+        user.displayName != null &&
+        user.displayName!.isNotEmpty) {
+      // Nếu là user mới và Auth object có displayName (ví dụ từ Google Sign-In)
+      userDataToSet['displayName'] = user.displayName;
+    }
+
+    // Chỉ thêm/cập nhật photoURL nếu được cung cấp và không rỗng
+    if (photoURL != null && photoURL.isNotEmpty) {
+      userDataToSet['photoURL'] = photoURL;
+    } else if (isNewUser &&
+        user.photoURL != null &&
+        user.photoURL!.isNotEmpty) {
+      // Nếu là user mới và Auth object có photoURL
+      userDataToSet['photoURL'] = user.photoURL;
+    }
+
+    // Chỉ thêm trường 'createdAt' nếu đây là một người dùng mới
+    if (isNewUser) {
+      userDataToSet['createdAt'] = FieldValue.serverTimestamp();
+    }
+
+    // Luôn cập nhật 'lastLogin' nếu là user mới HOẶC được yêu cầu tường minh
+    if (isNewUser || updateLastLogin) {
+      userDataToSet['lastLogin'] = FieldValue.serverTimestamp();
+    }
+
+    // Nếu không có gì để cập nhật ngoài uid và email (ví dụ khi chỉ updateLastLogin cho user cũ không có thay đổi khác)
+    // và không phải user mới, thì có thể cân nhắc dùng update() thay vì set(merge:true)
+    // Tuy nhiên, set(merge:true) vẫn an toàn và xử lý cả trường hợp tạo mới.
+
+    if (userDataToSet.isEmpty && !isNewUser && !updateLastLogin) {
+      print(
+          "[FirestoreService] No new data to update for user profile ${user.uid}. Skipping Firestore write.");
+      return; // Không có gì để ghi
+    }
 
     try {
-      // Dùng set với merge: true để tạo mới nếu chưa có, hoặc cập nhật các trường cung cấp nếu đã tồn tại
-      await _db
-          .collection(AppConstants.usersCollection)
-          .doc(user.uid)
-          .set(userData, SetOptions(merge: true)); // merge:true là quan trọng
-      print("User profile updated/created for ${user.uid}");
+      print(
+          "[FirestoreService] Updating/Creating user profile for ${user.uid} with data: $userDataToSet");
+      // Sử dụng set với merge: true để:
+      // - Tạo mới document nếu chưa tồn tại (trường hợp isNewUser).
+      // - Cập nhật các trường được cung cấp trong `userDataToSet` nếu document đã tồn tại,
+      //   giữ nguyên các trường khác không có trong `userDataToSet`.
+      await _db.collection(AppConstants.usersCollection).doc(user.uid).set(
+          userDataToSet, SetOptions(merge: true)); // merge:true là quan trọng
+
+      print(
+          "[FirestoreService] User profile ${isNewUser ? 'created' : 'updated'} successfully for ${user.uid}.");
     } catch (e) {
-      print("Error updating/creating user profile: $e");
-      // throw FirestoreException("user_profile_update_failed");
+      print(
+          "!!! [FirestoreService] Error updating/creating user profile for ${user.uid}: $e");
+      // Cân nhắc ném lại lỗi để AuthProvider có thể xử lý (ví dụ, báo lỗi cho người dùng)
+      // throw FirebaseException(plugin: 'FirestoreService', code: 'profile-update-failed', message: e.toString());
     }
   }
 
@@ -70,45 +118,31 @@ class FirestoreService {
   // Lưu một bản ghi dữ liệu sức khỏe
   // healthData nên là một Map<String, dynamic> khớp với cấu trúc JSON từ ESP32
   Future<void> saveHealthData(
-    String userId,
-    Map<String, dynamic> healthData,
-  ) async {
-    // Thêm timestamp từ server nếu trong healthData chưa có hoặc không hợp lệ
-    if (healthData['timestamp'] == null ||
-        healthData['timestamp'] == "Not initialized") {
-      // Nếu không có timestamp từ ESP32 hoặc không hợp lệ, dùng timestamp của server
-      healthData['recordedAt'] = FieldValue.serverTimestamp();
-      // Xóa trường timestamp gốc nếu không muốn lưu giá trị không hợp lệ
-      healthData.remove('timestamp');
-    } else {
-      // Nếu có timestamp từ ESP32, chuyển đổi nó thành kiểu Timestamp của Firestore
-      try {
-        // Cố gắng parse timestamp ISO 8601 từ ESP32
-        DateTime parsedTimestamp = DateTime.parse(healthData['timestamp']);
-        healthData['recordedAt'] = Timestamp.fromDate(parsedTimestamp);
-        // Xóa trường timestamp gốc sau khi đã chuyển đổi
-        healthData.remove('timestamp');
-      } catch (e) {
-        print(
-          "Error parsing timestamp from ESP32: ${healthData['timestamp']}. Using server timestamp. Error: $e",
-        );
-        // Nếu parse lỗi, vẫn dùng timestamp server
-        healthData['recordedAt'] = FieldValue.serverTimestamp();
-        healthData.remove('timestamp');
-      }
-    }
-
+      String userId, HealthData healthDataObject) async {
     try {
-      // Tạo document mới với ID tự động trong subcollection 'health_data'
+      // 1. Lấy Map dữ liệu từ object (đã bao gồm temp, pres nếu có)
+      //    Hàm toJsonForFirestore() đã được cập nhật để KHÔNG bao gồm 'recordedAt'
+      final Map<String, dynamic> dataToSave =
+          healthDataObject.toJsonForFirestore();
+
+      // 2. Thêm trường 'recordedAt' vào Map, sử dụng timestamp từ object HealthData
+      //    Đảm bảo timestamp trong HealthData object là UTC
+      dataToSave['recordedAt'] =
+          Timestamp.fromDate(healthDataObject.timestamp.toUtc());
+
+      // 3. Tạo document mới với ID tự động trong subcollection 'health_data'
       await _db
           .collection(AppConstants.usersCollection)
           .doc(userId)
           .collection(AppConstants.healthDataSubcollection)
-          .add(healthData); // add() sẽ tự tạo ID
-      // print("Health data saved for user $userId"); // Giảm log để tránh spam
+          .add(dataToSave); // Dùng add() để Firestore tự tạo ID
+
+      // Log tối giản hơn để tránh spam console
+      // print("Health data saved for user $userId at ${healthDataObject.timestamp.toIso8601String()}");
     } catch (e) {
-      print("Error saving health data: $e");
-      // throw FirestoreException("health_data_save_failed");
+      print("!!! Error saving health data to Firestore for user $userId: $e");
+      // Cân nhắc ném lỗi ra ngoài để BleService/DataSyncService xử lý (ví dụ: không đánh dấu đã đồng bộ)
+      // throw FirebaseException(plugin: 'FirestoreService', code: 'save-failed', message: e.toString());
     }
   }
 

@@ -10,6 +10,7 @@ import '../../app_constants.dart'; // Import AppConstants (cho key SharedPrefere
 import '../config/wifi_config_screen.dart'; // Import màn hình Wifi Config
 import '../device/device_select_screen.dart'; // Import màn hình chọn thiết bị
 import '../../generated/app_localizations.dart'; // <<< Import lớp Localization
+import '../auth/login_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -324,9 +325,27 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                   );
-
-                  if (confirm == true) {
+                  if (confirm == true && context.mounted) {
+                    // <<< THÊM KIỂM TRA CONTEXT.MOUNTED
+                    // Gọi signOut từ AuthProvider
                     await context.read<AuthProvider>().signOut();
+
+                    // <<< ĐIỀU HƯỚNG VỀ LOGIN VÀ XÓA STACK >>>
+                    // Sử dụng rootNavigator: true để đảm bảo pop từ Navigator gốc của MaterialApp
+                    // và xóa hết các màn hình cũ (bao gồm cả MainNavigator).
+                    Navigator.of(context, rootNavigator: true)
+                        .pushAndRemoveUntil(
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                      (Route<dynamic> route) =>
+                          false, // Điều kiện này xóa tất cả các route trước đó
+                    );
+                    // Hoặc nếu bạn đã định nghĩa route '/login' trong MaterialApp:
+                    // Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                    //   '/login',
+                    //   (Route<dynamic> route) => false,
+                    // );
+                    // ------------------------------------
                   }
                 },
                 style: ElevatedButton.styleFrom(
