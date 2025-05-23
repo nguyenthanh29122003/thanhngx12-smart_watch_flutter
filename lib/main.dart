@@ -22,6 +22,7 @@ import 'providers/ble_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/relatives_provider.dart';
 import 'providers/settings_provider.dart';
+// import 'services/activity_recognition_service.dart';
 import 'screens/core/main_navigator.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -65,23 +66,33 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        // --- Level 1: Singleton Services (khởi tạo trước, không phụ thuộc context.read) ---
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<NotificationService>.value(value: NotificationService()),
+
+        // --- Level 2: Core Services (ít phụ thuộc) ---
+        Provider<AuthService>(create: (_) => AuthService()),
+        Provider<FirestoreService>(create: (_) => FirestoreService()),
         Provider<ConnectivityService>(
           create: (_) => ConnectivityService(),
           dispose: (_, s) => s.dispose(),
         ),
-        Provider<AuthService>(create: (_) => AuthService()),
-        Provider<FirestoreService>(create: (_) => FirestoreService()),
+
+        // --- Level 3: Settings Provider (có thể đọc SharedPreferences) ---
         ChangeNotifierProvider<SettingsProvider>(
           create: (_) => SettingsProvider(),
         ),
+
+        // --- Level 4: AuthProvider (phụ thuộc AuthService, FirestoreService) ---
         ChangeNotifierProvider<AuthProvider>(
+          // Đã dùng alias
           create: (context) => AuthProvider(
             context.read<AuthService>(),
             context.read<FirestoreService>(),
           ),
         ),
+
+        // --- Level 5: BleService (phụ thuộc nhiều service) ---
         Provider<BleService>(
           create: (context) => BleService(
             context.read<AuthService>(),
@@ -90,8 +101,10 @@ Future<void> main() async {
             context.read<ConnectivityService>(),
             context.read<NotificationService>(),
           ),
-          dispose: (_, s) => s.dispose(),
+          dispose: (context, service) => service.dispose(),
         ),
+
+        // --- Level 6: Providers phụ thuộc BleService hoặc các service khác ---
         ChangeNotifierProvider<BleProvider>(
           create: (context) => BleProvider(context.read<BleService>()),
         ),
@@ -107,6 +120,16 @@ Future<void> main() async {
             context.read<AuthService>(),
           ),
         ),
+        // <<< THÊM ACTIVITY RECOGNITION SERVICE Ở ĐÂY >>>
+        // Nó có thể không phụ thuộc vào context.read ngay khi tạo,
+        // nhưng việc bắt đầu lắng nghe stream từ BleService sẽ diễn ra sau đó.
+        // Provider<ActivityRecognitionService>(
+        //   create: (_) => ActivityRecognitionService(),
+        //   dispose: (_, service) => service.dispose(),
+        // ),
+        // --------------------------------------------
+
+        // --- Level 7: DataSyncService (phụ thuộc nhiều, lazy load) ---
         Provider<DataSyncService>(
           create: (context) => DataSyncService(
             context.read<ConnectivityService>(),
@@ -114,7 +137,7 @@ Future<void> main() async {
             context.read<FirestoreService>(),
             context.read<AuthService>(),
           ),
-          dispose: (_, s) => s.dispose(),
+          dispose: (context, service) => service.dispose(),
           lazy: true,
         ),
       ],

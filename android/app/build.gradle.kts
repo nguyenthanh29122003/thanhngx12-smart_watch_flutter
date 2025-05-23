@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.smart_wearable_app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
