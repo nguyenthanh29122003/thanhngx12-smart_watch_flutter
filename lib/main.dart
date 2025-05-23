@@ -22,7 +22,7 @@ import 'providers/ble_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/relatives_provider.dart';
 import 'providers/settings_provider.dart';
-// import 'services/activity_recognition_service.dart';
+import 'services/activity_recognition_service.dart';
 import 'screens/core/main_navigator.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -123,10 +123,10 @@ Future<void> main() async {
         // <<< THÊM ACTIVITY RECOGNITION SERVICE Ở ĐÂY >>>
         // Nó có thể không phụ thuộc vào context.read ngay khi tạo,
         // nhưng việc bắt đầu lắng nghe stream từ BleService sẽ diễn ra sau đó.
-        // Provider<ActivityRecognitionService>(
-        //   create: (_) => ActivityRecognitionService(),
-        //   dispose: (_, service) => service.dispose(),
-        // ),
+        Provider<ActivityRecognitionService>(
+          create: (_) => ActivityRecognitionService(),
+          dispose: (_, service) => service.dispose(),
+        ),
         // --------------------------------------------
 
         // --- Level 7: DataSyncService (phụ thuộc nhiều, lazy load) ---
