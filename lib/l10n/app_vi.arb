@@ -252,5 +252,53 @@
   "pressureLabel": "Áp suất",
   "tempUnit": "°C",
   "pressureUnitHpa": "hPa",
-  "connectingStatusDevice": "Đang kết nối..."
+  "connectingStatusDevice": "Đang kết nối...",
+    "currentActivityTitle": "Hoạt động Hiện tại",
+  "@currentActivityTitle": {
+    "description": "Tiêu đề cho mục hiển thị hoạt động hiện tại của người dùng."
+  },
+  "activityInitializing": "Đang khởi tạo...",
+  "@activityInitializing": {
+    "description": "Chữ hiển thị khi nhận dạng hoạt động đang khởi động hoặc chờ dữ liệu đầu tiên."
+  },
+  "activityUnknown": "Hoạt động Không rõ",
+  "@activityUnknown": {
+    "description": "Chữ hiển thị khi không thể xác định hoạt động hiện tại hoặc không phải là một trong các loại được nhận dạng."
+  },
+  "activityError": "Lỗi Hoạt động",
+  "@activityError": {
+    "description": "Chữ hiển thị nếu có lỗi trong luồng nhận dạng hoạt động."
+  },
+  "activityLying": "Nằm",
+  "@activityLying": {
+    "description": "Tên cho hoạt động 'Nằm'."
+  },
+  "activitySitting": "Ngồi",
+  "@activitySitting": {
+    "description": "Tên cho hoạt động 'Ngồi'."
+  },
+  "activityStanding": "Đứng",
+  "@activityStanding": {
+    "description": "Tên cho hoạt động 'Đứng'."
+  },
+  "activityWalking": "Đi bộ",
+  "@activityWalking": {
+    "description": "Tên cho hoạt động 'Đi bộ'."
+  },
+  "activityRunning": "Chạy",
+  "@activityRunning": {
+    "description": "Tên cho hoạt động 'Chạy'."
+  },
+  "activityCycling": "Đạp xe",
+  "@activityCycling": {
+    "description": "Tên cho hoạt động 'Đạp xe'."
+  },
+  "activityAscendingStairs": "Leo cầu thang",
+  "@activityAscendingStairs": {
+    "description": "Tên cho hoạt động 'Leo cầu thang'."
+  },
+  "activityDescendingStairs": "Xuống cầu thang",
+  "@activityDescendingStairs": {
+    "description": "Tên cho hoạt động 'Xuống cầu thang'."
+  }
 }

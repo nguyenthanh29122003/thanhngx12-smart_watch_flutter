@@ -11,7 +11,7 @@ import '../models/health_data.dart'; // Để nhận HealthData object
 // --- CÁC HẰNG SỐ CHO MODEL HAR CỦA BẠN ---
 // <<< ĐÃ CẬP NHẬT THEO SCRIPT PYTHON >>>
 const String TFLITE_MODEL_HAR_FILE =
-    'models/har_cnn_float32.tflite'; // Tên file model từ Python Cell 7
+    'assets/ml_models/har_cnn_float32.tflite'; // Tên file model từ Python Cell 7
 const int HAR_WINDOW_SIZE = 256; // Từ WINDOW_SIZE của Python (2.56s * 100Hz)
 const int HAR_NUM_FEATURES =
     6; // ax, ay, az, gx, gy, gz (Từ NUM_FEATURES của Python)

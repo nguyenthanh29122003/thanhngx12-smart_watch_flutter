@@ -41,4 +41,6 @@ class AppConstants {
   static const int hrLowThreshold = 50;
   static const int hrHighThreshold = 120;
   static const int spo2LowThreshold = 90;
+
+  static const int goalsScreenIndex = 2;
 }

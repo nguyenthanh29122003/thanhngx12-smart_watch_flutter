@@ -312,5 +312,53 @@
   "pressureLabel": "Pressure",
   "tempUnit": "°C",
   "pressureUnitHpa": "hPa",
-  "connectingStatusDevice": "Connecting..."
+  "connectingStatusDevice": "Connecting...",
+    "currentActivityTitle": "Current Activity",
+  "@currentActivityTitle": {
+    "description": "Title for the section displaying the user's current activity."
+  },
+  "activityInitializing": "Initializing...",
+  "@activityInitializing": {
+    "description": "Text shown when the activity recognition is starting up or waiting for the first data."
+  },
+  "activityUnknown": "Unknown Activity",
+  "@activityUnknown": {
+    "description": "Text shown when the current activity cannot be determined or is not one of the recognized types."
+  },
+  "activityError": "Activity Error",
+  "@activityError": {
+    "description": "Text shown if there's an error in the activity recognition stream."
+  },
+  "activityLying": "Lying",
+  "@activityLying": {
+    "description": "Name for the 'Lying' activity."
+  },
+  "activitySitting": "Sitting",
+  "@activitySitting": {
+    "description": "Name for the 'Sitting' activity."
+  },
+  "activityStanding": "Standing",
+  "@activityStanding": {
+    "description": "Name for the 'Standing' activity."
+  },
+  "activityWalking": "Walking",
+  "@activityWalking": {
+    "description": "Name for the 'Walking' activity."
+  },
+  "activityRunning": "Running",
+  "@activityRunning": {
+    "description": "Name for the 'Running' activity."
+  },
+  "activityCycling": "Cycling",
+  "@activityCycling": {
+    "description": "Name for the 'Cycling' activity."
+  },
+  "activityAscendingStairs": "Ascending Stairs",
+  "@activityAscendingStairs": {
+    "description": "Name for the 'Ascending Stairs' activity."
+  },
+  "activityDescendingStairs": "Descending Stairs",
+  "@activityDescendingStairs": {
+    "description": "Name for the 'Descending Stairs' activity."
+  }
 }

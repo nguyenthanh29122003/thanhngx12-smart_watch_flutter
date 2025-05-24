@@ -14,7 +14,7 @@ enum AuthStatus {
   authenticated, // Đã xác thực
   authenticating, // Đang trong quá trình đăng nhập/đăng ký
   unauthenticated, // Chưa xác thực
-  error // Có lỗi xác thực không mong muốn
+  error // Có lỗi xác thực không mong muốnz
 }
 
 class AuthProvider with ChangeNotifier {

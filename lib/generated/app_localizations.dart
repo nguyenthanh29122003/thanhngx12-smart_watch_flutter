@@ -1492,6 +1492,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'hPa'**
   String get pressureUnitHpa;
+
+  /// Title for the section displaying the user's current activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Activity'**
+  String get currentActivityTitle;
+
+  /// Text shown when the activity recognition is starting up or waiting for the first data.
+  ///
+  /// In en, this message translates to:
+  /// **'Initializing...'**
+  String get activityInitializing;
+
+  /// Text shown when the current activity cannot be determined or is not one of the recognized types.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Activity'**
+  String get activityUnknown;
+
+  /// Text shown if there's an error in the activity recognition stream.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Error'**
+  String get activityError;
+
+  /// Name for the 'Lying' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Lying'**
+  String get activityLying;
+
+  /// Name for the 'Sitting' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting'**
+  String get activitySitting;
+
+  /// Name for the 'Standing' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Standing'**
+  String get activityStanding;
+
+  /// Name for the 'Walking' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get activityWalking;
+
+  /// Name for the 'Running' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get activityRunning;
+
+  /// Name for the 'Cycling' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get activityCycling;
+
+  /// Name for the 'Ascending Stairs' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending Stairs'**
+  String get activityAscendingStairs;
+
+  /// Name for the 'Descending Stairs' activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending Stairs'**
+  String get activityDescendingStairs;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

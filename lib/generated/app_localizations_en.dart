@@ -736,4 +736,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pressureUnitHpa => 'hPa';
+
+  @override
+  String get currentActivityTitle => 'Current Activity';
+
+  @override
+  String get activityInitializing => 'Initializing...';
+
+  @override
+  String get activityUnknown => 'Unknown Activity';
+
+  @override
+  String get activityError => 'Activity Error';
+
+  @override
+  String get activityLying => 'Lying';
+
+  @override
+  String get activitySitting => 'Sitting';
+
+  @override
+  String get activityStanding => 'Standing';
+
+  @override
+  String get activityWalking => 'Walking';
+
+  @override
+  String get activityRunning => 'Running';
+
+  @override
+  String get activityCycling => 'Cycling';
+
+  @override
+  String get activityAscendingStairs => 'Ascending Stairs';
+
+  @override
+  String get activityDescendingStairs => 'Descending Stairs';
 }

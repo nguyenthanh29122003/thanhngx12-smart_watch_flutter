@@ -119,10 +119,6 @@ class RealtimeMetricsCard extends StatelessWidget {
     if (status == BleConnectionStatus.connected) {
       if (data != null) {
         // --- Đã Kết nối và Có Dữ liệu ---
-        // Chuyển đổi áp suất sang hPa và làm tròn
-        final String pressureHpa = data.pressure != null
-            ? (data.pressure! / 100).round().toString()
-            : '---';
         // Định dạng nhiệt độ (1 chữ số thập phân)
         final String temperatureStr = data.temperature != null
             ? data.temperature!.toStringAsFixed(1)
@@ -165,14 +161,7 @@ class RealtimeMetricsCard extends StatelessWidget {
                     label: l10n.temperatureLabel,
                     value: temperatureStr,
                     unit: l10n.tempUnit,
-                    color: Colors.amber.shade700),
-                _buildMetricDisplay(
-                    context: context,
-                    icon: Icons.speed_outlined,
-                    label: l10n.pressureLabel,
-                    value: pressureHpa,
-                    unit: l10n.pressureUnitHpa,
-                    color: Colors.purple.shade400),
+                    color: Colors.amber.shade700)
               ],
             ),
             // ---------------------------------------------------------

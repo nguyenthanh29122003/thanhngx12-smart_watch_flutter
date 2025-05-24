@@ -736,4 +736,40 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pressureUnitHpa => 'hPa';
+
+  @override
+  String get currentActivityTitle => 'Hoạt động Hiện tại';
+
+  @override
+  String get activityInitializing => 'Đang khởi tạo...';
+
+  @override
+  String get activityUnknown => 'Hoạt động Không rõ';
+
+  @override
+  String get activityError => 'Lỗi Hoạt động';
+
+  @override
+  String get activityLying => 'Nằm';
+
+  @override
+  String get activitySitting => 'Ngồi';
+
+  @override
+  String get activityStanding => 'Đứng';
+
+  @override
+  String get activityWalking => 'Đi bộ';
+
+  @override
+  String get activityRunning => 'Chạy';
+
+  @override
+  String get activityCycling => 'Đạp xe';
+
+  @override
+  String get activityAscendingStairs => 'Leo cầu thang';
+
+  @override
+  String get activityDescendingStairs => 'Xuống cầu thang';
 }

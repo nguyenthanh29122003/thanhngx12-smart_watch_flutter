@@ -2,17 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart'; // Cần cho xử lý ngày tháng
+// import 'package:intl/intl.dart'; // Không thấy dùng trực tiếp trong file này nữa
 
 // Import Providers
 import '../../providers/auth_provider.dart';
 import '../../providers/ble_provider.dart';
-import '../../providers/dashboard_provider.dart'; // Cần để lấy hourlyStepsData
+import '../../providers/dashboard_provider.dart';
 
 // Import Models and Services
-import '../../models/health_data.dart'; // Cần cho ValueListenableBuilder nếu dùng
+// import '../../models/health_data.dart'; // Không thấy dùng trực tiếp
 import '../../services/ble_service.dart'; // Cần cho enum BleConnectionStatus
-import '../../services/notification_service.dart'; // Cần cho nút Test (nếu còn giữ)
+// import '../../services/notification_service.dart'; // Không thấy dùng trực tiếp
+import '../../services/activity_recognition_service.dart'; // <<< THÊM IMPORT NÀY
 
 // Import Widgets and Constants
 import '../../widgets/dashboard/realtime_metrics_card.dart';
@@ -21,9 +22,9 @@ import '../../widgets/dashboard/spo2_history_chart_card.dart';
 import '../../widgets/dashboard/steps_history_chart_card.dart';
 import '../../app_constants.dart';
 
-// Import MainNavigator State và GlobalKey (cần đảm bảo main.dart export key)
-import '../core/main_navigator.dart'; // Import để có thể tham chiếu State (nếu dùng cách khác)
-import '../../main.dart'; // <<< Import main.dart để lấy mainNavigatorKey (Cách tạm)
+// Import MainNavigator State và GlobalKey
+// import '../core/main_navigator.dart'; // Không cần nếu chỉ dùng key
+import '../../main.dart'; // Import main.dart để lấy mainNavigatorKey
 
 import '../../generated/app_localizations.dart';
 
@@ -34,58 +35,62 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-// Thêm 'with WidgetsBindingObserver' để lắng nghe vòng đời app
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
-  // State cho mục tiêu (đọc từ Prefs)
   int _dashboardStepGoal = AppConstants.defaultDailyStepGoal;
   bool _isLoadingGoal = true;
-
-  // State cho tổng số bước hôm nay và trạng thái tải/tính toán
   int _todaySteps = 0;
   bool _isLoadingTodaySteps = true;
-
-  // Listener để theo dõi thay đổi trong DashboardProvider
   VoidCallback? _dashboardListener;
+
+  // <<< THÊM THAM CHIẾU ĐẾN ACTIVITY RECOGNITION SERVICE >>>
+  ActivityRecognitionService? _activityServiceRef;
+  // ----------------------------------------------------
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Đăng ký observer
-    _loadDashboardStepGoal(); // Tải mục tiêu khi màn hình khởi tạo
+    WidgetsBinding.instance.addObserver(this);
+    _loadDashboardStepGoal();
 
-    // Lắng nghe DashboardProvider và fetch lịch sử sau khi frame đầu tiên build xong
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Luôn kiểm tra mounted
         final dashboardProvider =
             Provider.of<DashboardProvider>(context, listen: false);
 
-        // Khởi tạo và đăng ký listener cho DashboardProvider
         _dashboardListener = () {
           if (mounted) {
-            _calculateTodaySteps(
-                dashboardProvider); // Tính lại steps khi provider báo thay đổi
+            _calculateTodaySteps(dashboardProvider);
           }
         };
         dashboardProvider.addListener(_dashboardListener!);
         print("[DashboardScreen] Added listener to DashboardProvider.");
 
-        // Fetch dữ liệu lịch sử nếu cần (việc này sẽ trigger listener khi xong)
         if (dashboardProvider.historyStatus == HistoryStatus.initial) {
           print("[DashboardScreen] Fetching initial health history...");
           dashboardProvider.fetchHealthHistory();
         } else {
-          // Nếu provider đã có dữ liệu (hoặc lỗi), tính toán steps ngay
           print(
               "[DashboardScreen] DashboardProvider already has data/error, calculating steps immediately.");
           _calculateTodaySteps(dashboardProvider);
         }
 
-        // Lắng nghe trạng thái kết nối BLE (giữ nguyên)
         final bleProvider = Provider.of<BleProvider>(context, listen: false);
         bleProvider.connectionStatus
             .addListener(_handleConnectionChangeForRefresh);
+
+        // <<< LẤY THAM CHIẾU ACTIVITY SERVICE >>>
+        _activityServiceRef =
+            Provider.of<ActivityRecognitionService>(context, listen: false);
+        // setState ở đây để build lại nếu _activityServiceRef vừa được gán
+        // và StreamBuilder cần nó ngay lập tức.
+        // Tuy nhiên, nếu StreamBuilder xử lý null cho stream thì không cần.
+        // Hiện tại, StreamBuilder có kiểm tra _activityServiceRef != null.
+        if (_activityServiceRef != null && mounted) {
+          setState(
+              () {}); // Để đảm bảo StreamBuilder được build với service nếu nó vừa có
+        }
+        // ------------------------------------
       }
     });
     print("[DashboardScreen] initState completed.");
@@ -93,11 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // Hủy đăng ký observer
+    WidgetsBinding.instance.removeObserver(this);
 
-    // Hủy đăng ký listener DashboardProvider
     try {
-      // Dùng tryRead hoặc Provider.of(listen: false) để an toàn
       Provider.of<DashboardProvider>(context, listen: false)
           .removeListener(_dashboardListener!);
       print("[DashboardScreen] Removed dashboard listener.");
@@ -105,7 +108,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       print("Error removing dashboard listener in Dashboard dispose: $e");
     }
 
-    // Hủy đăng ký listener BLE (giữ nguyên)
     try {
       context
           .read<BleProvider>()
@@ -114,32 +116,25 @@ class _DashboardScreenState extends State<DashboardScreen>
     } catch (e) {
       print("Error removing connection listener in Dashboard dispose: $e");
     }
-
+    _activityServiceRef = null; // Dọn dẹp tham chiếu
     super.dispose();
   }
 
-  // Hàm được gọi khi trạng thái vòng đời App thay đổi
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && mounted) {
       print(
           "[DashboardScreen] App Resumed - Reloading goal and recalculating steps.");
-      // Tải lại mục tiêu từ prefs và yêu cầu tính lại số bước khi app quay lại
       _loadDashboardStepGoal();
       final dashboardProvider =
           Provider.of<DashboardProvider>(context, listen: false);
-      // Gọi fetch lại lịch sử (an toàn nhất, sẽ tự trigger tính lại steps)
       dashboardProvider.fetchHealthHistory();
-      // Hoặc chỉ tính lại nếu bạn chắc chắn dữ liệu provider không cũ
-      // _calculateTodaySteps(dashboardProvider);
     }
   }
 
-  // Hàm tải mục tiêu từ SharedPreferences
   Future<void> _loadDashboardStepGoal() async {
     if (!mounted) return;
-    // Đặt loading true để có phản hồi nếu người dùng vào lại màn hình nhanh
     if (!_isLoadingGoal) setStateIfMounted(() => _isLoadingGoal = true);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -147,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (mounted) {
         setStateIfMounted(() {
           _dashboardStepGoal = savedGoal ?? AppConstants.defaultDailyStepGoal;
-          _isLoadingGoal = false; // Mục tiêu đã tải xong
+          _isLoadingGoal = false;
         });
         print(
             "[DashboardScreen] Loaded step goal from SharedPreferences: $_dashboardStepGoal");
@@ -164,7 +159,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // Hàm xử lý refresh khi kết nối lại BLE
   void _handleConnectionChangeForRefresh() {
     if (!mounted) return;
     final bleStatus =
@@ -181,9 +175,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // Hàm build chip trạng thái BLE
   Widget _buildBleStatusChip(BleConnectionStatus status) {
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n
+    final l10n = AppLocalizations.of(context)!;
     String text;
     Color color;
     IconData icon;
@@ -224,10 +217,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       label: Text(text, style: const TextStyle(color: Colors.white)),
       backgroundColor: color,
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-    ); // Giữ nguyên phần UI của Chip
+    );
   }
 
-  // Hàm build chip trạng thái WiFi
   Widget _buildWifiStatusChip(bool? isWifiConnected) {
     final l10n = AppLocalizations.of(context)!;
     String text;
@@ -251,12 +243,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 0),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
-    ); // Giữ nguyên phần UI của Chip
+    );
   }
 
-  // Hàm tính toán tổng số bước hôm nay từ dữ liệu của DashboardProvider
   void _calculateTodaySteps(DashboardProvider dashboardProvider) {
-    // Chỉ tính nếu provider không còn đang tải dữ liệu lịch sử
     if (dashboardProvider.historyStatus == HistoryStatus.loading ||
         dashboardProvider.historyStatus == HistoryStatus.initial) {
       print(
@@ -267,7 +257,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       return;
     }
 
-    // Nếu không có dữ liệu lịch sử (ví dụ lỗi tải)
     if (dashboardProvider.healthHistory.isEmpty &&
         dashboardProvider.historyStatus != HistoryStatus.loading) {
       print(
@@ -282,8 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     print(
         "[DashboardScreen] Calculating today's steps using DashboardProvider data...");
     if (!_isLoadingTodaySteps) {
-      setStateIfMounted(
-          () => _isLoadingTodaySteps = true); // Đặt loading trước khi tính
+      setStateIfMounted(() => _isLoadingTodaySteps = true);
     }
 
     final List<HourlyStepsData> hourlyStepsList =
@@ -307,21 +295,67 @@ class _DashboardScreenState extends State<DashboardScreen>
           "[DashboardScreen] Hourly steps data calculated by DashboardProvider is empty.");
     }
 
-    // Cập nhật state an toàn
     setStateIfMounted(() {
       _todaySteps = calculatedSteps;
-      _isLoadingTodaySteps = false; // Đánh dấu đã tính xong
+      _isLoadingTodaySteps = false;
       print(
           "[DashboardScreen] Step calculation complete. Today's steps: $_todaySteps");
     });
   }
 
-  // Hàm helper setState an toàn
   void setStateIfMounted(VoidCallback fn) {
     if (mounted) {
       setState(fn);
     }
   }
+
+  // <<< HELPER FUNCTIONS CHO HIỂN THỊ HOẠT ĐỘNG >>>
+  String _getLocalizedActivityName(String activityKey, AppLocalizations l10n) {
+    switch (activityKey) {
+      case 'Lying':
+        return l10n.activityLying;
+      case 'Sitting':
+        return l10n.activitySitting;
+      case 'Standing':
+        return l10n.activityStanding;
+      case 'Walking':
+        return l10n.activityWalking;
+      case 'Running':
+        return l10n.activityRunning;
+      case 'Cycling':
+        return l10n.activityCycling;
+      case 'Ascending_Stairs':
+        return l10n.activityAscendingStairs;
+      case 'Descending_Stairs':
+        return l10n.activityDescendingStairs;
+      default:
+        return l10n.activityUnknown;
+    }
+  }
+
+  IconData _getActivityIcon(String activityKey) {
+    switch (activityKey) {
+      case 'Lying':
+        return Icons.hotel_outlined;
+      case 'Sitting':
+        return Icons.chair_outlined;
+      case 'Standing':
+        return Icons.accessibility_new_outlined;
+      case 'Walking':
+        return Icons.directions_walk_outlined;
+      case 'Running':
+        return Icons.directions_run_outlined;
+      case 'Cycling':
+        return Icons.directions_bike_outlined;
+      case 'Ascending_Stairs':
+        return Icons.stairs_outlined;
+      case 'Descending_Stairs':
+        return Icons.stairs_outlined; // Có thể dùng icon khác nếu có
+      default:
+        return Icons.help_outline;
+    }
+  }
+  // ---------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -333,33 +367,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     final bool? espWifiStatus = isDeviceConnected ? latestData?.wifi : null;
 
     final l10n = AppLocalizations.of(context)!;
-
-    // Trạng thái loading chính (chỉ check tải mục tiêu cho đơn giản)
     final bool isLoadingScreen = _isLoadingGoal;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.dashboardTitle), // TODO: Dịch
+        title: Text(l10n.dashboardTitle),
         automaticallyImplyLeading: false,
         actions: [
-          // Hiển thị Chip WiFi và BLE
           Padding(
             padding: const EdgeInsets.only(right: 10.0),
             child: Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // <<< SỬA LẠI PHẦN HIỂN THỊ WIFI CHIP >>>
-                  if (isDeviceConnected) // Chỉ hiển thị khi kết nối
-                    _buildWifiStatusChip(
-                        espWifiStatus) // Gọi trực tiếp với giá trị đã lấy
-                  else
-                    const SizedBox
-                        .shrink(), // Không hiển thị gì nếu không kết nối
-                  // --------------------------------------
                   if (isDeviceConnected)
-                    const SizedBox(width: 4), // Khoảng cách
-                  // Chip BLE giữ nguyên ValueListenableBuilder vì connectionStatus là ValueNotifier
+                    _buildWifiStatusChip(espWifiStatus)
+                  else
+                    const SizedBox.shrink(),
+                  if (isDeviceConnected) const SizedBox(width: 4),
                   ValueListenableBuilder<BleConnectionStatus>(
                     valueListenable: bleProvider.connectionStatus,
                     builder: (context, status, child) =>
@@ -376,94 +401,136 @@ class _DashboardScreenState extends State<DashboardScreen>
           : RefreshIndicator(
               onRefresh: () async {
                 print("[DashboardScreen] Pull to refresh triggered.");
-                await _loadDashboardStepGoal(); // Tải lại mục tiêu
+                await _loadDashboardStepGoal();
                 await Provider.of<DashboardProvider>(context, listen: false)
-                    .fetchHealthHistory(); // Tải lại lịch sử
+                    .fetchHealthHistory();
               },
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
-                  // Lời chào
                   if (user != null)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
+                      padding: const EdgeInsets.only(
+                          bottom: 16.0), // Tăng padding bottom
                       child: Text(
-                        // <<< DÙNG KEY VÀ PLACEHOLDER >>>
                         l10n.welcomeUser(
                             user.displayName ?? user.email ?? l10n.defaultUser),
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall, // Thay đổi style
                         textAlign: TextAlign.center,
                       ),
-                    ), // Giữ nguyên UI Lời chào
+                    ),
 
-                  // Nút Test Notification (Nếu còn giữ)
-                  // Padding(
-                  //   child: ElevatedButton.icon(
-                  //     label: Text(l10n.testNotificationButton), // <<< DÙNG KEY
-                  //     onPressed: () {
-                  //        // ...
-                  //        ScaffoldMessenger.of(context).showSnackBar(
-                  //          SnackBar(content: Text(l10n.testNotificationSent)), // <<< DÙNG KEY
-                  //        );
-                  //     }
-                  //   )
-                  // ),
-                  // const SizedBox(height: 20),
+                  // <<< WIDGET HIỂN THỊ HOẠT ĐỘNG HIỆN TẠI >>>
+                  if (_activityServiceRef != null)
+                    Card(
+                      elevation: 2.0,
+                      margin:
+                          const EdgeInsets.only(bottom: 16.0), // Thêm margin
+                      child: StreamBuilder<String>(
+                        stream: _activityServiceRef!.activityPredictionStream,
+                        builder: (context, snapshot) {
+                          IconData activityIcon =
+                              Icons.person_outline; // Icon mặc định chung hơn
+                          String activityText = l10n
+                              .activityInitializing; // Mặc định là đang khởi tạo
 
-                  // Widget Chỉ Số Realtime
+                          if (snapshot.hasError) {
+                            activityText = l10n.activityError;
+                            activityIcon = Icons.error_outline;
+                            print(
+                                "[DashboardScreen] Error on activity stream: ${snapshot.error}");
+                          } else if (snapshot.hasData &&
+                              snapshot.data!.isNotEmpty) {
+                            final currentActivity = snapshot.data!;
+                            activityText = _getLocalizedActivityName(
+                                currentActivity, l10n);
+                            activityIcon = _getActivityIcon(currentActivity);
+                          } else if (snapshot.connectionState ==
+                                  ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            // Giữ activityText là initializing
+                            activityIcon = Icons.hourglass_empty_outlined;
+                          } else if (!snapshot.hasData) {
+                            activityText = l10n
+                                .activityUnknown; // Nếu stream active nhưng không có data
+                            activityIcon = Icons.help_outline;
+                          }
+
+                          return ListTile(
+                            leading: Icon(activityIcon,
+                                size: 32,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary), // Tăng size icon
+                            title: Text(l10n.currentActivityTitle,
+                                style: Theme.of(context).textTheme.titleMedium),
+                            subtitle: Text(
+                              activityText,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    // Tăng size text
+                                    fontWeight: FontWeight
+                                        .w600, // Điều chỉnh font weight
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  // -------------------------------------------
+
                   const RealtimeMetricsCard(),
                   const SizedBox(height: 16),
 
-                  // --- Placeholder Mục Tiêu (ĐÃ SỬA LẠI HOÀN CHỈNH) ---
                   Card(
                     elevation: 2.0,
                     child: ListTile(
-                      leading: const Icon(Icons.flag_outlined),
-                      title: Text(l10n.goalProgressTitle), // TODO: Dịch
-                      subtitle:
-                          _isLoadingTodaySteps // <<< KIỂM TRA LOADING STEPS >>>
-                              ? Row(
-                                  // Hiển thị indicator nhỏ khi đang tính/chờ
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const SizedBox(
-                                        width: 12,
-                                        height: 12,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                    const SizedBox(width: 8),
-                                    Text(l10n.stepsCalculating), // TODO: Dịch
-                                  ],
-                                )
-                              // <<< HIỂN THỊ _todaySteps và _dashboardStepGoal >>>
-                              : Text(l10n.stepsProgress('$_todaySteps',
-                                  '$_dashboardStepGoal')), // TODO: Dịch 'Steps:'
-                      trailing: const Icon(Icons.chevron_right),
+                      leading: const Icon(Icons.flag_outlined,
+                          color: Colors.orangeAccent), // Thêm màu
+                      title: Text(l10n.goalProgressTitle),
+                      subtitle: _isLoadingTodaySteps
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                                const SizedBox(width: 8),
+                                Text(l10n.stepsCalculating),
+                              ],
+                            )
+                          : Text(l10n.stepsProgress(
+                              '$_todaySteps', '$_dashboardStepGoal')),
+                      trailing: Icon(Icons.settings_outlined,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary), // Đổi icon
                       onTap: () {
-                        // <<< SỬ DỤNG GLOBAL KEY ĐỂ ĐIỀU HƯỚNG >>>
                         try {
-                          // Truy cập GlobalKey từ main.dart (cần import main.dart)
-                          // Đảm bảo key đã được tạo và truyền vào MainNavigator
-                          mainNavigatorKey.currentState
-                              ?.navigateTo(2); // Giả sử index 2 là Goals
+                          mainNavigatorKey.currentState?.navigateTo(
+                              AppConstants.goalsScreenIndex); // Sử dụng hằng số
                         } catch (e) {
                           print(
                               "!!! [DashboardScreen] Error navigating using GlobalKey: $e");
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text(l10n.errorNavigateGoals),
-                                backgroundColor: Colors.orange),
+                                backgroundColor: Colors.redAccent), // Đổi màu
                           );
                         }
-                        // ------------------------------------------
                       },
                     ),
                   ),
-                  // ------------------------------------------------------
-
                   const SizedBox(height: 16),
 
-                  // --- Các Widget Biểu Đồ ---
                   const HistoryChartCard(),
                   const SizedBox(height: 16),
                   const Spo2HistoryChartCard(),
