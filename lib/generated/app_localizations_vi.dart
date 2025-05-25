@@ -772,4 +772,28 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get activityDescendingStairs => 'Xuống cầu thang';
+
+  @override
+  String get recordActivityTitle => 'Ghi Dữ liệu Hoạt động';
+
+  @override
+  String get selectActivityLabel => 'Chọn Hoạt động để Ghi';
+
+  @override
+  String get startRecordingButton => 'Bắt đầu Ghi';
+
+  @override
+  String get stopRecordingButton => 'Dừng Ghi';
+
+  @override
+  String get statusLabel => 'Trạng thái:';
+
+  @override
+  String get samplesRecordedLabel => 'Số mẫu đã ghi:';
+
+  @override
+  String get viewRecordedDataHint => 'Đường dẫn dữ liệu đã ghi (thông tin)';
+
+  @override
+  String get pathCopiedSnackbar => 'Thông tin đường dẫn hiển thị trong console.';
 }

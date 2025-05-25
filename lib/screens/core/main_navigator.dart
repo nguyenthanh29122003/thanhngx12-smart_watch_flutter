@@ -6,7 +6,8 @@ import '../core/dashboard_screen.dart';
 import '../core/relatives_screen.dart';
 import '../core/goals_screen.dart';
 import '../core/settings_screen.dart';
-import 'chatbot_screen.dart'; // Thêm import
+import 'chatbot_screen.dart';
+import '../debug/record_activity_screen.dart'; // <<< THÊM IMPORT NÀY
 
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
@@ -16,9 +17,8 @@ class MainNavigator extends StatefulWidget {
 }
 
 class MainNavigatorState extends State<MainNavigator> {
-  int _selectedIndex = 0; // Index của tab đang được chọn
+  int _selectedIndex = 0;
 
-  // Danh sách các màn hình tương ứng với các tab
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
     RelativesScreen(),
@@ -26,7 +26,6 @@ class MainNavigatorState extends State<MainNavigator> {
     SettingsScreen(),
   ];
 
-  // Hàm được gọi khi người dùng nhấn vào một tab
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -38,7 +37,7 @@ class MainNavigatorState extends State<MainNavigator> {
     if (index >= 0 &&
         index < _widgetOptions.length &&
         index != _selectedIndex) {
-      _onItemTapped(index); // Gọi hàm xử lý nhấn tab nội bộ
+      _onItemTapped(index);
     } else if (index == _selectedIndex) {
       print("[MainNavigator] Already on tab $index.");
     } else {
@@ -46,17 +45,14 @@ class MainNavigatorState extends State<MainNavigator> {
     }
   }
 
-  // <<< ----------------------------------------------- >>>
   @override
   Widget build(BuildContext context) {
     print(
       "MainNavigator build triggered. SelectedIndex: $_selectedIndex",
-    ); // Debug log
+    );
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      // Hiển thị màn hình tương ứng với index đang được chọn
       body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-      // Thanh điều hướng dưới cùng
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -96,7 +92,6 @@ class MainNavigatorState extends State<MainNavigator> {
             label: AppLocalizations.of(context)!.chatbotTitle,
             backgroundColor: Colors.blue,
             onTap: () {
-              // Điều hướng đến ChatbotScreen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ChatbotScreen()),
@@ -108,21 +103,38 @@ class MainNavigatorState extends State<MainNavigator> {
             label: AppLocalizations.of(context)!.predictTitle,
             backgroundColor: Colors.green,
             onTap: () {
-              // Placeholder cho chức năng Dự đoán
               ScaffoldMessenger.of(context).showSnackBar(
+                // Sử dụng key dịch thuật nếu có, ví dụ l10n.predictPlaceholder
                 const SnackBar(
                     content: Text('Prediction functionality coming soon!')),
               );
             },
           ),
           SpeedDialChild(
-            child: const Icon(Icons.bluetooth),
-            label: AppLocalizations.of(context)!.connectDevice,
+            child: const Icon(
+                Icons.bluetooth_searching_outlined), // Thay đổi icon một chút
+            label: AppLocalizations.of(context)!
+                .connectDevice, // Giả sử key này là "Connect / Change Device"
             backgroundColor: Colors.orange,
             onTap: () {
               Navigator.pushNamed(context, '/device_select');
             },
           ),
+          // <<< THÊM SPEEDDIALCHILD CHO MÀN HÌNH RECORD >>>
+          SpeedDialChild(
+            child: const Icon(Icons.fiber_manual_record_outlined,
+                color: Colors.white),
+            label: l10n.recordActivityTitle, // Sử dụng key dịch thuật đã thêm
+            backgroundColor: Colors.purple,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const RecordActivityScreen()),
+              );
+            },
+          ),
+          // --------------------------------------------
         ],
       ),
     );

@@ -1564,6 +1564,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Descending Stairs'**
   String get activityDescendingStairs;
+
+  /// Title for the activity data recording screen
+  ///
+  /// In en, this message translates to:
+  /// **'Record Activity Data'**
+  String get recordActivityTitle;
+
+  /// Label for the dropdown to select an activity
+  ///
+  /// In en, this message translates to:
+  /// **'Select Activity to Record'**
+  String get selectActivityLabel;
+
+  /// Label for the button to start recording data
+  ///
+  /// In en, this message translates to:
+  /// **'Start Recording'**
+  String get startRecordingButton;
+
+  /// Label for the button to stop recording data
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Recording'**
+  String get stopRecordingButton;
+
+  /// Label for the status message area
+  ///
+  /// In en, this message translates to:
+  /// **'Status:'**
+  String get statusLabel;
+
+  /// Label for the count of recorded data samples
+  ///
+  /// In en, this message translates to:
+  /// **'Samples Recorded:'**
+  String get samplesRecordedLabel;
+
+  /// Hint text showing where data is/was saved
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded data path (info)'**
+  String get viewRecordedDataHint;
+
+  /// Snackbar message after tapping the data path hint
+  ///
+  /// In en, this message translates to:
+  /// **'Path information shown in console.'**
+  String get pathCopiedSnackbar;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

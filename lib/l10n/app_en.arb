@@ -360,5 +360,37 @@
   "activityDescendingStairs": "Descending Stairs",
   "@activityDescendingStairs": {
     "description": "Name for the 'Descending Stairs' activity."
+  },
+    "recordActivityTitle": "Record Activity Data",
+  "@recordActivityTitle": {
+    "description": "Title for the activity data recording screen"
+  },
+  "selectActivityLabel": "Select Activity to Record",
+  "@selectActivityLabel": {
+    "description": "Label for the dropdown to select an activity"
+  },
+  "startRecordingButton": "Start Recording",
+  "@startRecordingButton": {
+    "description": "Label for the button to start recording data"
+  },
+  "stopRecordingButton": "Stop Recording",
+  "@stopRecordingButton": {
+    "description": "Label for the button to stop recording data"
+  },
+  "statusLabel": "Status:",
+  "@statusLabel": {
+    "description": "Label for the status message area"
+  },
+  "samplesRecordedLabel": "Samples Recorded:",
+  "@samplesRecordedLabel": {
+    "description": "Label for the count of recorded data samples"
+  },
+  "viewRecordedDataHint": "Recorded data path (info)",
+  "@viewRecordedDataHint": {
+    "description": "Hint text showing where data is/was saved"
+  },
+  "pathCopiedSnackbar": "Path information shown in console.",
+  "@pathCopiedSnackbar": {
+    "description": "Snackbar message after tapping the data path hint"
   }
 }

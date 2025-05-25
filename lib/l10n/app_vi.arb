@@ -300,5 +300,37 @@
   "activityDescendingStairs": "Xuống cầu thang",
   "@activityDescendingStairs": {
     "description": "Tên cho hoạt động 'Xuống cầu thang'."
+  },
+    "recordActivityTitle": "Ghi Dữ liệu Hoạt động",
+  "@recordActivityTitle": {
+    "description": "Tiêu đề cho màn hình ghi dữ liệu hoạt động"
+  },
+  "selectActivityLabel": "Chọn Hoạt động để Ghi",
+  "@selectActivityLabel": {
+    "description": "Nhãn cho menu thả xuống để chọn một hoạt động"
+  },
+  "startRecordingButton": "Bắt đầu Ghi",
+  "@startRecordingButton": {
+    "description": "Nhãn cho nút để bắt đầu ghi dữ liệu"
+  },
+  "stopRecordingButton": "Dừng Ghi",
+  "@stopRecordingButton": {
+    "description": "Nhãn cho nút để dừng ghi dữ liệu"
+  },
+  "statusLabel": "Trạng thái:",
+  "@statusLabel": {
+    "description": "Nhãn cho khu vực hiển thị thông báo trạng thái"
+  },
+  "samplesRecordedLabel": "Số mẫu đã ghi:",
+  "@samplesRecordedLabel": {
+    "description": "Nhãn cho số lượng mẫu dữ liệu đã được ghi lại"
+  },
+  "viewRecordedDataHint": "Đường dẫn dữ liệu đã ghi (thông tin)",
+  "@viewRecordedDataHint": {
+    "description": "Chữ gợi ý hiển thị nơi dữ liệu được/đã được lưu"
+  },
+  "pathCopiedSnackbar": "Thông tin đường dẫn hiển thị trong console.",
+  "@pathCopiedSnackbar": {
+    "description": "Thông báo snackbar sau khi nhấn vào gợi ý đường dẫn dữ liệu"
   }
 }

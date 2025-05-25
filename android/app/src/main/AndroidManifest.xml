@@ -23,6 +23,13 @@
  <!-- !!! QUYỀN CHO THÔNG BÁO (Android 13+) !!! -->
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<!-- Nếu bạn target Android 13 (API 33) trở lên và cần đọc media files từ các app khác -->
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+<uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+<uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+
 <application
     android:label="Health Tracker"
     android:name="${applicationName}"
