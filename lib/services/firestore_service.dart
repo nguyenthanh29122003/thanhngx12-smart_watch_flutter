@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Cần để lấy User object
 import '../app_constants.dart'; // Import các hằng số
 import '../models/health_data.dart'; // <<< Import HealthData model
+import '../models/activity_segment.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -381,5 +382,61 @@ class FirestoreService {
       print("No changes detected for relative $relativeId. Update skipped.");
       // Có thể throw lỗi nhẹ hoặc trả về gì đó nếu muốn báo không có gì thay đổi
     }
+  }
+
+  /// Lưu một bản ghi ActivitySegment lên Firestore.
+  Future<void> saveActivitySegment(
+      String userId, ActivitySegment segment) async {
+    try {
+      // Sử dụng toJsonForFirestore() từ model ActivitySegment
+      // Hàm này đã chuyển đổi startTime và endTime sang Timestamp của Firestore
+      final Map<String, dynamic> dataToSave = segment.toJsonForFirestore();
+
+      // (Tùy chọn) Thêm một trường 'syncedAt' hoặc 'createdAtServer' nếu bạn muốn
+      // biết khi nào bản ghi này được đồng bộ lên server.
+      // dataToSave['syncedAt'] = FieldValue.serverTimestamp();
+
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .collection(AppConstants
+              .activitySegmentsSubcollection) // <<< SỬ DỤNG HẰNG SỐ ĐÚNG
+          .add(dataToSave); // Dùng add() để Firestore tự tạo ID cho document
+
+      // Log tối giản hơn để tránh spam console
+      // print("ActivitySegment saved for user $userId: ${segment.activityName} from ${segment.startTime.toIso8601String()}");
+    } catch (e) {
+      print(
+          "!!! Error saving ActivitySegment to Firestore for user $userId: $e");
+      // Cân nhắc ném lỗi ra ngoài để DataSyncService có thể xử lý
+      // (ví dụ: không đánh dấu segment này là đã đồng bộ ở local)
+      throw FirebaseException(
+        plugin: 'FirestoreService',
+        code: 'save-activity-segment-failed',
+        message: e.toString(),
+      );
+    }
+  }
+
+  /// (Tùy chọn) Lấy lịch sử ActivitySegment từ Firestore.
+  Stream<QuerySnapshot<Map<String, dynamic>>> getActivitySegmentsHistory(
+    String userId, {
+    int limit = 100, // Giới hạn số lượng
+    DateTime?
+        startAfterTimestamp, // Cho phân trang (lấy các bản ghi sau một thời điểm nhất định)
+  }) {
+    Query<Map<String, dynamic>> query = _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection(AppConstants.activitySegmentsSubcollection)
+        .orderBy('startTime',
+            descending: true); // Sắp xếp theo startTime, mới nhất trước
+
+    if (startAfterTimestamp != null) {
+      query =
+          query.startAfter([Timestamp.fromDate(startAfterTimestamp.toUtc())]);
+    }
+
+    return query.limit(limit).snapshots();
   }
 }

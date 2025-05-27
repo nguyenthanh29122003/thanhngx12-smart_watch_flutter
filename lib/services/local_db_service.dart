@@ -7,20 +7,16 @@ import 'package:flutter/foundation.dart'; // Cho kDebugMode
 
 // Import Models
 import '../models/health_data.dart';
-import '../models/activity_segment.dart'; // Model cho lịch sử hoạt động
+import '../models/activity_segment.dart';
 
 class LocalDbService {
   static const _databaseName = "health_data_v1.db";
-  // QUAN TRỌNG: Tăng version nếu bạn thay đổi schema (ví dụ: thêm bảng mới)
-  // Nếu DB đã tồn tại với version cũ, onUpgrade sẽ được gọi.
-  // Nếu bạn đang phát triển và muốn tạo lại từ đầu, hãy gỡ cài đặt app
-  // hoặc dùng deleteDatabaseFile() rồi đặt version là 1.
-  static const _databaseVersion = 3; // Giả sử version 2 đã thêm cột temp/pres
-  // Version 3 sẽ thêm bảng activity_segments
+  static const _databaseVersion =
+      3; // Version 3: Thêm bảng activity_segments với is_synced
 
   // --- Bảng Health Records ---
   static const tableHealthRecords = 'health_records';
-  static const columnId = '_id'; // Dùng chung cho Primary Key của các bảng
+  static const columnId = '_id';
   static const columnAx = 'ax';
   static const columnAy = 'ay';
   static const columnAz = 'az';
@@ -33,21 +29,21 @@ class LocalDbService {
   static const columnIr = 'ir';
   static const columnRed = 'red';
   static const columnWifi = 'wifi';
-  static const columnTimestamp = 'timestamp'; // Unix milliseconds UTC
-  static const columnIsSynced = 'is_synced'; // 0 = false, 1 = true
-  static const columnTemp = 'temp'; // REAL NULL
-  static const columnPres = 'pres'; // REAL NULL
+  static const columnTimestamp = 'timestamp';
+  static const columnIsSynced = 'is_synced'; // Dùng chung tên cột cho is_synced
+  static const columnTemp = 'temp';
+  static const columnPres = 'pres';
 
-  // --- Bảng Activity Segments (MỚI) ---
+  // --- Bảng Activity Segments ---
   static const tableActivitySegments = 'activity_segments';
   // columnId (PK) đã được định nghĩa ở trên
-  static const columnActivityName = 'activityName'; // TEXT NOT NULL
-  static const columnSegmentStartTime =
-      'startTime'; // TEXT NOT NULL (ISO8601 UTC)
-  static const columnSegmentEndTime = 'endTime'; // TEXT NOT NULL (ISO8601 UTC)
-  static const columnSegmentDuration = 'durationInSeconds'; // INTEGER NOT NULL
-  static const columnSegmentCalories = 'caloriesBurned'; // REAL NULL
-  static const columnSegmentUserId = 'userId'; // TEXT NULL (tùy chọn)
+  static const columnActivityName = 'activityName';
+  static const columnSegmentStartTime = 'startTime';
+  static const columnSegmentEndTime = 'endTime';
+  static const columnSegmentDuration = 'durationInSeconds';
+  static const columnSegmentCalories = 'caloriesBurned';
+  static const columnSegmentUserId = 'userId';
+  // static const columnSegmentIsSynced = 'is_synced'; // <<< DÙNG CHUNG columnIsSynced
 
   // --- Singleton Pattern ---
   LocalDbService._privateConstructor();
@@ -64,7 +60,6 @@ class LocalDbService {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final path = join(documentsDirectory.path, _databaseName);
     if (kDebugMode) print("[LocalDbService] Database path: $path");
-
     return await openDatabase(
       path,
       version: _databaseVersion,
@@ -76,11 +71,9 @@ class LocalDbService {
   Future<void> _onCreate(Database db, int version) async {
     if (kDebugMode)
       print("[LocalDbService] Creating database tables version $version...");
-    // Tạo bảng health_records
     await _createHealthRecordsTable(db);
-
-    // Tạo bảng activity_segments nếu version hiện tại khi tạo là 3 hoặc cao hơn
     if (version >= 3) {
+      // Nếu DB được tạo mới với version 3+
       await _createActivitySegmentsTable(db);
     }
   }
@@ -113,19 +106,27 @@ class LocalDbService {
     if (oldVersion < 3) {
       if (kDebugMode)
         print(
-            "  Applying upgrade for v3: Creating table $tableActivitySegments");
-      await _createActivitySegmentsTable(db);
+            "  Applying upgrade for v3: Creating table $tableActivitySegments (with is_synced column)");
+      await _createActivitySegmentsTable(
+          db); // Hàm này đã bao gồm cột is_synced
     }
-    // Thêm các khối if (oldVersion < X) cho các lần nâng cấp sau
+    // Nếu bạn có version 3 đã tạo bảng activity_segments mà CHƯA CÓ cột is_synced:
+    // if (oldVersion == 3 && newVersion >= 4) { // Giả sử bạn tăng lên version 4 để thêm cột
+    //   if (kDebugMode) print("  Applying upgrade for v4: Adding $columnIsSynced column to $tableActivitySegments");
+    //   try {
+    //     await db.execute('ALTER TABLE $tableActivitySegments ADD COLUMN $columnIsSynced INTEGER NOT NULL DEFAULT 0');
+    //     if (kDebugMode) print("    Added column to $tableActivitySegments: $columnIsSynced");
+    //   } catch (e) { if (kDebugMode) print("    Error adding $columnIsSynced to $tableActivitySegments (may exist or other issue): $e");}
+    // }
     if (kDebugMode) print("[LocalDbService] Database upgrade complete.");
   }
 
-  // Hàm helper để tạo bảng health_records
   Future<void> _createHealthRecordsTable(Database db) async {
     if (kDebugMode)
-      print("[LocalDbService] Creating table '$tableHealthRecords'...");
+      print(
+          "[LocalDbService] Creating/Ensuring table '$tableHealthRecords'...");
     await db.execute('''
-      CREATE TABLE $tableHealthRecords (
+      CREATE TABLE IF NOT EXISTS $tableHealthRecords ( 
         $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
         $columnAx REAL NOT NULL, $columnAy REAL NOT NULL, $columnAz REAL NOT NULL,
         $columnGx REAL NOT NULL, $columnGy REAL NOT NULL, $columnGz REAL NOT NULL,
@@ -136,32 +137,37 @@ class LocalDbService {
         $columnTemp REAL NULL,
         $columnPres REAL NULL
       )
-    ''');
+    '''); // Thêm IF NOT EXISTS cho an toàn
     await db.execute(
-        'CREATE INDEX idx_hr_timestamp ON $tableHealthRecords ($columnTimestamp)');
+        'CREATE INDEX IF NOT EXISTS idx_hr_timestamp ON $tableHealthRecords ($columnTimestamp)');
     await db.execute(
-        'CREATE INDEX idx_hr_is_synced ON $tableHealthRecords ($columnIsSynced)');
+        'CREATE INDEX IF NOT EXISTS idx_hr_is_synced ON $tableHealthRecords ($columnIsSynced)');
     if (kDebugMode)
       print("[LocalDbService] Table '$tableHealthRecords' created/ensured.");
   }
 
-  // Hàm helper để tạo bảng activity_segments
   Future<void> _createActivitySegmentsTable(Database db) async {
     if (kDebugMode)
-      print("[LocalDbService] Creating table '$tableActivitySegments'...");
+      print(
+          "[LocalDbService] Creating/Ensuring table '$tableActivitySegments'...");
     await db.execute('''
-      CREATE TABLE $tableActivitySegments (
+      CREATE TABLE IF NOT EXISTS $tableActivitySegments (
         $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
         $columnActivityName TEXT NOT NULL,
         $columnSegmentStartTime TEXT NOT NULL,
         $columnSegmentEndTime TEXT NOT NULL,
         $columnSegmentDuration INTEGER NOT NULL,
         $columnSegmentCalories REAL NULL,
-        $columnSegmentUserId TEXT NULL
+        $columnSegmentUserId TEXT NULL,
+        $columnIsSynced INTEGER NOT NULL DEFAULT 0 -- <<< THÊM CỘT is_synced
       )
-    ''');
+    '''); // Thêm IF NOT EXISTS
     await db.execute(
-        'CREATE INDEX idx_segment_start_time ON $tableActivitySegments ($columnSegmentStartTime)');
+        'CREATE INDEX IF NOT EXISTS idx_segment_start_time ON $tableActivitySegments ($columnSegmentStartTime)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_segment_user_id ON $tableActivitySegments ($columnSegmentUserId)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_segment_is_synced ON $tableActivitySegments ($columnIsSynced)'); // Index cho is_synced
     if (kDebugMode)
       print("[LocalDbService] Table '$tableActivitySegments' created/ensured.");
   }
@@ -176,8 +182,7 @@ class LocalDbService {
         columnSteps: data.steps, columnHr: data.hr, columnSpo2: data.spo2,
         columnIr: data.ir, columnRed: data.red,
         columnWifi: data.wifi ? 1 : 0,
-        columnTimestamp:
-            data.timestamp.toUtc().millisecondsSinceEpoch, // Luôn lưu UTC
+        columnTimestamp: data.timestamp.toUtc().millisecondsSinceEpoch,
         columnIsSynced: 0, // Mặc định là chưa đồng bộ
         columnTemp: data.temperature,
         columnPres: data.pressure,
@@ -185,10 +190,7 @@ class LocalDbService {
       final id = await db.insert(tableHealthRecords, row,
           conflictAlgorithm: ConflictAlgorithm.ignore);
       if (id == 0 && kDebugMode) {
-        print(
-            "[LocalDbService] Skipped saving duplicate HealthData (timestamp conflict): ${data.timestamp.toIso8601String()}");
-      } else if (id > 0 && kDebugMode) {
-        // print("[LocalDbService] Saved HealthData with local ID: $id");
+        // print("[LocalDbService] Skipped saving duplicate HealthData (timestamp conflict): ${data.timestamp.toIso8601String()}");
       }
       return id;
     } catch (e) {
@@ -220,17 +222,17 @@ class LocalDbService {
       {int limit = 50}) async {
     final List<Map<String, dynamic>> maps =
         await getUnsyncedHealthRecords(limit: limit);
-    // Sử dụng HealthData.fromDbMap từ model HealthData
     return List.generate(maps.length, (i) => HealthData.fromDbMap(maps[i]));
   }
 
-  Future<int> markRecordsAsSynced(List<int> recordIds) async {
+  Future<int> markHealthRecordsAsSynced(List<int> recordIds) async {
+    // Đổi tên để rõ ràng
     if (recordIds.isEmpty) return 0;
     try {
       final db = await database;
       final placeholders = List.filled(recordIds.length, '?').join(',');
       final count = await db.update(
-        tableHealthRecords,
+        tableHealthRecords, // <<< SỬA: Tên bảng đúng
         {columnIsSynced: 1},
         where: '$columnId IN ($placeholders)',
         whereArgs: recordIds,
@@ -247,7 +249,6 @@ class LocalDbService {
   }
 
   Future<int> deleteHealthRecordsByIds(List<int> recordIds) async {
-    // Đổi tên để rõ ràng hơn
     if (recordIds.isEmpty) return 0;
     try {
       final db = await database;
@@ -282,25 +283,26 @@ class LocalDbService {
     }
   }
 
-  // --- Các hàm cho ActivitySegment (MỚI) ---
+  // --- Các hàm cho ActivitySegment (CẬP NHẬT VÀ THÊM MỚI) ---
 
   Future<int> insertActivitySegment(ActivitySegment segment) async {
     try {
       final db = await database;
+      // toMap() trong ActivitySegment đã xử lý việc isSynced thành 0 hoặc 1
       Map<String, dynamic> segmentMap = segment.toMap();
       if (segment.id == null) {
-        segmentMap.remove('id'); // Để SQLite tự tạo ID
+        segmentMap.remove('id');
       }
+      // Đảm bảo isSynced được thêm vào map nếu chưa có (mặc định là false khi tạo segment)
+      segmentMap[columnIsSynced] = (segment.isSynced) ? 1 : 0;
 
       final id = await db.insert(
         tableActivitySegments,
         segmentMap,
-        conflictAlgorithm:
-            ConflictAlgorithm.replace, // Hoặc .ignore nếu không muốn ghi đè
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
       if (kDebugMode && id > 0) {
-        print(
-            "[LocalDbService] Inserted activity segment ID: $id, Activity: ${segment.activityName}, Duration: ${segment.durationInSeconds}s");
+        // print("[LocalDbService] Inserted activity segment ID: $id, Activity: ${segment.activityName}, Synced: ${segment.isSynced}");
       }
       return id;
     } catch (e) {
@@ -311,27 +313,28 @@ class LocalDbService {
   }
 
   Future<List<ActivitySegment>> getActivitySegmentsForDateRange(
-      DateTime startDate, DateTime endDate) async {
+      DateTime startDate, DateTime endDate,
+      {String? userId}) async {
     try {
       final db = await database;
-      final String startStr =
-          startDate.toUtc().toIso8601String(); // So sánh bằng UTC
+      final String startStr = startDate.toUtc().toIso8601String();
       final String endStr = endDate.toUtc().toIso8601String();
 
-      // Lấy các segment có startTime nằm trong khoảng, hoặc endTime nằm trong khoảng,
-      // hoặc startTime trước khoảng và endTime sau khoảng (bao trùm)
-      // Điều này phức tạp hơn, cách đơn giản là lấy theo startTime:
+      String whereClause =
+          '$columnSegmentStartTime < ? AND $columnSegmentEndTime > ?';
+      List<dynamic> whereArgs = [endStr, startStr];
+
+      if (userId != null) {
+        whereClause += ' AND $columnSegmentUserId = ?';
+        whereArgs.add(userId);
+      }
+
       final List<Map<String, dynamic>> maps = await db.query(
         tableActivitySegments,
-        where:
-            '$columnSegmentStartTime < ? AND $columnSegmentEndTime > ?', // Lấy các segment giao với khoảng thời gian
-        whereArgs: [endStr, startStr], // Lưu ý thứ tự cho logic giao nhau
+        where: whereClause,
+        whereArgs: whereArgs,
         orderBy: '$columnSegmentStartTime ASC',
       );
-      // Hoặc một logic đơn giản hơn:
-      // where: '$columnSegmentStartTime >= ? AND $columnSegmentStartTime < ?',
-      // whereArgs: [startStr, endStr],
-
       return List.generate(
           maps.length, (i) => ActivitySegment.fromMap(maps[i]));
     } catch (e) {
@@ -342,26 +345,24 @@ class LocalDbService {
     }
   }
 
-  Future<List<ActivitySegment>> getActivitySegmentsForDay(DateTime date) async {
-    final DateTime startOfDay =
-        DateTime.utc(date.year, date.month, date.day); // UTC để nhất quán
+  Future<List<ActivitySegment>> getActivitySegmentsForDay(DateTime date,
+      {String? userId}) async {
+    final DateTime startOfDay = DateTime.utc(date.year, date.month, date.day);
     final DateTime endOfDay = startOfDay.add(const Duration(days: 1));
-    return await getActivitySegmentsForDateRange(startOfDay, endOfDay);
+    return await getActivitySegmentsForDateRange(startOfDay, endOfDay,
+        userId: userId);
   }
 
   Future<int> updateActivitySegmentCalories(
       int segmentId, double calories) async {
     try {
       final db = await database;
-      final count = await db.update(
+      return await db.update(
         tableActivitySegments,
         {columnSegmentCalories: calories},
-        where: '$columnId = ?', // Giả định columnId là PK
+        where: '$columnId = ?',
         whereArgs: [segmentId],
       );
-      if (kDebugMode && count > 0)
-        print("[LocalDbService] Updated calories for segment ID: $segmentId");
-      return count;
     } catch (e) {
       if (kDebugMode)
         print(
@@ -392,7 +393,59 @@ class LocalDbService {
     }
   }
 
-  // --- Các hàm tiện ích chung ---
+  // --- HÀM MỚI CHO ĐỒNG BỘ ACTIVITY SEGMENT ---
+  Future<List<ActivitySegment>> getUnsyncedActivitySegments(
+      {int limit = 50, String? userId}) async {
+    try {
+      final db = await database;
+      String whereClause = '$columnIsSynced = ?';
+      List<dynamic> whereArgs = [0];
+
+      if (userId != null) {
+        whereClause += ' AND $columnSegmentUserId = ?';
+        whereArgs.add(userId);
+      }
+
+      final List<Map<String, dynamic>> maps = await db.query(
+        tableActivitySegments,
+        where: whereClause,
+        whereArgs: whereArgs,
+        orderBy: '$columnSegmentStartTime ASC', // Đồng bộ cái cũ trước
+        limit: limit,
+      );
+      return List.generate(
+          maps.length, (i) => ActivitySegment.fromMap(maps[i]));
+    } catch (e) {
+      if (kDebugMode)
+        print(
+            "!!! [LocalDbService] Error getting unsynced activity segments: $e");
+      return [];
+    }
+  }
+
+  Future<int> markActivitySegmentsAsSynced(List<int> segmentIds) async {
+    if (segmentIds.isEmpty) return 0;
+    try {
+      final db = await database;
+      final placeholders = List.filled(segmentIds.length, '?').join(',');
+      final count = await db.update(
+        tableActivitySegments,
+        {columnIsSynced: 1}, // Đặt is_synced = 1
+        where: '$columnId IN ($placeholders)', // Giả sử columnId là PK
+        whereArgs: segmentIds,
+      );
+      if (kDebugMode)
+        print("[LocalDbService] Marked $count activity segments as synced.");
+      return count;
+    } catch (e) {
+      if (kDebugMode)
+        print(
+            "!!! [LocalDbService] Error marking activity segments as synced: $e");
+      return -1;
+    }
+  }
+  // ---------------------------------------------
+
   Future<void> closeDatabase() async {
     if (_database != null && _database!.isOpen) {
       await _database!.close();

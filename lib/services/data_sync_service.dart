@@ -1,15 +1,15 @@
 // lib/services/data_sync_service.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart'; // Cho kDebugMode
+import 'package:flutter/foundation.dart';
 
-// Import các file cục bộ
 import 'auth_service.dart';
 import 'connectivity_service.dart';
 import 'firestore_service.dart';
-import 'local_db_service.dart'; // LocalDbService đã được cập nhật
-import '../models/health_data.dart'; // Model HealthData với fromDbMap và toJsonForFirestore
-import '../app_constants.dart'; // Chứa các hằng số như collection names, batch limit
+import 'local_db_service.dart';
+import '../models/health_data.dart';
+import '../models/activity_segment.dart';
+import '../app_constants.dart';
 
 class DataSyncService {
   final ConnectivityService _connectivityService;
@@ -18,7 +18,8 @@ class DataSyncService {
   final AuthService _authService;
 
   StreamSubscription? _connectivitySubscription;
-  bool _isSyncingHealthData = false; // Cờ riêng cho health data sync
+  bool _isSyncingHealthData = false;
+  bool _isSyncingActivitySegments = false; // Cờ mới
   bool _wasOffline = true;
 
   DataSyncService(
@@ -43,49 +44,47 @@ class DataSyncService {
       _handleNetworkChange,
     );
 
-    // Kích hoạt đồng bộ lần đầu nếu khởi động online và đã đăng nhập
     if (!_wasOffline && _authService.currentUser != null) {
-      if (kDebugMode) {
+      if (kDebugMode)
         print(
-            "[DataSyncService] App started online and user logged in. Triggering initial health data sync check...");
-      }
-      Future.delayed(const Duration(seconds: 10),
-          syncOfflineHealthData); // Delay lâu hơn chút
+            "[DataSyncService] App started online and user logged in. Triggering initial sync checks...");
+      Future.delayed(const Duration(seconds: 8), () {
+        // Delay chung, có thể tách ra
+        syncOfflineHealthData();
+        syncOfflineActivitySegments();
+      });
     }
   }
 
   void _handleNetworkChange(NetworkStatus status) {
-    if (kDebugMode) {
+    if (kDebugMode)
       print(
           "[DataSyncService] _handleNetworkChange received: $status. Current _wasOffline: $_wasOffline");
-    }
     final bool isCurrentlyOnline = (status == NetworkStatus.online);
 
     if (isCurrentlyOnline && _wasOffline) {
       if (kDebugMode)
         print("[DataSyncService] Network came ONLINE from OFFLINE.");
-      _wasOffline = false; // Cập nhật trạng thái trước
+      _wasOffline = false;
       if (_authService.currentUser != null) {
-        // Chỉ đồng bộ nếu đã đăng nhập
         if (kDebugMode)
           print(
-              "[DataSyncService] Triggering health data sync due to network change...");
+              "[DataSyncService] Triggering ALL data sync due to network change...");
         syncOfflineHealthData();
+        syncOfflineActivitySegments();
       } else {
         if (kDebugMode)
           print(
               "[DataSyncService] Network online, but user not logged in. Sync deferred.");
       }
     } else if (!isCurrentlyOnline) {
-      if (!_wasOffline && kDebugMode) {
-        // Chỉ log nếu trước đó đang online
+      if (!_wasOffline && kDebugMode)
         print("[DataSyncService] Network went OFFLINE.");
-      }
       _wasOffline = true;
     }
   }
 
-  // Đồng bộ HealthData từ SQLite lên Firestore
+  // --- Đồng bộ HealthData (Giữ nguyên như phiên bản trước bạn đã có) ---
   Future<void> syncOfflineHealthData() async {
     if (_isSyncingHealthData) {
       if (kDebugMode)
@@ -93,20 +92,13 @@ class DataSyncService {
             "[DataSyncService] HealthData sync already in progress. Skipping.");
       return;
     }
-    if (!_connectivityService.isOnline()) {
+    if (!_connectivityService.isOnline() || _authService.currentUser == null) {
       if (kDebugMode)
         print(
-            "[DataSyncService] No network connection. Skipping HealthData sync.");
+            "[DataSyncService] Pre-conditions not met for HealthData sync (Network: ${_connectivityService.isOnline()}, User: ${_authService.currentUser != null}).");
       return;
     }
-    final currentUser = _authService.currentUser;
-    if (currentUser == null) {
-      if (kDebugMode)
-        print(
-            "[DataSyncService] User not logged in. Skipping HealthData sync.");
-      return;
-    }
-
+    final currentUser = _authService.currentUser!;
     _isSyncingHealthData = true;
     if (kDebugMode)
       print(
@@ -115,15 +107,12 @@ class DataSyncService {
     try {
       int totalHealthDataSyncedInThisRun = 0;
       bool hasMoreHealthData = true;
-      // Sử dụng hằng số từ AppConstants
       const int healthDataBatchLimit = AppConstants.firestoreSyncBatchLimit;
 
       while (hasMoreHealthData && _connectivityService.isOnline()) {
-        // Sử dụng hàm getUnsyncedHealthRecords (trả về List<Map<String, dynamic>>)
         final List<Map<String, dynamic>> unsyncedRecordMaps =
             await _localDbService.getUnsyncedHealthRecords(
                 limit: healthDataBatchLimit);
-
         if (unsyncedRecordMaps.isEmpty) {
           hasMoreHealthData = false;
           if (kDebugMode)
@@ -139,96 +128,72 @@ class DataSyncService {
 
         for (final recordMap in unsyncedRecordMaps) {
           final recordId = recordMap[LocalDbService.columnId] as int?;
-          if (recordId == null) {
-            if (kDebugMode)
-              print(
-                  "!!! [DataSyncService] Skipping health record with null local ID");
-            continue;
-          }
-
+          if (recordId == null) continue;
           try {
-            // Chuyển đổi Map từ DB sang HealthData object
             final healthData = HealthData.fromDbMap(recordMap);
-
-            // Chuẩn bị dữ liệu cho Firestore
             final Map<String, dynamic> dataForFirestore =
                 healthData.toJsonForFirestore();
-            // Thêm timestamp chuẩn của Firestore, LƯU Ý: healthData.timestamp đã là UTC
             dataForFirestore['recordedAt'] =
-                Timestamp.fromDate(healthData.timestamp);
-
-            // Tạo document mới trên Firestore
+                Timestamp.fromDate(healthData.timestamp.toUtc());
             final docRef = _firestoreService.firestoreInstance
                 .collection(AppConstants.usersCollection)
                 .doc(currentUser.uid)
                 .collection(AppConstants.healthDataSubcollection)
-                .doc(); // Firestore tự tạo ID
-
+                .doc();
             batch.set(docRef, dataForFirestore);
             recordIdsInBatchToMark.add(recordId);
           } catch (e) {
             if (kDebugMode)
               print(
-                  "!!! [DataSyncService] Error processing local health record ID $recordId during sync prep: $e");
+                  "!!! [DataSyncService] Error processing local health record ID $recordId for sync: $e");
           }
         }
 
         if (recordIdsInBatchToMark.isNotEmpty) {
           try {
-            if (kDebugMode)
-              print(
-                  "[DataSyncService] Committing Firestore batch for health data (${recordIdsInBatchToMark.length} records)...");
             await batch.commit();
             if (kDebugMode)
               print(
                   "[DataSyncService] Health data batch committed successfully.");
-
-            // Đánh dấu các bản ghi đã đồng bộ thành công trong SQLite
-            final int markedCount = await _localDbService
-                .markRecordsAsSynced(recordIdsInBatchToMark);
-
+            final int markedCount =
+                await _localDbService.markHealthRecordsAsSynced(
+                    recordIdsInBatchToMark); // Đổi tên hàm
             if (markedCount >= 0) {
               totalHealthDataSyncedInThisRun += markedCount;
               if (kDebugMode)
                 print(
                     "[DataSyncService] Marked $markedCount synced health records locally.");
-              if (markedCount < recordIdsInBatchToMark.length) {
-                if (kDebugMode)
-                  print(
-                      "!!! [DataSyncService] Warning: Marked health records count ($markedCount) is less than batch size (${recordIdsInBatchToMark.length}).");
+              if (markedCount < recordIdsInBatchToMark.length && kDebugMode) {
+                print(
+                    "!!! [DataSyncService] Warning: Marked health records count ($markedCount) is less than batch size (${recordIdsInBatchToMark.length}).");
               }
             } else {
               if (kDebugMode)
                 print(
-                    "!!! [DataSyncService] Error marking local health records as synced (returned $markedCount). Stopping sync for this cycle.");
-              hasMoreHealthData = false; // Dừng nếu đánh dấu lỗi
+                    "!!! [DataSyncService] Error marking local health records as synced (returned $markedCount). Stopping sync.");
+              hasMoreHealthData = false;
             }
           } catch (e) {
             if (kDebugMode)
               print(
-                  "!!! [DataSyncService] Error committing Firestore health data batch or marking local records: $e");
-            hasMoreHealthData =
-                false; // Dừng đồng bộ nếu không ghi được lên Firestore hoặc không đánh dấu được
+                  "!!! [DataSyncService] Error committing Firestore health data batch or marking local: $e");
+            hasMoreHealthData = false;
           }
         } else {
           if (kDebugMode)
             print(
-                "[DataSyncService] Health data batch was empty after processing records. Stopping for this cycle.");
+                "[DataSyncService] Health data batch was empty after processing. Stopping.");
           hasMoreHealthData = false;
         }
-
-        if (hasMoreHealthData && _connectivityService.isOnline()) {
-          await Future.delayed(const Duration(milliseconds: 500)); // Delay nhỏ
-        }
-      } // Kết thúc while
-
+        if (hasMoreHealthData && _connectivityService.isOnline())
+          await Future.delayed(const Duration(milliseconds: 200));
+      }
       if (kDebugMode)
         print(
-            "[DataSyncService] HealthData sync cycle finished. Total records marked as synced in this run: $totalHealthDataSyncedInThisRun");
+            "[DataSyncService] HealthData sync cycle finished. Total marked: $totalHealthDataSyncedInThisRun");
     } catch (e) {
       if (kDebugMode)
-        print(
-            "!!! [DataSyncService] Error during overall HealthData sync process: $e");
+        print("!!! [DataSyncService] Error during HealthData sync: $e");
     } finally {
       _isSyncingHealthData = false;
       if (kDebugMode)
@@ -236,7 +201,127 @@ class DataSyncService {
     }
   }
 
-  // TODO: Thêm hàm syncOfflineActivitySegments() tương tự nếu bạn muốn đồng bộ ActivitySegment
+  // --- HÀM ĐỒNG BỘ ACTIVITY SEGMENT (ĐÃ CUNG CẤP Ở TRÊN) ---
+  Future<void> syncOfflineActivitySegments() async {
+    if (_isSyncingActivitySegments) {
+      if (kDebugMode)
+        print(
+            "[DataSyncService] ActivitySegment sync already in progress. Skipping.");
+      return;
+    }
+    if (!_connectivityService.isOnline() || _authService.currentUser == null) {
+      if (kDebugMode)
+        print(
+            "[DataSyncService] Pre-conditions not met for ActivitySegment sync (Network: ${_connectivityService.isOnline()}, User: ${_authService.currentUser != null}).");
+      return;
+    }
+    final currentUser = _authService.currentUser!;
+
+    _isSyncingActivitySegments = true;
+    if (kDebugMode)
+      print(
+          "[DataSyncService] Starting offline ActivitySegment sync for user: ${currentUser.uid}");
+
+    try {
+      int totalSegmentsSyncedInThisRun = 0;
+      bool hasMoreSegments = true;
+      const int segmentBatchLimit = AppConstants.firestoreSyncBatchLimit;
+
+      while (hasMoreSegments && _connectivityService.isOnline()) {
+        final List<ActivitySegment> unsyncedSegments =
+            await _localDbService.getUnsyncedActivitySegments(
+                limit: segmentBatchLimit, userId: currentUser.uid);
+
+        if (unsyncedSegments.isEmpty) {
+          hasMoreSegments = false;
+          if (kDebugMode)
+            print(
+                "[DataSyncService] No more unsynced activity segments found.");
+          break;
+        }
+
+        if (kDebugMode)
+          print(
+              "[DataSyncService] Found ${unsyncedSegments.length} activity segments to sync in this batch.");
+        final WriteBatch batch = _firestoreService.firestoreInstance.batch();
+        final List<int> segmentIdsInBatchToMark = [];
+
+        for (final segment in unsyncedSegments) {
+          if (segment.id == null) {
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Skipping activity segment with null local ID: ${segment.activityName}");
+            continue;
+          }
+          try {
+            final Map<String, dynamic> dataForFirestore =
+                segment.toJsonForFirestore();
+            final docRef = _firestoreService.firestoreInstance
+                .collection(AppConstants.usersCollection)
+                .doc(currentUser.uid)
+                .collection(AppConstants.activitySegmentsSubcollection)
+                .doc();
+            batch.set(docRef, dataForFirestore);
+            segmentIdsInBatchToMark.add(segment.id!);
+          } catch (e) {
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Error processing local activity segment ID ${segment.id} for sync: $e");
+          }
+        }
+
+        if (segmentIdsInBatchToMark.isNotEmpty) {
+          try {
+            await batch.commit();
+            if (kDebugMode)
+              print(
+                  "[DataSyncService] Activity segment batch committed successfully.");
+            final int markedCount = await _localDbService
+                .markActivitySegmentsAsSynced(segmentIdsInBatchToMark);
+            if (markedCount >= 0) {
+              totalSegmentsSyncedInThisRun += markedCount;
+              if (kDebugMode)
+                print(
+                    "[DataSyncService] Marked $markedCount synced activity segments locally.");
+              if (markedCount < segmentIdsInBatchToMark.length && kDebugMode) {
+                print(
+                    "!!! [DataSyncService] Warning: Marked activity segments count ($markedCount) is less than batch size (${segmentIdsInBatchToMark.length}).");
+              }
+            } else {
+              if (kDebugMode)
+                print(
+                    "!!! [DataSyncService] Error marking local activity segments as synced (returned $markedCount). Stopping sync.");
+              hasMoreSegments = false;
+            }
+          } catch (e) {
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Error committing Firestore activity segment batch or marking local: $e");
+            hasMoreSegments = false;
+          }
+        } else {
+          if (kDebugMode)
+            print(
+                "[DataSyncService] Activity segment batch was empty after processing. Stopping.");
+          hasMoreSegments = false;
+        }
+        if (hasMoreSegments && _connectivityService.isOnline())
+          await Future.delayed(const Duration(milliseconds: 200));
+      }
+      if (kDebugMode)
+        print(
+            "[DataSyncService] ActivitySegment sync cycle finished. Total marked: $totalSegmentsSyncedInThisRun");
+    } catch (e) {
+      if (kDebugMode)
+        print(
+            "!!! [DataSyncService] Error during overall ActivitySegment sync process: $e");
+    } finally {
+      _isSyncingActivitySegments = false;
+      if (kDebugMode)
+        print("[DataSyncService] ActivitySegment sync flag reset to false.");
+    }
+  }
+  // --------------------------------------------------------------
 
   void dispose() {
     if (kDebugMode) print("[DataSyncService] Disposing...");
