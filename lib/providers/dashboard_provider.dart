@@ -133,7 +133,7 @@ class DashboardProvider with ChangeNotifier {
   /// Tải dữ liệu sức khỏe, có tùy chọn sử dụng dữ liệu giả.
   Future<void> fetchHealthHistory({
     Duration duration = const Duration(hours: 24),
-    bool useDummyData = true, // <<< Cờ để bật/tắt dữ liệu giả
+    bool useDummyData = false, // <<< Cờ để bật/tắt dữ liệu giả
   }) async {
     // Không cần kiểm tra user nếu dùng dummy
     final currentUser = _authService.currentUser;

@@ -1,15 +1,107 @@
+# name: smart_wearable_app
+# description: "A new Flutter project."
+# publish_to: 'none'
+# version: 1.0.0+1
+
+# environment:
+#   sdk: '>=3.0.0 <4.0.0' # Nên dùng ràng buộc phiên bản rộng hơn một chút
+
+# dependencies:
+#   flutter:
+#     sdk: flutter
+#   flutter_localizations: # <<< Đặt ở đây là đúng
+#     sdk: flutter
+
+#   # Firebase
+#   firebase_core: ^2.27.1
+#   firebase_auth: ^4.17.9
+#   cloud_firestore: ^4.15.9
+#   google_sign_in: ^6.2.1
+
+#   # BLE
+#   flutter_blue_plus: ^1.31.14
+
+#   # State Management
+#   provider: ^6.1.2
+
+#   # Local Storage & Cache
+#   shared_preferences: ^2.2.2
+#   sqflite: ^2.3.2
+#   path_provider: ^2.1.2
+#   path: ^1.9.0 # <<< Thêm dependency 'path' nếu chưa có, sqflite cần
+
+#   # Networking & Connectivity
+#   connectivity_plus: ^5.0.2
+
+#   # UI & Utils
+#   intl: ^0.19.0
+#   fl_chart: ^0.67.0
+#   flutter_local_notifications: ^17.0.0
+#   permission_handler: ^11.3.1
+#   percent_indicator: ^4.2.3 # <<< Sửa lại version nếu cần
+
+#   # Icons
+#   cupertino_icons: ^1.0.6
+
+#   http: ^1.2.2
+#   flutter_dotenv: ^5.1.0
+#   flutter_speed_dial: ^7.0.0
+#   flutter_markdown: ^0.7.7
+#   animated_text_kit: ^4.2.3
+#   flutter_launcher_icons: ^0.11.0
+
+#   #Tensorflow Lite
+#   tflite_flutter: ^0.11.0
+#   sensors_plus: ^5.0.1
+
+#   #CSV
+#   csv: ^5.0.2
+
+#   share_plus: ^7.2.2
+
+
+# dev_dependencies:
+#   flutter_test:
+#     sdk: flutter
+#   flutter_lints: ^3.0.0
+#   # intl_utils không thực sự cần thiết nếu chỉ dùng flutter gen-l10n cơ bản
+#   # build_runner: ^2.4.8 # Chỉ cần nếu dùng các code generator khác
+
+# flutter_launcher_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/images/app_logo.png"
+
+# flutter:
+#   uses-material-design: true
+#   generate: true # <<< Đặt generate: true ở đây là đúng
+
+#   assets:
+#     - assets/images/
+#     - .env # <<< Thêm .env vào assets nếu cần thiết
+#     - assets/ml_models/
+
+
+# # --- KHỐI flutter_intl PHẢI NẰM Ở CẤP ĐỘ GỐC NÀY ---
+# flutter_intl:
+#   enabled: true
+#   class_name: AppLocalizations
+#   main_locale: en
+#   arb_dir: lib/l10n
+#   output_dir: lib/generated
+# # ----------------------------------------------------
 name: smart_wearable_app
 description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # Nên dùng ràng buộc phiên bản rộng hơn một chút
+  sdk: '>=3.3.0 <4.0.0' # Ví dụ, bạn có thể nâng lên phiên bản Flutter ổn định mới nhất
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations: # <<< Đặt ở đây là đúng
+  flutter_localizations:
     sdk: flutter
 
   # Firebase
@@ -19,7 +111,7 @@ dependencies:
   google_sign_in: ^6.2.1
 
   # BLE
-  flutter_blue_plus: ^1.31.14
+  flutter_blue_plus: ^1.31.14 # Kiểm tra phiên bản mới nhất
 
   # State Management
   provider: ^6.1.2
@@ -28,7 +120,7 @@ dependencies:
   shared_preferences: ^2.2.2
   sqflite: ^2.3.2
   path_provider: ^2.1.2
-  path: ^1.9.0 # <<< Thêm dependency 'path' nếu chưa có, sqflite cần
+  path: ^1.9.0
 
   # Networking & Connectivity
   connectivity_plus: ^5.0.2
@@ -38,7 +130,7 @@ dependencies:
   fl_chart: ^0.67.0
   flutter_local_notifications: ^17.0.0
   permission_handler: ^11.3.1
-  percent_indicator: ^4.2.3 # <<< Sửa lại version nếu cần
+  percent_indicator: ^4.2.3 # Hoặc ^4.2.3
 
   # Icons
   cupertino_icons: ^1.0.6
@@ -48,21 +140,23 @@ dependencies:
   flutter_speed_dial: ^7.0.0
   flutter_markdown: ^0.7.7
   animated_text_kit: ^4.2.3
-  flutter_launcher_icons: ^0.11.0
+  flutter_launcher_icons: ^0.11.0 # Di chuyển lên trên, đây là dependency chứ không phải cấu hình flutter_launcher_icons
 
-  #Tensorflow Lite
-  tflite_flutter: ^0.11.0 # Hoặc phiên bản mới nhất bạn tìm được
+  # Machine Learning & Sensors
+  tflite_flutter: ^0.10.4 # <<< SỬA PHIÊN BẢN (KIỂM TRA pub.dev)
+  sensors_plus: ^5.0.1    # <<< THÊM PACKAGE NÀY (KIỂM TRA pub.dev)
 
-  #CSV
-  csv: ^5.0.2
+  # CSV (Nếu bạn cần đọc/ghi CSV trong app, nếu không thì có thể không cần)
+  csv: ^5.0.2 # Hoặc ^5.1.1
+
+  share_plus: ^7.2.2
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  # intl_utils không thực sự cần thiết nếu chỉ dùng flutter gen-l10n cơ bản
-  # build_runner: ^2.4.8 # Chỉ cần nếu dùng các code generator khác
+  # build_runner: ^2.4.8 # Chỉ giữ lại nếu bạn dùng các code generator khác (ngoài flutter_intl)
 
 flutter_launcher_icons:
   android: true
@@ -71,19 +165,17 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-  generate: true # <<< Đặt generate: true ở đây là đúng
+  generate: true
 
   assets:
     - assets/images/
-    - .env # <<< Thêm .env vào assets nếu cần thiết
-    - assets/ml_models/
+    - .env
+    - assets/ml_models/ # Đảm bảo file .tflite và .json của bạn nằm trong thư mục này
+                       # hoặc một thư mục con của nó và được khai báo đúng.
 
-
-# --- KHỐI flutter_intl PHẢI NẰM Ở CẤP ĐỘ GỐC NÀY ---
 flutter_intl:
   enabled: true
   class_name: AppLocalizations
   main_locale: en
   arb_dir: lib/l10n
   output_dir: lib/generated
-# ----------------------------------------------------

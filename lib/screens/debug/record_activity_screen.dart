@@ -144,44 +144,58 @@ class _RecordActivityScreenState extends State<RecordActivityScreen> {
     }
 
     try {
-      // Lấy BleService ở đây nếu chưa có
       _bleService = Provider.of<BleService>(context, listen: false);
 
       final filePath = await _getFilePath(_selectedActivity!);
-      if (filePath == null) return; // Lỗi đã được xử lý trong _getFilePath
+      if (filePath == null) return;
 
       _currentFilePath = filePath;
       final file = File(_currentFilePath);
-      _fileSink = file.openWrite(
-          mode: FileMode.write); // Mở file để ghi (ghi đè nếu tồn tại)
+      _fileSink = file.openWrite(mode: FileMode.append);
 
       // Ghi header cho file CSV
       const List<String> header = [
-        'timestamp_ms', // Unix timestamp in milliseconds
-        'activity_id', // ID số của hoạt động
-        'activity_name', // Tên hoạt động (để dễ đọc)
-        'ax', 'ay', 'az',
-        'gx', 'gy', 'gz'
+        'timestamp_ms',
+        'activity_id',
+        'activity_name',
+        'ax',
+        'ay',
+        'az',
+        'gx',
+        'gy',
+        'gz'
       ];
       _fileSink!.writeln(const ListToCsvConverter().convert([header]));
       print('CSV Header written to $_currentFilePath');
 
       _samplesRecorded = 0;
       _healthDataSubscription =
-          _bleService.healthDataStream.listen((HealthData data) {
+          _bleService.healthDataStream.listen((HealthData data) async {
         if (!_isRecording || _fileSink == null) return;
 
         final List<dynamic> row = [
           DateTime.now().millisecondsSinceEpoch,
-          activityIds[_selectedActivity!]!, // ID số của hoạt động
-          activityDisplayNames[_selectedActivity!]!, // Tên hoạt động
-          data.ax, data.ay, data.az,
-          data.gx, data.gy, data.gz,
+          activityIds[_selectedActivity!]!,
+          activityDisplayNames[_selectedActivity!]!,
+          data.ax,
+          data.ay,
+          data.az,
+          data.gx,
+          data.gy,
+          data.gz,
         ];
         _fileSink!.writeln(const ListToCsvConverter().convert([row]));
         setState(() {
           _samplesRecorded++;
         });
+
+        // Tự động lưu (flush) sau mỗi 100 mẫu
+        if (_samplesRecorded % 100 == 0) {
+          await _fileSink!.flush();
+          _updateStatusMessage(
+              'Recording ${activityDisplayNames[_selectedActivity!]}: $_samplesRecorded samples (saved).');
+          print('Flushed data at $_samplesRecorded samples');
+        }
       }, onError: (error) {
         print('Error on health data stream: $error');
         _updateStatusMessage(
@@ -190,7 +204,6 @@ class _RecordActivityScreenState extends State<RecordActivityScreen> {
       }, onDone: () {
         print('Health data stream closed.');
         if (_isRecording) {
-          // Nếu stream đóng khi đang ghi
           _updateStatusMessage('Data stream ended. Recording stopped.');
           _stopRecording();
         }
@@ -205,8 +218,8 @@ class _RecordActivityScreenState extends State<RecordActivityScreen> {
     } catch (e) {
       print('Error starting recording: $e');
       _updateStatusMessage('Error starting recording: $e');
-      _isRecording = false; // Đảm bảo reset trạng thái
-      await _fileSink?.close(); // Đóng file nếu đã mở
+      _isRecording = false;
+      await _fileSink?.close();
       _fileSink = null;
     }
   }
@@ -217,7 +230,7 @@ class _RecordActivityScreenState extends State<RecordActivityScreen> {
     await _healthDataSubscription?.cancel();
     _healthDataSubscription = null;
 
-    await _fileSink?.flush();
+    await _fileSink?.flush(); // Flush lần cuối trước khi đóng
     await _fileSink?.close();
     _fileSink = null;
 
@@ -227,7 +240,6 @@ class _RecordActivityScreenState extends State<RecordActivityScreen> {
     setState(() {
       _isRecording = false;
       _statusMessage = message;
-      // _currentFilePath = ''; // Giữ lại để người dùng có thể thấy
     });
   }
 
