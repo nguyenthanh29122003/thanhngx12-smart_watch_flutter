@@ -109,7 +109,10 @@ Future<void> main() async {
           ),
         ),
         Provider<ActivityRecognitionService>(
-          create: (_) => ActivityRecognitionService(),
+          create: (context) => ActivityRecognitionService(
+            authService: context
+                .read<app_auth_service.AuthService>(), // Truyền AuthService
+          ),
           dispose: (_, service) => service.dispose(),
         ),
         Provider<DataSyncService>(
