@@ -143,8 +143,9 @@ dependencies:
   flutter_launcher_icons: ^0.11.0 # Di chuyển lên trên, đây là dependency chứ không phải cấu hình flutter_launcher_icons
 
   # Machine Learning & Sensors
-  tflite_flutter: ^0.10.4 # <<< SỬA PHIÊN BẢN (KIỂM TRA pub.dev)
+  tflite_flutter: ^0.11.0 # <<< SỬA PHIÊN BẢN (KIỂM TRA pub.dev)
   sensors_plus: ^5.0.1    # <<< THÊM PACKAGE NÀY (KIỂM TRA pub.dev)
+  rxdart: ^0.27.7
 
   # CSV (Nếu bạn cần đọc/ghi CSV trong app, nếu không thì có thể không cần)
   csv: ^5.0.2 # Hoặc ^5.1.1

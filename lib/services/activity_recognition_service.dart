@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:rxdart/rxdart.dart'; // <<< THÊM IMPORT NÀY
 
 import '../models/health_data.dart'; // Điều chỉnh đường dẫn nếu cần
 
@@ -41,13 +42,19 @@ class ActivityRecognitionService {
   List<double>? _scalerStdDevs;
 
   final List<List<double>> _imuDataBuffer = [];
-  final StreamController<String> _activityPredictionController =
-      StreamController<String>.broadcast();
+
+  // SỬA ĐỔI: Dùng BehaviorSubject
+  // Khởi tạo với một giá trị mặc định nếu muốn, ví dụ "Đang khởi tạo..."
+  // Hoặc để nó bắt đầu mà không có giá trị ban đầu, StreamBuilder sẽ dùng initialData của nó.
+  final BehaviorSubject<String> _activityPredictionController = BehaviorSubject<
+      String>(); // Có thể .seeded("Đang khởi tạo...") nếu muốn có giá trị ban đầu ngay
   Stream<String> get activityPredictionStream =>
       _activityPredictionController.stream;
+  // Để truy cập giá trị hiện tại của BehaviorSubject (nếu cần từ bên ngoài stream)
+  String? get currentActivityValue => _activityPredictionController.valueOrNull;
 
   StreamSubscription? _healthDataSubscriptionForHar;
-  String? _currentPredictedActivity;
+  String? _currentPredictedActivityInternal; // Đổi tên để phân biệt với getter
   Timer? _sittingTimer;
   Timer? _lyingTimer;
   Duration _sittingDuration = Duration.zero;
@@ -72,12 +79,16 @@ class ActivityRecognitionService {
   }
 
   Future<void> _loadResources() async {
-    if (_isHarModelLoaded && _scalerMeans != null && _scalerStdDevs != null)
+    // Thêm kiểm tra để tránh load lại không cần thiết nếu đã có giá trị
+    if (_isHarModelLoaded &&
+        _scalerMeans != null &&
+        _scalerStdDevs != null &&
+        _harInterpreter != null) {
+      if (kDebugMode) print("[ARService] Resources already loaded.");
       return;
-
-    if (kDebugMode) {
-      print("[ARService] Loading HAR TFLite model and Scaler params...");
     }
+    if (kDebugMode)
+      print("[ARService] Loading HAR TFLite model and Scaler params...");
     try {
       _harInterpreter = await Interpreter.fromAsset(TFLITE_MODEL_HAR_FILE);
 
@@ -98,6 +109,7 @@ class ActivityRecognitionService {
         _harInputType = _harInterpreter!.getInputTensor(0).type;
         _harOutputType = _harInterpreter!.getOutputTensor(0).type;
 
+        // ... (Log debug và kiểm tra shape/type giữ nguyên) ...
         if (kDebugMode) {
           print('---------------------------------------------------');
           print('[ARService] HAR TFLite Model Loaded:');
@@ -111,8 +123,6 @@ class ActivityRecognitionService {
               '  StdDevs (count: ${_scalerStdDevs!.length}): $_scalerStdDevs');
           print('---------------------------------------------------');
         }
-
-        // Kiểm tra Shape
         if (!(_harInputShape != null &&
             _harInputShape!.length == 3 &&
             _harInputShape![0] == 1 &&
@@ -123,16 +133,13 @@ class ActivityRecognitionService {
           if (kDebugMode) print("!!! $errorMsg");
           throw Exception(errorMsg);
         }
-        // SỬA LỖI: So sánh với TfLiteType.kTfLiteFloat32
         if (_harInputType != TfLiteType.kTfLiteFloat32) {
+          // Sử dụng kTfLiteFloat32
           final errorMsg =
               "HAR Model input type mismatch! Expected TfLiteType.kTfLiteFloat32, Got $_harInputType (Runtime type: ${_harInputType.runtimeType})";
-          if (kDebugMode) print("!!! $errorMsg");
-          //  Nếu bạn chắc chắn model là float32, có thể bỏ qua throw ở đây nếu runtimeType là đúng,
-          //  nhưng cảnh báo này hữu ích.
-          // throw Exception(errorMsg);
+          if (kDebugMode)
+            print("!!! $errorMsg"); /* throw Exception(errorMsg); */
         }
-
         if (!(_harOutputShape != null &&
             _harOutputShape!.length == 2 &&
             _harOutputShape![0] == 1 &&
@@ -142,14 +149,13 @@ class ActivityRecognitionService {
           if (kDebugMode) print("!!! $errorMsg");
           throw Exception(errorMsg);
         }
-        // SỬA LỖI: So sánh với TfLiteType.kTfLiteFloat32
         if (_harOutputType != TfLiteType.kTfLiteFloat32) {
+          // Sử dụng kTfLiteFloat32
           final errorMsg =
               "HAR Model output type mismatch! Expected TfLiteType.kTfLiteFloat32, Got $_harOutputType (Runtime type: ${_harOutputType.runtimeType})";
-          if (kDebugMode) print("!!! $errorMsg");
-          // throw Exception(errorMsg);
+          if (kDebugMode)
+            print("!!! $errorMsg"); /* throw Exception(errorMsg); */
         }
-
         _isHarModelLoaded = true;
       } else {
         throw Exception(
@@ -174,12 +180,21 @@ class ActivityRecognitionService {
             "[ARService] HAR Model or Scaler not loaded. Cannot start processing.");
       }
       _loadResources().then((_) {
-        if (_isHarModelLoaded) startProcessingHealthData(healthDataStream);
+        // Cố gắng load lại resources nếu chưa có
+        if (_isHarModelLoaded &&
+            _scalerMeans != null &&
+            _scalerStdDevs != null) {
+          startProcessingHealthData(healthDataStream);
+        } else {
+          if (kDebugMode)
+            print(
+                "[ARService] Failed to load resources on retry. Cannot start processing.");
+        }
       });
       return;
     }
 
-    _healthDataSubscriptionForHar?.cancel();
+    _healthDataSubscriptionForHar?.cancel(); // Hủy sub cũ nếu có
     if (kDebugMode) {
       print("[ARService] Subscribing to health data stream for HAR...");
     }
@@ -195,6 +210,10 @@ class ActivityRecognitionService {
     }, onError: (error) {
       if (kDebugMode) {
         print("!!! [ARService] Error on health data stream: $error");
+      }
+      if (!_activityPredictionController.isClosed) {
+        // Phát lỗi qua stream nếu cần
+        _activityPredictionController.addError("Health data stream error");
       }
     }, onDone: () {
       if (kDebugMode) {
@@ -265,18 +284,26 @@ class ActivityRecognitionService {
         String predictedActivityName =
             HAR_ACTIVITY_LABELS[predictedIndex] ?? "Unknown";
 
+        // Chỉ phát ra nếu hoạt động thay đổi VÀ có độ tin cậy nhất định
+        // Hoặc nếu giá trị hiện tại của BehaviorSubject khác với dự đoán mới
         if (predictedIndex != -1 &&
             maxProbability > 0.60 &&
-            predictedActivityName != _currentPredictedActivity) {
-          _currentPredictedActivity = predictedActivityName;
+            predictedActivityName != _currentPredictedActivityInternal) {
+          _currentPredictedActivityInternal =
+              predictedActivityName; // Cập nhật biến nội bộ
           if (kDebugMode) {
             print(
-                ">>> HAR Prediction: $_currentPredictedActivity (Prob: ${maxProbability.toStringAsFixed(2)}) Raw: ${probabilities.map((p) => p.toStringAsFixed(2)).toList()}");
+                ">>> HAR Prediction: $_currentPredictedActivityInternal (Prob: ${maxProbability.toStringAsFixed(2)}) Raw: ${probabilities.map((p) => p.toStringAsFixed(2)).toList()}");
           }
           if (!_activityPredictionController.isClosed) {
-            _activityPredictionController.add(_currentPredictedActivity!);
+            // Kiểm tra nếu giá trị mới khác với giá trị cuối cùng của stream để tránh phát dư thừa
+            if (_activityPredictionController.valueOrNull !=
+                _currentPredictedActivityInternal) {
+              _activityPredictionController
+                  .add(_currentPredictedActivityInternal!);
+            }
           }
-          _handleActivityChange(_currentPredictedActivity!);
+          _handleActivityChange(_currentPredictedActivityInternal!);
         }
       } catch (e) {
         if (kDebugMode)
@@ -309,6 +336,8 @@ class ActivityRecognitionService {
                 "CẢNH BÁO: Bạn đã ngồi quá ${_sittingWarningThreshold.inMinutes} phút!");
           }
           _sittingTimer?.cancel();
+          _sittingTimer =
+              null; // Quan trọng: đặt lại timer để tránh lỗi khi gọi cancel lần nữa
         }
       });
     } else if (newActivity == 'Lying') {
@@ -318,13 +347,13 @@ class ActivityRecognitionService {
         if (kDebugMode) print("[ARService] Lying duration: $_lyingDuration");
         final now = DateTime.now();
         if (now.hour >= 8 && now.hour < 22) {
-          // Giả định ban ngày
           if (_lyingDuration >= _lyingWarningDaytimeThreshold) {
             if (!_warningController.isClosed) {
               _warningController.add(
                   "CẢNH BÁO: Bạn đã nằm quá ${_lyingWarningDaytimeThreshold.inHours} giờ vào ban ngày!");
             }
             _lyingTimer?.cancel();
+            _lyingTimer = null; // Quan trọng
           }
         }
       });
@@ -336,6 +365,9 @@ class ActivityRecognitionService {
     _lyingTimer?.cancel();
     _sittingTimer = null;
     _lyingTimer = null;
+    // Không reset duration ở đây để nếu _handleActivityChange được gọi lại cho cùng 1 activity
+    // (do ngưỡng prob thay đổi chẳng hạn) thì timer không bị reset về 0.
+    // Tuy nhiên, logic hiện tại của _handleActivityChange sẽ reset duration.
     if (kDebugMode) print("[ARService] Activity timers stopped.");
   }
 
@@ -345,8 +377,10 @@ class ActivityRecognitionService {
     }
     _healthDataSubscriptionForHar?.cancel();
     _harInterpreter?.close();
-    _activityPredictionController.close();
-    _warningController.close();
+    // Đóng BehaviorSubject và StreamController
+    if (!_activityPredictionController.isClosed)
+      _activityPredictionController.close();
+    if (!_warningController.isClosed) _warningController.close();
     _stopActivityTimers();
     _isHarModelLoaded = false;
     _imuDataBuffer.clear();

@@ -274,16 +274,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _activityServiceRef!
           .startProcessingHealthData(bleService.healthDataStream);
     } else {
-      // Khi BLE ngắt kết nối (disconnected, error, etc.)
-      // ActivityRecognitionService.dispose() sẽ được gọi bởi MultiProvider,
-      // và trong đó _healthDataSubscriptionForHar sẽ được cancel.
-      // Nếu bạn muốn dừng ngay lập tức một cách tường minh hơn:
-      // _activityServiceRef!.stopProcessingHealthData();
       debugPrint(
-          "[HAR Listener] BLE Disconnected/Error. HAR should stop or pause receiving data.");
-      // Không cần gọi stopProcessingHealthData ở đây nữa nếu dispose của service đã xử lý.
-      // Việc ActivityRecognitionService tiếp tục "lắng nghe" một stream không có dữ liệu
-      // cũng không gây hại, và nó sẽ nhận lại dữ liệu khi stream đó bắt đầu phát lại.
+          "[HAR Listener] BLE Disconnected/Error. HAR processing should stop.");
+      _activityServiceRef!.stopProcessingHealthData();
     }
   }
   // ------------------------------------------------------------------------

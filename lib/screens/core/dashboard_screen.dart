@@ -312,22 +312,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   // <<< HELPER FUNCTIONS CHO HIỂN THỊ HOẠT ĐỘNG >>>
   String _getLocalizedActivityName(String activityKey, AppLocalizations l10n) {
     switch (activityKey) {
+      case 'Standing':
+        return l10n.activityStanding; // Giả sử có localization key
       case 'Lying':
         return l10n.activityLying;
       case 'Sitting':
         return l10n.activitySitting;
-      case 'Standing':
-        return l10n.activityStanding;
       case 'Walking':
         return l10n.activityWalking;
       case 'Running':
         return l10n.activityRunning;
-      case 'Cycling':
-        return l10n.activityCycling;
-      case 'Ascending_Stairs':
-        return l10n.activityAscendingStairs;
-      case 'Descending_Stairs':
-        return l10n.activityDescendingStairs;
       default:
         return l10n.activityUnknown;
     }
@@ -335,22 +329,16 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   IconData _getActivityIcon(String activityKey) {
     switch (activityKey) {
+      case 'Standing':
+        return Icons.accessibility_new_outlined;
       case 'Lying':
         return Icons.hotel_outlined;
       case 'Sitting':
         return Icons.chair_outlined;
-      case 'Standing':
-        return Icons.accessibility_new_outlined;
       case 'Walking':
         return Icons.directions_walk_outlined;
       case 'Running':
         return Icons.directions_run_outlined;
-      case 'Cycling':
-        return Icons.directions_bike_outlined;
-      case 'Ascending_Stairs':
-        return Icons.stairs_outlined;
-      case 'Descending_Stairs':
-        return Icons.stairs_outlined; // Có thể dùng icon khác nếu có
       default:
         return Icons.help_outline;
     }
