@@ -1,12 +1,15 @@
 // lib/services/data_sync_service.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart'; // Cho kDebugMode
+
+// Import các file cục bộ
 import 'auth_service.dart';
 import 'connectivity_service.dart';
 import 'firestore_service.dart';
-import 'local_db_service.dart';
-import '../models/health_data.dart';
-import '../app_constants.dart'; // Đảm bảo import này đúng
+import 'local_db_service.dart'; // LocalDbService đã được cập nhật
+import '../models/health_data.dart'; // Model HealthData với fromDbMap và toJsonForFirestore
+import '../app_constants.dart'; // Chứa các hằng số như collection names, batch limit
 
 class DataSyncService {
   final ConnectivityService _connectivityService;
@@ -15,8 +18,8 @@ class DataSyncService {
   final AuthService _authService;
 
   StreamSubscription? _connectivitySubscription;
-  bool _isSyncing = false;
-  bool _wasOffline = true; // Giả định ban đầu là offline hoặc chưa biết
+  bool _isSyncingHealthData = false; // Cờ riêng cho health data sync
+  bool _wasOffline = true;
 
   DataSyncService(
     this._connectivityService,
@@ -25,210 +28,219 @@ class DataSyncService {
     this._authService,
   ) {
     _initialize();
-    print("DataSyncService Initialized.");
+    if (kDebugMode) print("[DataSyncService] Initialized.");
   }
 
   void _initialize() {
-    // Lấy trạng thái ban đầu và đặt _wasOffline
     _wasOffline = !_connectivityService.isOnline();
-    print(
-      "[DataSyncService] Initial network state is ${_wasOffline ? 'Offline' : 'Online'}",
-    );
+    if (kDebugMode) {
+      print(
+          "[DataSyncService] Initial network state is ${_wasOffline ? 'Offline' : 'Online'}");
+    }
 
-    // Lắng nghe thay đổi trạng thái mạng và gọi hàm xử lý riêng
     _connectivitySubscription?.cancel();
     _connectivitySubscription = _connectivityService.networkStatusStream.listen(
       _handleNetworkChange,
-    ); // <<< GỌI HÀM RIÊNG
+    );
 
-    // Kích hoạt kiểm tra đồng bộ lần đầu nếu khởi động online
-    if (!_wasOffline) {
-      print(
-        "[DataSyncService] App started online. Triggering initial sync check...",
-      );
-      // Delay nhỏ để đảm bảo mọi thứ sẵn sàng
-      Future.delayed(const Duration(seconds: 3), syncOfflineData);
+    // Kích hoạt đồng bộ lần đầu nếu khởi động online và đã đăng nhập
+    if (!_wasOffline && _authService.currentUser != null) {
+      if (kDebugMode) {
+        print(
+            "[DataSyncService] App started online and user logged in. Triggering initial health data sync check...");
+      }
+      Future.delayed(const Duration(seconds: 10),
+          syncOfflineHealthData); // Delay lâu hơn chút
     }
   }
 
-  // --- HÀM XỬ LÝ THAY ĐỔI MẠNG ---
   void _handleNetworkChange(NetworkStatus status) {
-    print(
-      "[DataSyncService] _handleNetworkChange received: $status. Current _wasOffline: $_wasOffline",
-    );
+    if (kDebugMode) {
+      print(
+          "[DataSyncService] _handleNetworkChange received: $status. Current _wasOffline: $_wasOffline");
+    }
     final bool isCurrentlyOnline = (status == NetworkStatus.online);
 
-    // Chỉ kích hoạt đồng bộ khi chuyển từ OFFLINE sang ONLINE
     if (isCurrentlyOnline && _wasOffline) {
-      print(
-        "[DataSyncService] Condition met: Network came ONLINE from OFFLINE. Triggering data sync...",
-      );
-      _wasOffline = false; // Cập nhật trạng thái NGAY TRƯỚC KHI gọi sync
-      syncOfflineData();
+      if (kDebugMode)
+        print("[DataSyncService] Network came ONLINE from OFFLINE.");
+      _wasOffline = false; // Cập nhật trạng thái trước
+      if (_authService.currentUser != null) {
+        // Chỉ đồng bộ nếu đã đăng nhập
+        if (kDebugMode)
+          print(
+              "[DataSyncService] Triggering health data sync due to network change...");
+        syncOfflineHealthData();
+      } else {
+        if (kDebugMode)
+          print(
+              "[DataSyncService] Network online, but user not logged in. Sync deferred.");
+      }
     } else if (!isCurrentlyOnline) {
-      // Nếu chuyển sang offline, cập nhật lại cờ
-      if (!_wasOffline) {
+      if (!_wasOffline && kDebugMode) {
         // Chỉ log nếu trước đó đang online
-        print("[DataSyncService] Condition met: Network went OFFLINE.");
+        print("[DataSyncService] Network went OFFLINE.");
       }
       _wasOffline = true;
-    } else {
-      // Trường hợp đang online và vẫn nhận sự kiện online (không cần làm gì)
-      // Hoặc trường hợp lạ khác
-      print(
-        "[DataSyncService] Condition NOT met for sync trigger (isOnline: $isCurrentlyOnline, wasOffline: $_wasOffline).",
-      );
     }
   }
 
-  // ---------------------------------
-  Future<void> syncOfflineData() async {
-    if (_isSyncing) {
-      print("[DataSyncService] Sync already in progress. Skipping.");
+  // Đồng bộ HealthData từ SQLite lên Firestore
+  Future<void> syncOfflineHealthData() async {
+    if (_isSyncingHealthData) {
+      if (kDebugMode)
+        print(
+            "[DataSyncService] HealthData sync already in progress. Skipping.");
       return;
     }
     if (!_connectivityService.isOnline()) {
-      print("[DataSyncService] No network connection. Skipping sync.");
+      if (kDebugMode)
+        print(
+            "[DataSyncService] No network connection. Skipping HealthData sync.");
       return;
     }
     final currentUser = _authService.currentUser;
     if (currentUser == null) {
-      print("[DataSyncService] User not logged in. Skipping sync.");
+      if (kDebugMode)
+        print(
+            "[DataSyncService] User not logged in. Skipping HealthData sync.");
       return;
     }
 
-    _isSyncing = true;
-    print(
-        "[DataSyncService] Starting offline data sync for user: ${currentUser.uid}");
+    _isSyncingHealthData = true;
+    if (kDebugMode)
+      print(
+          "[DataSyncService] Starting offline HealthData sync for user: ${currentUser.uid}");
 
     try {
-      int totalSyncedInThisRun = 0;
-      bool hasMoreData = true;
-      const int batchLimit = 100; // Giới hạn số lượng documents mỗi batch
+      int totalHealthDataSyncedInThisRun = 0;
+      bool hasMoreHealthData = true;
+      // Sử dụng hằng số từ AppConstants
+      const int healthDataBatchLimit = AppConstants.firestoreSyncBatchLimit;
 
-      while (hasMoreData && _connectivityService.isOnline()) {
-        // Kiểm tra mạng mỗi vòng lặp
-        final unsyncedRecords = await _localDbService.getUnsyncedHealthRecords(
-          limit: batchLimit,
-        );
+      while (hasMoreHealthData && _connectivityService.isOnline()) {
+        // Sử dụng hàm getUnsyncedHealthRecords (trả về List<Map<String, dynamic>>)
+        final List<Map<String, dynamic>> unsyncedRecordMaps =
+            await _localDbService.getUnsyncedHealthRecords(
+                limit: healthDataBatchLimit);
 
-        if (unsyncedRecords.isEmpty) {
-          hasMoreData = false;
-          print("[DataSyncService] No more unsynced records found.");
-          break; // Thoát vòng lặp while
+        if (unsyncedRecordMaps.isEmpty) {
+          hasMoreHealthData = false;
+          if (kDebugMode)
+            print("[DataSyncService] No more unsynced health records found.");
+          break;
         }
 
-        print(
-            "[DataSyncService] Found ${unsyncedRecords.length} records to sync in this batch.");
+        if (kDebugMode)
+          print(
+              "[DataSyncService] Found ${unsyncedRecordMaps.length} health records to sync in this batch.");
         final WriteBatch batch = _firestoreService.firestoreInstance.batch();
-        final List<int> recordIdsInBatch = []; // Lưu ID của SQLite để xóa sau
+        final List<int> recordIdsInBatchToMark = [];
 
-        for (final recordMap in unsyncedRecords) {
+        for (final recordMap in unsyncedRecordMaps) {
           final recordId = recordMap[LocalDbService.columnId] as int?;
           if (recordId == null) {
-            print("!!! [DataSyncService] Skipping record with null local ID");
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Skipping health record with null local ID");
             continue;
           }
 
           try {
-            // 1. Tạo HealthData object từ dữ liệu SQLite
+            // Chuyển đổi Map từ DB sang HealthData object
             final healthData = HealthData.fromDbMap(recordMap);
 
-            // <<< SỬA PHẦN CHUẨN BỊ DATA CHO FIRESTORE >>>
-            // 2. Tạo Map dữ liệu cho Firestore từ HealthData object
-            //    Bắt đầu bằng Map từ toJsonForFirestore (không có recordedAt)
+            // Chuẩn bị dữ liệu cho Firestore
             final Map<String, dynamic> dataForFirestore =
                 healthData.toJsonForFirestore();
-
-            // 3. Thêm trường 'recordedAt' vào Map, lấy từ timestamp của HealthData
-            //    Đảm bảo timestamp này là UTC
+            // Thêm timestamp chuẩn của Firestore, LƯU Ý: healthData.timestamp đã là UTC
             dataForFirestore['recordedAt'] =
-                Timestamp.fromDate(healthData.timestamp.toUtc());
-            // -------------------------------------------------
+                Timestamp.fromDate(healthData.timestamp);
 
-            // 4. Tạo tham chiếu document mới trên Firestore
-            //    Dùng .doc() để Firestore tự tạo ID duy nhất
+            // Tạo document mới trên Firestore
             final docRef = _firestoreService.firestoreInstance
                 .collection(AppConstants.usersCollection)
                 .doc(currentUser.uid)
                 .collection(AppConstants.healthDataSubcollection)
-                .doc(); // ID mới tự động
+                .doc(); // Firestore tự tạo ID
 
-            // 5. Thêm lệnh set vào WriteBatch
-            batch.set(docRef, dataForFirestore); // Dùng Map đã chuẩn bị đầy đủ
-
-            // 6. Thêm ID của bản ghi SQLite vào danh sách để xóa sau
-            recordIdsInBatch.add(recordId);
+            batch.set(docRef, dataForFirestore);
+            recordIdsInBatchToMark.add(recordId);
           } catch (e) {
-            // Lỗi khi xử lý một bản ghi cụ thể (ví dụ: parse lỗi - ít xảy ra vì đã lưu)
-            print(
-                "!!! [DataSyncService] Error processing local record ID $recordId during sync prep: $e");
-            // Có thể bỏ qua bản ghi này hoặc dừng toàn bộ batch tùy chiến lược
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Error processing local health record ID $recordId during sync prep: $e");
           }
         }
 
-        // Chỉ commit và xóa nếu batch có dữ liệu và có ID để xóa
-        if (recordIdsInBatch.isNotEmpty) {
+        if (recordIdsInBatchToMark.isNotEmpty) {
           try {
-            print(
-                "[DataSyncService] Committing Firestore batch (${recordIdsInBatch.length} records)...");
-            await batch.commit(); // Gửi batch lên Firestore
-            print("[DataSyncService] Batch committed successfully.");
-
-            // Xóa các bản ghi đã đồng bộ thành công khỏi SQLite
-            final deletedCount =
-                await _localDbService.deleteRecordsByIds(recordIdsInBatch);
-            // Hoặc nếu chỉ muốn đánh dấu:
-            // final updatedCount = await _localDbService.markRecordsAsSynced(recordIdsInBatch);
-
-            if (deletedCount >= 0) {
-              // Hàm delete trả về số hàng bị xóa (>=0)
-              totalSyncedInThisRun += deletedCount;
+            if (kDebugMode)
               print(
-                  "[DataSyncService] Deleted $deletedCount synced records locally.");
-              // Nếu số lượng xóa ít hơn số lượng trong batch -> có lỗi tiềm ẩn
-              if (deletedCount < recordIdsInBatch.length) {
+                  "[DataSyncService] Committing Firestore batch for health data (${recordIdsInBatchToMark.length} records)...");
+            await batch.commit();
+            if (kDebugMode)
+              print(
+                  "[DataSyncService] Health data batch committed successfully.");
+
+            // Đánh dấu các bản ghi đã đồng bộ thành công trong SQLite
+            final int markedCount = await _localDbService
+                .markRecordsAsSynced(recordIdsInBatchToMark);
+
+            if (markedCount >= 0) {
+              totalHealthDataSyncedInThisRun += markedCount;
+              if (kDebugMode)
                 print(
-                    "!!! [DataSyncService] Warning: Deleted count ($deletedCount) is less than batch size (${recordIdsInBatch.length}). Some local records might not have been deleted.");
+                    "[DataSyncService] Marked $markedCount synced health records locally.");
+              if (markedCount < recordIdsInBatchToMark.length) {
+                if (kDebugMode)
+                  print(
+                      "!!! [DataSyncService] Warning: Marked health records count ($markedCount) is less than batch size (${recordIdsInBatchToMark.length}).");
               }
             } else {
-              // Hàm delete trả về -1 nếu có lỗi
-              print(
-                  "!!! [DataSyncService] Error deleting local records for batch (returned $deletedCount). Stopping sync.");
-              hasMoreData = false; // Dừng nếu xóa lỗi
+              if (kDebugMode)
+                print(
+                    "!!! [DataSyncService] Error marking local health records as synced (returned $markedCount). Stopping sync for this cycle.");
+              hasMoreHealthData = false; // Dừng nếu đánh dấu lỗi
             }
           } catch (e) {
-            // Lỗi khi commit batch lên Firestore
-            print("!!! [DataSyncService] Error committing Firestore batch: $e");
-            hasMoreData =
-                false; // Dừng đồng bộ nếu không ghi được lên Firestore
+            if (kDebugMode)
+              print(
+                  "!!! [DataSyncService] Error committing Firestore health data batch or marking local records: $e");
+            hasMoreHealthData =
+                false; // Dừng đồng bộ nếu không ghi được lên Firestore hoặc không đánh dấu được
           }
         } else {
-          // Không có bản ghi hợp lệ nào trong batch này để xử lý
-          print(
-              "[DataSyncService] Batch was empty after processing records. Stopping.");
-          hasMoreData = false;
+          if (kDebugMode)
+            print(
+                "[DataSyncService] Health data batch was empty after processing records. Stopping for this cycle.");
+          hasMoreHealthData = false;
         }
 
-        // Delay nhỏ giữa các batch để tránh quá tải (tùy chọn)
-        if (hasMoreData)
-          await Future.delayed(const Duration(milliseconds: 200));
-      } // Kết thúc while(hasMoreData)
+        if (hasMoreHealthData && _connectivityService.isOnline()) {
+          await Future.delayed(const Duration(milliseconds: 500)); // Delay nhỏ
+        }
+      } // Kết thúc while
 
-      print(
-          "[DataSyncService] Sync cycle finished. Total records processed in this run: $totalSyncedInThisRun");
+      if (kDebugMode)
+        print(
+            "[DataSyncService] HealthData sync cycle finished. Total records marked as synced in this run: $totalHealthDataSyncedInThisRun");
     } catch (e) {
-      // Lỗi chung trong quá trình đồng bộ (ví dụ: lỗi đọc SQLite ban đầu)
-      print("!!! [DataSyncService] Error during overall sync process: $e");
+      if (kDebugMode)
+        print(
+            "!!! [DataSyncService] Error during overall HealthData sync process: $e");
     } finally {
-      _isSyncing = false; // Luôn reset cờ syncing
-      print("[DataSyncService] Sync flag reset to false.");
+      _isSyncingHealthData = false;
+      if (kDebugMode)
+        print("[DataSyncService] HealthData sync flag reset to false.");
     }
   }
 
+  // TODO: Thêm hàm syncOfflineActivitySegments() tương tự nếu bạn muốn đồng bộ ActivitySegment
+
   void dispose() {
-    print("Disposing DataSyncService...");
+    if (kDebugMode) print("[DataSyncService] Disposing...");
     _connectivitySubscription?.cancel();
-    print("DataSyncService disposed.");
+    if (kDebugMode) print("[DataSyncService] Disposed.");
   }
 }
