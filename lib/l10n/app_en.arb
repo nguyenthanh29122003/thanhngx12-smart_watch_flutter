@@ -392,5 +392,13 @@
   "pathCopiedSnackbar": "Path information shown in console.",
   "@pathCopiedSnackbar": {
     "description": "Snackbar message after tapping the data path hint"
+  },
+  "statusReconnecting": "Reconnecting...",
+  "@statusReconnecting": {
+    "description": "Text displayed when the app is attempting to reconnect to a Bluetooth device"
+  },
+  "reconnectingTooltip": "Attempting to reconnect...",
+  "@reconnectingTooltip": {
+    "description": "Text displayed in the tooltip of the scan button when reconnecting"
   }
 }

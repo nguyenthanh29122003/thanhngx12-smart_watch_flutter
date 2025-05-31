@@ -821,4 +821,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pathCopiedSnackbar => 'Path information shown in console.';
+
+  @override
+  String get statusReconnecting => 'Reconnecting...';
+
+  @override
+  String get reconnectingTooltip => 'Attempting to reconnect...';
 }

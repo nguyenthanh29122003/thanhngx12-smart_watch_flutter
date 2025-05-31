@@ -48,7 +48,7 @@ class AppConstants {
   // Default Values
   static const int defaultDailyStepGoal = 8000;
   static const double defaultUserWeightKg = 70.0;
-  static const Duration defaultSittingWarningThreshold = Duration(minutes: 60);
+  static const Duration defaultSittingWarningThreshold = Duration(minutes: 1);
   static const Duration defaultLyingWarningDaytimeThreshold =
       Duration(hours: 2);
   static const int minActivityDurationToLogSeconds = 60;

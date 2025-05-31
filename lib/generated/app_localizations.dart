@@ -1612,6 +1612,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Path information shown in console.'**
   String get pathCopiedSnackbar;
+
+  /// Text displayed when the app is attempting to reconnect to a Bluetooth device
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting...'**
+  String get statusReconnecting;
+
+  /// Text displayed in the tooltip of the scan button when reconnecting
+  ///
+  /// In en, this message translates to:
+  /// **'Attempting to reconnect...'**
+  String get reconnectingTooltip;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

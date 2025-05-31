@@ -796,4 +796,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pathCopiedSnackbar => 'Thông tin đường dẫn hiển thị trong console.';
+
+  @override
+  String get statusReconnecting => 'Đang kết nối lại...';
+
+  @override
+  String get reconnectingTooltip => 'Đang thử kết nối lại...';
 }

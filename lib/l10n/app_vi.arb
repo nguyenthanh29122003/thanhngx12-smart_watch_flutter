@@ -332,5 +332,13 @@
   "pathCopiedSnackbar": "Thông tin đường dẫn hiển thị trong console.",
   "@pathCopiedSnackbar": {
     "description": "Thông báo snackbar sau khi nhấn vào gợi ý đường dẫn dữ liệu"
+  },
+  "statusReconnecting": "Đang kết nối lại...",
+  "@statusReconnecting": {
+    "description": "Chữ hiển thị khi ứng dụng đang cố gắng kết nối lại với thiết bị Bluetooth"
+  },
+  "reconnectingTooltip": "Đang thử kết nối lại...",
+  "@reconnectingTooltip": {
+    "description": "Chữ hiển thị trong tooltip của nút quét khi đang kết nối lại"
   }
 }
