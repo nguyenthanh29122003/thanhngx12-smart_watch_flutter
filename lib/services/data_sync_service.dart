@@ -328,4 +328,21 @@ class DataSyncService {
     _connectivitySubscription?.cancel();
     if (kDebugMode) print("[DataSyncService] Disposed.");
   }
+
+  Future<void> cancelOngoingSyncsAndReset() async {
+    if (kDebugMode)
+      print(
+          "[DataSyncService] Cancelling ongoing syncs and resetting state for logout.");
+    // Hiện tại, các hàm sync chạy trong một vòng while. Việc hủy chúng giữa chừng hơi phức tạp.
+    // Cách đơn giản nhất là đặt cờ isSyncing thành false và dựa vào kiểm tra _connectivityService.isOnline()
+    // và _authService.currentUser == null ở đầu vòng lặp để chúng tự thoát.
+    // Hoặc, nếu bạn có các StreamSubscription phức tạp cho việc đồng bộ, hãy hủy chúng ở đây.
+    _isSyncingHealthData =
+        false; // Để vòng lặp hiện tại dừng lại ở lần kiểm tra tiếp theo
+    _isSyncingActivitySegments = false;
+    // _wasOffline có thể không cần reset, nó sẽ tự cập nhật khi có sự kiện mạng mới.
+    if (kDebugMode)
+      print(
+          "[DataSyncService] Sync flags reset. Ongoing syncs will attempt to stop.");
+  }
 }

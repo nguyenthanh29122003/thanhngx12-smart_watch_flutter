@@ -1,28 +1,27 @@
 // lib/services/ble_service.dart
 import 'dart:async';
-import 'dart:convert'; // Để mã hóa/giải mã JSON
-import 'dart:io'; // Để kiểm tra Platform
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <<< Cần cho đọc cài đặt và locale
-import 'package:flutter/widgets.dart'; // <<< Cần cho Locale
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/widgets.dart';
 
-import '../generated/app_localizations.dart'; // <<< Import cho l10n lookup
+import '../generated/app_localizations.dart';
 import 'auth_service.dart';
-import 'firestore_service.dart'; // Service đã sửa saveHealthData
+import 'firestore_service.dart';
 import 'local_db_service.dart';
 import 'connectivity_service.dart';
-import '../models/health_data.dart'; // Model đã cập nhật
-import '../app_constants.dart'; // Constants đã cập nhật
+import '../models/health_data.dart';
+import '../app_constants.dart';
 import 'notification_service.dart';
 
 enum BleConnectionStatus {
   disconnected,
   scanning,
   connecting,
-  connected, // <<< Sẽ dùng trạng thái này khi mọi thứ sẵn sàng
+  connected,
   discovering_services,
   error,
 }
@@ -34,7 +33,7 @@ class BleService {
   final ValueNotifier<List<ScanResult>> scanResults = ValueNotifier([]);
   final ValueNotifier<bool> isScanning = ValueNotifier(false);
 
-  // --- Stream Controllers để phân phối dữ liệu/trạng thái cho các listeners khác (Provider) ---
+  // --- Stream Controllers để phân phối dữ liệu/trạng thái ---
   final StreamController<HealthData> _healthDataStreamController =
       StreamController<HealthData>.broadcast();
   final StreamController<Map<String, dynamic>> _statusStreamController =
@@ -59,11 +58,19 @@ class BleService {
   final ConnectivityService _connectivityService;
   final NotificationService _notificationService;
 
+  // --- Auto Reconnect ---
+  bool _autoReconnectEnabled = true;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 3;
+  static const Duration _reconnectDelay = Duration(seconds: 5);
+  String? _lastConnectedDeviceId;
+  Timer? _reconnectTimer;
+
   // --- Trạng thái nội bộ ---
   BluetoothDevice? _connectedDevice;
-  BluetoothCharacteristic? _healthCharacteristic; // Đọc HealthData (Notify)
-  BluetoothCharacteristic? _writeCharacteristic; // Ghi Config (Write)
-  BluetoothCharacteristic? _statusCharacteristic; // Đọc Status (Notify)
+  BluetoothCharacteristic? _healthCharacteristic;
+  BluetoothCharacteristic? _writeCharacteristic;
+  BluetoothCharacteristic? _statusCharacteristic;
 
   // --- Subscriptions ---
   StreamSubscription? _scanSubscription;
@@ -75,7 +82,6 @@ class BleService {
 
   BluetoothDevice? get connectedDevice => _connectedDevice;
 
-  // Constructor
   BleService(
     this._authService,
     this._firestoreService,
@@ -87,7 +93,6 @@ class BleService {
     print("[BleService] Initialized.");
   }
 
-  // --- Quản lý Trạng thái Adapter và Quyền ---
   void _listenToAdapterState() {
     _adapterStateSubscription?.cancel();
     _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
@@ -96,14 +101,12 @@ class BleService {
         _handleDisconnect(
             isError: false, clearDevice: true, reason: "Bluetooth turned off");
       }
-      // TODO: Có thể xử lý trạng thái turningOn/turningOff nếu cần
     });
   }
 
   Future<bool> _requestPermissions() async {
     Map<Permission, PermissionStatus> statuses = {};
     List<Permission> permissionsToRequest = [];
-    // ... (logic request permission giữ nguyên) ...
     if (Platform.isAndroid) {
       permissionsToRequest.addAll([
         Permission.location,
@@ -130,7 +133,6 @@ class BleService {
     return allGranted;
   }
 
-  // --- Quản lý Quét Thiết bị ---
   Future<void> startScan({bool force = false}) async {
     if (isScanning.value && !force) {
       print("[BleService] Already scanning.");
@@ -146,10 +148,10 @@ class BleService {
     }
 
     _updateStatus(BleConnectionStatus.scanning, "Scan started");
-    scanResults.value = []; // Xóa kết quả cũ
+    scanResults.value = [];
 
     try {
-      await FlutterBluePlus.stopScan(); // Dừng quét cũ (nếu có)
+      await FlutterBluePlus.stopScan();
       _scanSubscription?.cancel();
       _isScanningSubscription?.cancel();
 
@@ -164,10 +166,11 @@ class BleService {
       });
 
       _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        // Lọc theo tên và cập nhật nếu danh sách thay đổi
         final List<ScanResult> currentScanResults = scanResults.value.toList();
         final List<ScanResult> newFound = [];
         for (var r in results) {
+          print(
+              "[BleService] Found device: ${r.device.platformName}, ID: ${r.device.remoteId}, RSSI: ${r.rssi}");
           if (r.device.platformName.contains(AppConstants.targetDeviceName) &&
               !currentScanResults
                   .any((old) => old.device.remoteId == r.device.remoteId)) {
@@ -195,6 +198,10 @@ class BleService {
   }
 
   Future<void> stopScan() async {
+    if (!isScanning.value) {
+      print("[BleService] Scan already stopped, ignoring.");
+      return;
+    }
     try {
       await FlutterBluePlus.stopScan();
       print("[BleService] Scan manually stopped.");
@@ -211,7 +218,6 @@ class BleService {
     _isScanningSubscription?.cancel();
     _isScanningSubscription = null;
     if (isScanning.value) isScanning.value = false;
-    // Chỉ reset status nếu đang scanning
     if (connectionStatus.value == BleConnectionStatus.scanning) {
       _updateStatus(BleConnectionStatus.disconnected, "Scan stopped");
     }
@@ -224,7 +230,6 @@ class BleService {
     return setEquals(ids1, ids2);
   }
 
-  // --- Quản lý Kết nối ---
   Future<void> connectToDevice(BluetoothDevice device) async {
     if (connectionStatus.value == BleConnectionStatus.connecting ||
         connectionStatus.value == BleConnectionStatus.connected) {
@@ -237,21 +242,19 @@ class BleService {
     print(
         "[BleService] Attempting connection to ${device.platformName} (${device.remoteId})");
     _updateStatus(BleConnectionStatus.connecting, "Connecting...");
-    _connectionStateSubscription
-        ?.cancel(); // Hủy listener cũ trước khi kết nối mới
+    _connectionStateSubscription?.cancel();
 
     try {
-      await device.connect(
-          timeout: const Duration(seconds: 15)); // Timeout kết nối
+      await device.connect(timeout: const Duration(seconds: 15));
       print("[BleService] connect() Future completed.");
 
-      // Kiểm tra lại trạng thái ngay sau khi Future hoàn thành
       if (device.isConnected) {
         print(
             "[BleService] device.isConnected is true. Proceeding to discover services.");
-        _connectedDevice = device; // Lưu thiết bị đã kết nối
+        _connectedDevice = device;
+        _lastConnectedDeviceId = device.remoteId.toString();
+        _reconnectAttempts = 0;
 
-        // Bắt đầu lắng nghe trạng thái ngắt kết nối TỪ BÂY GIỜ
         _connectionStateSubscription = device.connectionState
             .where((state) => state == BluetoothConnectionState.disconnected)
             .listen((state) {
@@ -264,68 +267,48 @@ class BleService {
 
         _updateStatus(BleConnectionStatus.discovering_services,
             "Discovering services...");
-        await _discoverServicesAndSubscribe(device); // Khám phá và subscribe
+        await _discoverServicesAndSubscribe(device);
       } else {
         print(
-            "!!! [BleService] connect() Future completed but device is not connected. Handling disconnect.");
+            "!!! [BleService] connect() Future completed but device is not connected.");
         _handleDisconnect(
-            isError: true,
-            reason: "Connection failed immediately after connect call");
+            isError: true, reason: "Connection failed after connect call");
       }
     } catch (e) {
-      print(
-          "!!! [BleService] Error during connect() or subsequent operations for ${device.remoteId}: $e");
-      // Đảm bảo trạng thái là lỗi nếu đang connecting
-      if (connectionStatus.value == BleConnectionStatus.connecting ||
-          connectionStatus.value == BleConnectionStatus.discovering_services) {
-        _handleDisconnect(
-            isError: true,
-            reason: "Connection/Discovery failed: ${e.runtimeType}");
-      }
+      print("!!! [BleService] Error during connect: $e");
+      _handleDisconnect(isError: true, reason: "Connection failed: $e");
     }
   }
 
   Future<void> disconnectFromDevice() async {
-    final deviceToDisconnect =
-        _connectedDevice; // Lấy tham chiếu trước khi reset
+    final deviceToDisconnect = _connectedDevice;
     if (deviceToDisconnect == null) {
       print("[BleService] No device currently connected.");
-      // Đảm bảo trạng thái là disconnected nếu chưa phải
       if (connectionStatus.value != BleConnectionStatus.disconnected) {
         _handleDisconnect(
-            isError: false,
-            clearDevice: true,
-            reason: "Disconnect called with no device");
+            isError: false, clearDevice: true, reason: "No device connected");
       }
       return;
     }
 
     print(
         "[BleService] Initiating disconnect from ${deviceToDisconnect.remoteId}...");
-    // Reset trạng thái nội bộ và hủy listeners trước khi gọi disconnect
     _handleDisconnect(
-        isError: false,
-        clearDevice: true,
-        reason: "Manual disconnect initiated");
+        isError: false, clearDevice: true, reason: "Manual disconnect");
     try {
-      await deviceToDisconnect
-          .disconnect(); // Gọi hàm disconnect của flutter_blue_plus
-      print(
-          "[BleService] Disconnect call completed for ${deviceToDisconnect.remoteId}.");
+      await deviceToDisconnect.disconnect();
+      print("[BleService] Disconnect call completed.");
     } catch (e) {
-      print("!!! [BleService] Error during physical disconnect call: $e");
-      // Trạng thái đã được xử lý trong _handleDisconnect
+      print("!!! [BleService] Error during disconnect: $e");
     }
   }
 
-  // Xử lý ngắt kết nối hoặc lỗi
-  void _handleDisconnect(
-      {bool isError = false,
-      bool clearDevice = false,
-      String reason = "Unknown"}) {
-    print(
-        "[BleService] Handling disconnect/error: IsError=$isError, ClearDevice=$clearDevice, Reason=$reason");
-    // Hủy tất cả các subscriptions liên quan đến device
+  void _handleDisconnect({
+    bool isError = false,
+    bool clearDevice = false,
+    String reason = "Unknown",
+  }) {
+    print("[BleService] Handling disconnect: IsError=$isError, Reason=$reason");
     _healthDataSubscription?.cancel();
     _healthDataSubscription = null;
     _statusDataSubscription?.cancel();
@@ -333,48 +316,169 @@ class BleService {
     _connectionStateSubscription?.cancel();
     _connectionStateSubscription = null;
 
-    // Reset các characteristics
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+
     _healthCharacteristic = null;
     _writeCharacteristic = null;
     _statusCharacteristic = null;
 
     final deviceIdBefore = _connectedDevice?.remoteId;
-    if (clearDevice || !isError) {
-      _connectedDevice = null; // Xóa tham chiếu thiết bị
+    if (clearDevice) {
+      _connectedDevice = null;
+      _lastConnectedDeviceId = null;
+      _reconnectAttempts = 0;
+    } else if (deviceIdBefore != null) {
+      _lastConnectedDeviceId = deviceIdBefore.toString();
     }
 
-    // Cập nhật trạng thái cuối cùng
     _updateStatus(
         isError ? BleConnectionStatus.error : BleConnectionStatus.disconnected,
         reason);
 
-    if (deviceIdBefore != null && _connectedDevice == null)
+    if (_autoReconnectEnabled &&
+        !clearDevice &&
+        isError &&
+        _lastConnectedDeviceId != null &&
+        _reconnectAttempts < _maxReconnectAttempts) {
       print(
-          "[BleService] Device $deviceIdBefore fully disconnected internally.");
-    else if (isError && _connectedDevice != null)
-      print(
-          "[BleService] Device ${_connectedDevice?.remoteId} encountered error, internal ref kept (will be cleared on next disconnect).");
+          "[BleService] Scheduling auto reconnect attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts...");
+      _reconnectTimer = Timer(_reconnectDelay, () {
+        _attemptReconnect();
+      });
+    }
   }
 
-  // Cập nhật trạng thái và thông báo listeners
+  Future<void> _attemptReconnect() async {
+    if (_lastConnectedDeviceId == null) {
+      print("[BleService] No device ID saved for reconnect.");
+      _reconnectAttempts = 0;
+      return;
+    }
+
+    if (connectionStatus.value == BleConnectionStatus.connected ||
+        connectionStatus.value == BleConnectionStatus.connecting) {
+      print("[BleService] Device already connected or connecting.");
+      _reconnectAttempts = 0;
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final localeCode = prefs.getString(AppConstants.prefKeyLanguageCode) ??
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    final locale = Locale(localeCode);
+    final l10n = lookupAppLocalizations(locale);
+
+    _reconnectAttempts++;
+    print(
+        "[BleService] Attempting reconnect ($_reconnectAttempts/$_maxReconnectAttempts)...");
+    if (_reconnectAttempts == 1) {
+      await _notificationService.showSimpleNotification(
+        id: 6,
+        title: l10n.reconnectAttemptTitle,
+        body: l10n.reconnectAttemptBody,
+        channelId: AppConstants.bleReconnectChannelId,
+        channelName: l10n.bleReconnectChannelName,
+        channelDescription: AppConstants.bleReconnectChannelDescription,
+        payload: "reconnect_attempt",
+      );
+    }
+
+    BluetoothDevice? targetDevice;
+    for (var result in scanResults.value) {
+      if (result.device.remoteId.toString() == _lastConnectedDeviceId) {
+        targetDevice = result.device;
+        break;
+      }
+    }
+
+    if (targetDevice == null) {
+      print(
+          "[BleService] Device not found in recent scan. Starting new scan...");
+      await startScan(force: true);
+      await Future.delayed(const Duration(seconds: 15));
+      for (var result in scanResults.value) {
+        if (result.device.remoteId.toString() == _lastConnectedDeviceId) {
+          targetDevice = result.device;
+          break;
+        }
+      }
+    }
+
+    if (targetDevice == null) {
+      print("[BleService] Reconnect failed: Device not found.");
+      if (_reconnectAttempts >= _maxReconnectAttempts) {
+        print("[BleService] Max reconnect attempts reached.");
+        await _notificationService.showSimpleNotification(
+          id: 5,
+          title: l10n.reconnectFailedTitle,
+          body: l10n.reconnectFailedBody(_maxReconnectAttempts.toString()),
+          channelId: AppConstants.bleReconnectChannelId,
+          channelName: l10n.bleReconnectChannelName,
+          channelDescription: AppConstants.bleReconnectChannelDescription,
+          payload: "reconnect_failed",
+        );
+        _updateStatus(BleConnectionStatus.error, "Reconnect failed");
+        _reconnectAttempts = 0;
+        _lastConnectedDeviceId = null;
+      } else {
+        _reconnectTimer = Timer(_reconnectDelay, () {
+          _attemptReconnect();
+        });
+      }
+      return;
+    }
+    await _notificationService.cancelNotification(6);
+    try {
+      await connectToDevice(targetDevice);
+      if (connectionStatus.value == BleConnectionStatus.connected) {
+        await _notificationService.showSimpleNotification(
+          id: 4,
+          title: l10n.reconnectSuccessTitle,
+          body: l10n.reconnectSuccessBody,
+          channelId: AppConstants.bleReconnectChannelId,
+          channelName: l10n.bleReconnectChannelName,
+          channelDescription: AppConstants.bleReconnectChannelDescription,
+          payload: "reconnect_success",
+        );
+        _reconnectAttempts = 0;
+      }
+    } catch (e) {
+      print("[BleService] Reconnect attempt failed: $e");
+      if (_reconnectAttempts >= _maxReconnectAttempts) {
+        await _notificationService.showSimpleNotification(
+          id: 5,
+          title: l10n.reconnectFailedTitle,
+          body: l10n.reconnectFailedBody(_maxReconnectAttempts.toString()),
+          channelId: AppConstants.bleReconnectChannelId,
+          channelName: l10n.bleReconnectChannelName,
+          channelDescription: AppConstants.bleReconnectChannelDescription,
+          payload: "reconnect_failed",
+        );
+        _updateStatus(BleConnectionStatus.error, "Reconnect failed");
+        _reconnectAttempts = 0;
+        _lastConnectedDeviceId = null;
+      } else {
+        _reconnectTimer = Timer(_reconnectDelay, () {
+          _attemptReconnect();
+        });
+      }
+    }
+  }
+
   void _updateStatus(BleConnectionStatus newStatus, String reason) {
     if (connectionStatus.value != newStatus) {
       print(
           "[BleService] Status changing: ${connectionStatus.value} -> $newStatus (Reason: $reason)");
       connectionStatus.value = newStatus;
-      // Đẩy trạng thái mới vào stream controller
       if (!_connectionStatusController.isClosed) {
         _connectionStatusController.add(newStatus);
       }
-    } else {
-      // Log nếu lý do thay đổi nhưng status không đổi (hữu ích để debug)
-      // print("[BleService] Status unchanged (${connectionStatus.value}) but reason updated: $reason");
     }
   }
 
-  // --- Khám phá Services và Subscribe ---
   Future<void> _discoverServicesAndSubscribe(BluetoothDevice device) async {
-    print("[BleService] Discovering services for ${device.remoteId}...");
+    print("[BleService] Discovering services...");
     List<BluetoothService> services;
     try {
       services = await device.discoverServices();
@@ -390,7 +494,6 @@ class BleService {
     _statusCharacteristic = null;
     bool foundTargetService = false;
 
-    // Tìm đúng Service và Characteristics
     for (var service in services) {
       if (service.uuid.toString().toLowerCase() ==
           AppConstants.bleServiceUUID.toLowerCase()) {
@@ -417,13 +520,6 @@ class BleService {
             _statusCharacteristic = char;
             print("+++ Stored Status Char (Notify OK)");
           }
-
-          if (isHealth && !char.properties.notify)
-            print("!!! Health Char incorrect properties!");
-          if (isWrite && !char.properties.write)
-            print("!!! Write Char incorrect properties!");
-          if (isStatus && !char.properties.notify)
-            print("!!! Status Char incorrect properties!");
         }
         break;
       }
@@ -434,59 +530,48 @@ class BleService {
       return;
     }
 
-    // Kiểm tra và Subscribe
     if (_healthCharacteristic != null &&
         _writeCharacteristic != null &&
         _statusCharacteristic != null) {
-      print("[BleService] All required characteristics found. Subscribing...");
-      // Subscribe song song để tăng tốc
+      print("[BleService] All characteristics found. Subscribing...");
       List<Future<bool>> subsFutures = [
         _subscribeToHealthData(_healthCharacteristic!),
         _subscribeToStatusUpdates(_statusCharacteristic!),
       ];
       try {
-        List<bool> subResults = await Future.wait(subsFutures)
-            .timeout(const Duration(seconds: 10)); // Timeout cho subscribe
-        bool allSubscribed =
-            subResults.every((ok) => ok); // Kiểm tra tất cả thành công
+        List<bool> subResults =
+            await Future.wait(subsFutures).timeout(const Duration(seconds: 10));
+        bool allSubscribed = subResults.every((ok) => ok);
 
         if (allSubscribed &&
             connectionStatus.value != BleConnectionStatus.disconnected &&
             connectionStatus.value != BleConnectionStatus.error) {
-          _updateStatus(BleConnectionStatus.connected,
-              "Connected and characteristics ready");
-          print("[BleService] Device setup complete. Status: Connected.");
+          _updateStatus(BleConnectionStatus.connected, "Connected");
+          print("[BleService] Device setup complete.");
           if (!_deviceReadyController.isClosed) {
             _deviceReadyController.add(null);
-          } // Phát sự kiện sẵn sàng
+          }
         } else {
-          print(
-              "!!! [BleService] Failed to subscribe to one or more characteristics ($subResults). Disconnecting.");
           _handleDisconnect(isError: true, reason: "Subscription failed");
         }
       } catch (e) {
-        print("!!! [BleService] Error during subscription process: $e");
-        _handleDisconnect(isError: true, reason: "Subscription error/timeout");
+        print("!!! [BleService] Error during subscription: $e");
+        _handleDisconnect(isError: true, reason: "Subscription error");
       }
     } else {
-      // Xác định char nào bị thiếu
       String missing = "";
       if (_healthCharacteristic == null) missing += "Health(N) ";
       if (_writeCharacteristic == null) missing += "Config(W) ";
       if (_statusCharacteristic == null) missing += "Status(N)";
-      print(
-          "!!! [BleService] Missing characteristic(s): $missing. Connection failed.");
-      _handleDisconnect(
-          isError: true, reason: "Missing characteristic(s): $missing");
+      print("!!! [BleService] Missing characteristic(s): $missing");
+      _handleDisconnect(isError: true, reason: "Missing characteristics");
     }
   }
 
-  // --- Subscribe Health Data ---
   Future<bool> _subscribeToHealthData(
       BluetoothCharacteristic characteristic) async {
-    print(
-        "[BleService] Subscribing to Health Data (${characteristic.uuid})...");
-    await _healthDataSubscription?.cancel(); // Hủy sub cũ trước
+    print("[BleService] Subscribing to Health Data...");
+    await _healthDataSubscription?.cancel();
     _healthDataSubscription = null;
     try {
       await characteristic.setNotifyValue(true);
@@ -496,56 +581,42 @@ class BleService {
           try {
             final jsonString = utf8.decode(value, allowMalformed: true);
             final jsonData = jsonDecode(jsonString);
-            final data = HealthData.fromJson(jsonData); // Model đã cập nhật
-            // print("[BleService] Parsed Health: Steps=${data.steps}, HR=${data.hr}, T=${data.temperature}, P=${data.pressure}");
-
-            // Lưu trữ
+            final data = HealthData.fromJson(jsonData);
             final user = _authService.currentUser;
             if (user != null) {
               if (_connectivityService.isOnline()) {
-                _firestoreService
-                    .saveHealthData(user.uid, data)
-                    .catchError((e) => print("!!! Firestore Save Error: $e"));
+                _firestoreService.saveHealthData(user.uid, data);
               } else {
-                _localDbService.saveHealthRecordLocally(data).then((id) {
-                  if (id <= 0) print("Offline save failed/skipped ($id)");
-                }).catchError((e) => print("!!! Offline Save Error: $e"));
+                _localDbService.saveHealthRecordLocally(data);
               }
             }
-
-            // Đẩy stream
             if (!_healthDataStreamController.isClosed) {
               _healthDataStreamController.add(data);
             }
-
-            // Gọi kiểm tra ngưỡng (nếu logic vẫn ở đây)
             _checkThresholdsAndNotify(data);
           } catch (e) {
-            print(
-                "!!! Error processing health data packet: $e - Raw: ${value.toString()}");
+            print("!!! [BleService] Error processing health data: $e");
           }
         },
         onError: (error) {
-          print("!!! Health data stream error: $error");
+          print("!!! [BleService] Health data stream error: $error");
         },
         onDone: () {
           print("[BleService] Health data stream closed.");
         },
         cancelOnError: false,
       );
-      print("[BleService] Subscription to Health Data successful.");
+      print("[BleService] Health Data subscription successful.");
       return true;
     } catch (e) {
-      print("!!! Error subscribing to Health Data: $e");
+      print("!!! [BleService] Error subscribing to Health Data: $e");
       return false;
     }
   }
 
-  // --- Subscribe Status Updates ---
   Future<bool> _subscribeToStatusUpdates(
       BluetoothCharacteristic characteristic) async {
-    print(
-        "[BleService] Subscribing to Status Updates (${characteristic.uuid})...");
+    print("[BleService] Subscribing to Status Updates...");
     await _statusDataSubscription?.cancel();
     _statusDataSubscription = null;
     try {
@@ -556,75 +627,64 @@ class BleService {
           try {
             final jsonString = utf8.decode(value, allowMalformed: true);
             final statusData = jsonDecode(jsonString) as Map<String, dynamic>;
-            print("[BleService] Received Status Update: $statusData");
             if (!_statusStreamController.isClosed) {
               _statusStreamController.add(statusData);
             }
           } catch (e) {
-            print(
-                "!!! Error processing status packet: $e - Raw: ${value.toString()}");
+            print("!!! [BleService] Error processing status: $e");
           }
         },
         onError: (error) {
-          print("!!! Status stream error: $error");
+          print("!!! [BleService] Status stream error: $error");
         },
         onDone: () {
           print("[BleService] Status stream closed.");
         },
         cancelOnError: false,
       );
-      print("[BleService] Subscription to Status Updates successful.");
+      print("[BleService] Status Updates subscription successful.");
       return true;
     } catch (e) {
-      print("!!! Error subscribing to Status Updates: $e");
+      print("!!! [BleService] Error subscribing to Status Updates: $e");
       return false;
     }
   }
 
-  // --- Ghi dữ liệu vào Write Characteristic ---
   Future<bool> writeDataToDevice(List<int> dataToWrite) async {
     if (_writeCharacteristic == null) {
-      print("!!! BleService Error: Write Char is null!");
+      print("!!! [BleService] Write Characteristic is null!");
       _updateStatus(BleConnectionStatus.error, "Write char missing");
       return false;
     }
     if (connectionStatus.value != BleConnectionStatus.connected) {
-      print("!!! BleService Error: Device not connected for write.");
+      print("!!! [BleService] Device not connected for write.");
       return false;
     }
     try {
-      print(
-          "[BleService] Writing ${dataToWrite.length} bytes to ${_writeCharacteristic!.uuid}...");
-      await _writeCharacteristic!
-          .write(dataToWrite, withoutResponse: false); // Dùng write có response
+      print("[BleService] Writing ${dataToWrite.length} bytes...");
+      await _writeCharacteristic!.write(dataToWrite, withoutResponse: false);
       print("[BleService] Write successful.");
       return true;
     } catch (e) {
-      print("!!! BleService Error writing data: $e");
-      _updateStatus(
-          BleConnectionStatus.error, "Write failed: ${e.runtimeType}");
+      print("!!! [BleService] Error writing data: $e");
+      _updateStatus(BleConnectionStatus.error, "Write failed");
       return false;
     }
   }
 
-  // --- Gửi WiFi Config (gọi hàm ghi chung) ---
   Future<bool> sendWifiConfig(String ssid, String password) async {
     try {
       Map<String, String> configData = {'ssid': ssid, 'password': password};
       String jsonString = jsonEncode(configData);
       List<int> bytesToSend = utf8.encode(jsonString);
-      print(
-          "[BleService] Sending WiFi config via writeDataToDevice: $jsonString");
+      print("[BleService] Sending WiFi config: $jsonString");
       return await writeDataToDevice(bytesToSend);
     } catch (e) {
-      print("!!! Error encoding WiFi config: $e");
+      print("!!! [BleService] Error encoding WiFi config: $e");
       return false;
     }
   }
 
-  // Trong class BleService
-
-// --- Hàm kiểm tra ngưỡng và gửi Notification (Đã sửa lỗi) ---
   DateTime? _lastHighHrNotificationTime;
   DateTime? _lastLowHrNotificationTime;
   DateTime? _lastLowSpo2NotificationTime;
@@ -637,15 +697,13 @@ class BleService {
           prefs.getBool(AppConstants.prefKeyNotificationsEnabled) ?? true;
       if (!notificationsEnabled) return;
 
-      // Lấy Locale và l10n
       final localeCode = prefs.getString(AppConstants.prefKeyLanguageCode) ??
           WidgetsBinding.instance.platformDispatcher.locale.languageCode;
       final locale = Locale(localeCode);
-      final l10n = lookupAppLocalizations(locale); // Đảm bảo import đúng
+      final l10n = lookupAppLocalizations(locale);
 
       final now = DateTime.now();
 
-      // Check HR High
       if (data.hr > AppConstants.hrHighThreshold && data.hr > 0) {
         if (_lastHighHrNotificationTime == null ||
             now.difference(_lastHighHrNotificationTime!) >
@@ -653,21 +711,15 @@ class BleService {
           print("[BleService] ALERT: High Heart Rate: ${data.hr}");
           _notificationService.showSimpleNotification(
               id: 1,
-              title: l10n.alertHrHighTitle, // Key cho tiêu đề
-              // <<< SỬA Ở ĐÂY: CHUYỂN INT THÀNH STRING >>>
+              title: l10n.alertHrHighTitle,
               body: l10n.alertHrHighBody(
-                  data.hr.toString(), // Chuyển hr thành String
-                  AppConstants.hrHighThreshold
-                      .toString() // Chuyển ngưỡng thành String
-                  ),
-              // --------------------------------------
+                  data.hr.toString(), AppConstants.hrHighThreshold.toString()),
               channelId: 'health_alerts_hr_high',
-              channelName: l10n.channelNameHrHigh, // <<< DÙNG KEY CHO TÊN KÊNH
+              channelName: l10n.channelNameHrHigh,
               payload: 'alert_hr_high');
           _lastHighHrNotificationTime = now;
         }
       }
-      // Check HR Low
       if (data.hr < AppConstants.hrLowThreshold && data.hr > 0) {
         if (_lastLowHrNotificationTime == null ||
             now.difference(_lastLowHrNotificationTime!) >
@@ -676,17 +728,14 @@ class BleService {
           _notificationService.showSimpleNotification(
               id: 2,
               title: l10n.alertHrLowTitle,
-              // <<< SỬA Ở ĐÂY: CHUYỂN INT THÀNH STRING >>>
               body: l10n.alertHrLowBody(
                   data.hr.toString(), AppConstants.hrLowThreshold.toString()),
-              // --------------------------------------
               channelId: 'health_alerts_hr_low',
-              channelName: l10n.channelNameHrLow, // <<< DÙNG KEY CHO TÊN KÊNH
+              channelName: l10n.channelNameHrLow,
               payload: 'alert_hr_low');
           _lastLowHrNotificationTime = now;
         }
       }
-      // Check SpO2 Low
       if (data.spo2 < AppConstants.spo2LowThreshold && data.spo2 > 0) {
         if (_lastLowSpo2NotificationTime == null ||
             now.difference(_lastLowSpo2NotificationTime!) >
@@ -695,24 +744,29 @@ class BleService {
           _notificationService.showSimpleNotification(
               id: 3,
               title: l10n.alertSpo2LowTitle,
-              // <<< SỬA Ở ĐÂY: CHUYỂN INT THÀNH STRING >>>
               body: l10n.alertSpo2LowBody(data.spo2.toString(),
                   AppConstants.spo2LowThreshold.toString()),
-              // --------------------------------------
               channelId: 'health_alerts_spo2_low',
-              channelName: l10n.channelNameSpo2Low, // <<< DÙNG KEY CHO TÊN KÊNH
+              channelName: l10n.channelNameSpo2Low,
               payload: 'alert_spo2_low');
           _lastLowSpo2NotificationTime = now;
         }
       }
     } catch (e) {
-      print(
-          "!!! [BleService] Error checking thresholds/sending notification: $e");
+      print("!!! [BleService] Error checking thresholds: $e");
     }
   }
-// -------------------------------------------------------------
 
-  // --- Dispose ---
+  void setAutoReconnect(bool enabled) {
+    _autoReconnectEnabled = enabled;
+    print("[BleService] Auto reconnect set to: $enabled");
+    if (!enabled) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      _reconnectAttempts = 0;
+    }
+  }
+
   void dispose() {
     print("[BleService] Disposing...");
     _adapterStateSubscription?.cancel();
@@ -720,23 +774,24 @@ class BleService {
     _isScanningSubscription?.cancel();
     _connectionStateSubscription?.cancel();
     _healthDataSubscription?.cancel();
-    _statusDataSubscription?.cancel(); // Hủy sub status
+    _statusDataSubscription?.cancel();
+    _reconnectTimer?.cancel();
     _healthDataStreamController.close();
-    _statusStreamController.close(); // Đóng status stream
-    _connectionStatusController.close(); // Đóng connection status stream
-    _deviceReadyController.close(); // Đóng device ready stream
+    _statusStreamController.close();
+    _connectionStatusController.close();
+    _deviceReadyController.close();
 
-    // Ngắt kết nối thiết bị nếu đang kết nối
-    final device = _connectedDevice; // Lưu lại trước khi reset
+    final device = _connectedDevice;
     if (device != null &&
         connectionStatus.value != BleConnectionStatus.disconnected) {
       print("[BleService] Disconnecting device on dispose...");
-      // Gọi disconnect trực tiếp, không cần gọi hàm disconnectFromDevice vì nó sẽ reset state không cần thiết nữa
       device.disconnect().catchError((e) {
-        print("!!! Error disconnecting on dispose: $e");
+        print("!!! [BleService] Error disconnecting on dispose: $e");
       });
     }
-    _connectedDevice = null; // Đảm bảo reset
+    _connectedDevice = null;
+    _lastConnectedDeviceId = null;
+    _reconnectAttempts = 0;
     _healthCharacteristic = null;
     _writeCharacteristic = null;
     _statusCharacteristic = null;

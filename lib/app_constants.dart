@@ -1,7 +1,4 @@
 // lib/app_constants.dart
-
-import 'package:flutter/material.dart'; // Cần cho Duration nếu dùng ở đây
-
 class AppConstants {
   // BLE Configuration
   static const String targetDeviceName = "ESP32-S3 Watch";
@@ -77,4 +74,10 @@ class AppConstants {
 
   // API Keys (Nên để trong .env)
   // static const String openRouterApiKey = "YOUR_OPENROUTER_API_KEY";
+
+  // Notification Channels for Reconnect
+  static const String bleReconnectChannelId = "ble_reconnect";
+  static const String bleReconnectChannelName = "BLE Reconnect";
+  static const String bleReconnectChannelDescription =
+      "Notifications for BLE reconnection events";
 }

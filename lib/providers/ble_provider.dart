@@ -1,16 +1,19 @@
 // lib/providers/ble_provider.dart
 import 'dart:async';
-import 'dart:convert'; // Cần cho việc gửi time
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../services/ble_service.dart'; // Cần BleService và Enum
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/ble_service.dart';
 import '../models/health_data.dart';
-import '../app_constants.dart'; // Cần cho việc gửi time
+import '../app_constants.dart';
+import '../generated/app_localizations.dart';
+import 'package:flutter/widgets.dart';
 
 class BleProvider with ChangeNotifier {
   final BleService _bleService;
 
-  // --- Getters cho các ValueNotifier từ BleService (UI có thể dùng trực tiếp) ---
+  // --- Getters cho các ValueNotifier từ BleService ---
   ValueNotifier<BleConnectionStatus> get connectionStatus =>
       _bleService.connectionStatus;
   ValueNotifier<List<ScanResult>> get scanResults => _bleService.scanResults;
@@ -19,34 +22,44 @@ class BleProvider with ChangeNotifier {
 
   // --- State cục bộ của Provider ---
   HealthData? _latestHealthData;
-  HealthData? get latestHealthData =>
-      _latestHealthData; // Giữ lại để tiện truy cập
+  HealthData? get latestHealthData => _latestHealthData;
 
-  // --- ValueNotifier cho State cục bộ (Tối ưu cho UI) ---
+  // --- ValueNotifier cho State cục bộ ---
   final ValueNotifier<HealthData?> latestHealthDataNotifier =
       ValueNotifier(null);
-  // <<< THÊM NOTIFIER CHO STATUS (VÍ DỤ: WIFI) >>>
-  final ValueNotifier<bool?> deviceWifiStatusNotifier =
-      ValueNotifier(null); // Null khi chưa biết/mất kết nối
+  final ValueNotifier<bool?> deviceWifiStatusNotifier = ValueNotifier(null);
+  final ValueNotifier<bool> isReconnectingNotifier = ValueNotifier(false);
 
-  // --- Subscriptions cho các Stream từ BleService ---
+  // --- Subscriptions ---
   StreamSubscription? _healthDataSub;
-  StreamSubscription? _connectionStatusSub; // Để lắng nghe trạng thái kết nối
-  StreamSubscription? _statusDataSub; // Để lắng nghe trạng thái từ ESP32
-  StreamSubscription? _deviceReadySub; // Để biết khi nào sẵn sàng gửi lệnh
+  StreamSubscription? _connectionStatusSub;
+  StreamSubscription? _statusDataSub;
+  StreamSubscription? _deviceReadySub;
+  VoidCallback? _scanResultsListener;
 
-  // Cờ mounted để kiểm tra an toàn trong callback
+  // --- Cờ và trạng thái ---
   bool _mounted = true;
+  bool _autoReconnectEnabled = true;
 
   BleProvider(this._bleService) {
     print("[BleProvider] Initializing...");
-    // Khởi tạo tất cả các listener
     _listenToHealthData();
     _listenToConnectionStatus();
-    _listenToStatusUpdates(); // <<< Lắng nghe stream status mới
-    _listenToDeviceReady(); // <<< Lắng nghe stream device ready mới
-    // Không cần lắng nghe isScanning, scanResults ở đây nếu UI dùng ValueListenableBuilder
+    _listenToStatusUpdates();
+    _listenToDeviceReady();
+    _listenToScanResults();
+    _tryReconnectOnInit();
     print("[BleProvider] Initialized and subscribed to BleService streams.");
+  }
+
+  // Lắng nghe thay đổi scanResults
+  void _listenToScanResults() {
+    _scanResultsListener = () {
+      print(
+          "[BleProvider] Scan results updated: ${scanResults.value.length} devices");
+      _notify();
+    };
+    _bleService.scanResults.addListener(_scanResultsListener!);
   }
 
   // Lắng nghe dữ liệu HealthData
@@ -56,8 +69,6 @@ class BleProvider with ChangeNotifier {
       (data) {
         _latestHealthData = data;
         latestHealthDataNotifier.value = data;
-        // Cập nhật trạng thái WiFi từ HealthData nếu muốn (fallback)
-        // deviceWifiStatusNotifier.value = data.wifi;
         _notify();
       },
       onError: (error) {
@@ -66,25 +77,38 @@ class BleProvider with ChangeNotifier {
     );
   }
 
-  // Lắng nghe thay đổi trạng thái kết nối từ Stream
+  // Lắng nghe thay đổi trạng thái kết nối
   void _listenToConnectionStatus() {
     _connectionStatusSub?.cancel();
     _connectionStatusSub = _bleService.connectionStatusStream.listen((status) {
-      print(
-          "[BleProvider] Received connection status update via stream: $status");
-      _handleConnectionChange(status); // Gọi hàm xử lý
+      print("[BleProvider] Connection status update: $status");
+      _handleConnectionChange(status);
+      if (status == BleConnectionStatus.connecting ||
+          status == BleConnectionStatus.discovering_services) {
+        isReconnectingNotifier.value = true;
+      } else {
+        isReconnectingNotifier.value = false;
+      }
+      _notify();
     }, onError: (error) {
       print("!!! [BleProvider] Error in connection status stream: $error");
-      _handleConnectionChange(BleConnectionStatus.error); // Xử lý như lỗi
+      _handleConnectionChange(BleConnectionStatus.error);
+      isReconnectingNotifier.value = false;
+      _notify();
     });
   }
 
-  // <<< HÀM MỚI: Lắng nghe cập nhật trạng thái từ ESP32 >>>
+  void updateReconnectStatus(bool isReconnecting) {
+    isReconnectingNotifier.value = isReconnecting;
+    print("[BleProvider] Reconnect status updated: $isReconnecting");
+    _notify();
+  }
+
+  // Lắng nghe cập nhật trạng thái từ ESP32
   void _listenToStatusUpdates() {
     _statusDataSub?.cancel();
     _statusDataSub = _bleService.statusStream.listen((statusData) {
-      print("[BleProvider] Received status update from device: $statusData");
-      // Xử lý dữ liệu status nhận được (Map<String, dynamic>)
+      print("[BleProvider] Status update: $statusData");
       if (statusData.containsKey('wifi_status')) {
         bool? newWifiStatus;
         if (statusData['wifi_status'] == 'connected') {
@@ -92,62 +116,76 @@ class BleProvider with ChangeNotifier {
         } else if (statusData['wifi_status'] == 'disconnected' ||
             statusData['wifi_status'] == 'connecting') {
           newWifiStatus = false;
-        } // Có thể thêm các trạng thái khác
-        // Chỉ cập nhật nếu khác giá trị hiện tại
+        }
         if (deviceWifiStatusNotifier.value != newWifiStatus) {
           deviceWifiStatusNotifier.value = newWifiStatus;
-          print("[BleProvider] Device WiFi status updated to: $newWifiStatus");
-          // Không cần gọi _notify() vì ValueNotifier tự thông báo
+          print("[BleProvider] Device WiFi status updated: $newWifiStatus");
         }
       }
-      // TODO: Xử lý các key status khác nếu có (ví dụ: time_status, error)
+      _notify();
     }, onError: (error) {
       print("!!! [BleProvider] Error in status update stream: $error");
     });
   }
-  // ----------------------------------------------------
 
-  // <<< HÀM MỚI: Lắng nghe sự kiện Device Ready >>>
+  // Lắng nghe sự kiện Device Ready
   void _listenToDeviceReady() {
     _deviceReadySub?.cancel();
     _deviceReadySub = _bleService.deviceReadyStream.listen((_) {
-      print("[BleProvider] Received Device Ready event from BleService.");
+      print("[BleProvider] Device Ready event received.");
       if (_mounted && connectionStatus.value == BleConnectionStatus.connected) {
-        print(
-            "[BleProvider] Attempting to sync time after Device Ready event...");
-        syncTimeToDevice(); // <<< GỌI SYNC TIME KHI SẴN SÀNG >>>
-      } else {
-        print(
-            "[BleProvider] Ignoring Device Ready event (unmounted or not connected).");
+        print("[BleProvider] Syncing time after Device Ready...");
+        syncTimeToDevice();
       }
     }, onError: (error) {
       print("!!! [BleProvider] Error in device ready stream: $error");
     });
   }
-  // ----------------------------------------
 
-  // Hàm xử lý khi trạng thái kết nối thay đổi (ĐƠN GIẢN HÓA)
+  // Thử reconnect khi khởi tạo
+  void _tryReconnectOnInit() {
+    if (_autoReconnectEnabled) {
+      print("[BleProvider] Checking for auto reconnect on initialization...");
+      _bleService.setAutoReconnect(true);
+      SharedPreferences.getInstance().then((prefs) {
+        final lastDeviceId =
+            prefs.getString(AppConstants.prefKeyConnectedDeviceId);
+        if (lastDeviceId != null && _mounted) {
+          print(
+              "[BleProvider] Found last device ID: $lastDeviceId. Triggering reconnect...");
+          updateReconnectStatus(true);
+          _bleService.startScan(force: true);
+        }
+      });
+    }
+  }
+
+  // Xử lý thay đổi trạng thái kết nối
   void _handleConnectionChange(BleConnectionStatus status) {
     if (!_mounted) return;
-    print(
-        "[BleProvider] Handling connection status change (from stream): $status");
-    // Chỉ reset dữ liệu khi không còn kết nối
+    print("[BleProvider] Handling connection status change: $status");
     if (status != BleConnectionStatus.connected &&
         status != BleConnectionStatus.connecting &&
         status != BleConnectionStatus.discovering_services) {
       if (_latestHealthData != null || latestHealthDataNotifier.value != null) {
         _latestHealthData = null;
         latestHealthDataNotifier.value = null;
-        print(
-            "[BleProvider] Cleared latest health data due to non-connected status.");
+        print("[BleProvider] Cleared health data due to non-connected status.");
       }
       if (deviceWifiStatusNotifier.value != null) {
-        deviceWifiStatusNotifier.value = null; // Reset cả trạng thái WiFi
-        print("[BleProvider] Cleared device WiFi status.");
+        deviceWifiStatusNotifier.value = null;
+        print("[BleProvider] Cleared WiFi status.");
       }
+      updateReconnectStatus(false);
+    } else if (status == BleConnectionStatus.connected) {
+      print("[BleProvider] Connection established.");
+      updateReconnectStatus(false);
+    } else if (status == BleConnectionStatus.connecting ||
+        status == BleConnectionStatus.discovering_services) {
+      print("[BleProvider] Reconnect in progress...");
+      updateReconnectStatus(true);
     }
-    // Không cần gọi syncTime ở đây nữa
-    _notify(); // Vẫn notify để UI cập nhật trạng thái chung (chip BLE)
+    _notify();
   }
 
   // Hàm tiện ích gọi notifyListeners
@@ -157,44 +195,70 @@ class BleProvider with ChangeNotifier {
     }
   }
 
-  // --- Các hàm public gọi BleService (giữ nguyên) ---
+  // Bật/tắt auto reconnect
+  void setAutoReconnect(bool enabled) {
+    _autoReconnectEnabled = enabled;
+    _bleService.setAutoReconnect(enabled);
+    print("[BleProvider] Auto reconnect set to: $enabled");
+    if (!enabled) {
+      updateReconnectStatus(false);
+    }
+    _notify();
+  }
+
+  // Kích hoạt reconnect thủ công
+  Future<void> tryReconnect() async {
+    if (!_mounted || !_autoReconnectEnabled) {
+      print(
+          "[BleProvider] Reconnect ignored: Unmounted or auto reconnect disabled.");
+      return;
+    }
+    print("[BleProvider] Triggering manual reconnect...");
+    updateReconnectStatus(true);
+    await _bleService.startScan(force: true);
+    _notify();
+  }
+
+  // --- Các hàm public gọi BleService ---
   Future<void> startScan() async {
     _latestHealthData = null;
     latestHealthDataNotifier.value = null;
-    deviceWifiStatusNotifier.value = null; // Reset status khi quét mới
+    deviceWifiStatusNotifier.value = null;
     _notify();
     await _bleService.startScan();
   }
 
   Future<void> stopScan() async {
     await _bleService.stopScan();
+    _notify();
   }
 
   Future<void> connectToDevice(BluetoothDevice device) async {
     await _bleService.connectToDevice(device);
+    _notify();
   }
 
   Future<void> disconnectFromDevice() async {
     await _bleService.disconnectFromDevice();
+    _notify();
   }
 
   Future<bool> sendWifiConfig(String ssid, String password) async {
-    return await _bleService.sendWifiConfig(ssid, password);
+    bool result = await _bleService.sendWifiConfig(ssid, password);
+    _notify();
+    return result;
   }
-  // -------------------------------------------------
 
-  // Hàm gửi thời gian (giữ nguyên logic, gọi hàm ghi của BleService)
   Future<bool> syncTimeToDevice() async {
-    if (!_mounted) return false;
-    if (connectionStatus.value != BleConnectionStatus.connected) {
+    if (!_mounted || connectionStatus.value != BleConnectionStatus.connected) {
       return false;
     }
     try {
       final now = DateTime.now();
       final timeData = {
         'time': {
-          'year': now.year, // Gửi năm đầy đủ (ví dụ: 2024)
-          'month': now.month, // Gửi tháng dạng 1-12
+          'year': now.year,
+          'month': now.month,
           'day': now.day,
           'hour': now.hour,
           'minute': now.minute,
@@ -203,42 +267,47 @@ class BleProvider with ChangeNotifier {
       };
       final jsonString = jsonEncode(timeData);
       final dataBytes = utf8.encode(jsonString);
-      print(
-          "[BleProvider] Preparing to send time data via BleService: $jsonString");
-      bool success =
-          await _bleService.writeDataToDevice(dataBytes); // Gọi hàm ghi chung
-      if (success)
-        print("[BleProvider] Time sync command sent successfully.");
-      else
-        print(
-            "[BleProvider] BleService reported failure sending time sync command.");
+      print("[BleProvider] Sending time data: $jsonString");
+      bool success = await _bleService.writeDataToDevice(dataBytes);
+      if (success) {
+        print("[BleProvider] Time sync successful.");
+      } else {
+        print("[BleProvider] Time sync failed.");
+      }
+      _notify();
       return success;
     } catch (e) {
-      print("!!! [BleProvider] Error creating/sending time sync data: $e");
+      print("!!! [BleProvider] Error sending time sync data: $e");
       return false;
     }
   }
 
-  // --- Hàm dispose (Cập nhật để hủy các subscription mới) ---
+  // --- Dispose ---
   @override
   void dispose() {
     print("Disposing BleProvider...");
-    _mounted = false; // Đặt cờ false NGAY ĐẦU
-    // Hủy tất cả các subscriptions
+    _mounted = false;
     _healthDataSub?.cancel();
     _connectionStatusSub?.cancel();
-    _statusDataSub?.cancel(); // <<< HỦY STATUS SUB
-    _deviceReadySub?.cancel(); // <<< HỦY DEVICE READY SUB
-    // Hủy các listener cũ (nếu còn add)
-    // try {
-    //   _bleService.isScanning.removeListener(_notify);
-    //   _bleService.scanResults.removeListener(_notify);
-    // } catch (e) { /* ... */ }
-    // Dispose các Notifier
+    _statusDataSub?.cancel();
+    _deviceReadySub?.cancel();
+    if (_scanResultsListener != null) {
+      _bleService.scanResults.removeListener(_scanResultsListener!);
+    }
     latestHealthDataNotifier.dispose();
-    deviceWifiStatusNotifier.dispose(); // <<< DISPOSE STATUS NOTIFIER
+    deviceWifiStatusNotifier.dispose();
+    isReconnectingNotifier.dispose();
+    _bleService.setAutoReconnect(false);
     print("BleProvider disposed.");
     super.dispose();
   }
-  // ----------------------------------------------------
+
+  void clearDataOnLogout() {
+    print("[BleProvider] Clearing data on logout.");
+    _latestHealthData = null;
+    latestHealthDataNotifier.value = null;
+    deviceWifiStatusNotifier.value = null;
+    updateReconnectStatus(false);
+    _notify();
+  }
 }

@@ -1624,6 +1624,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Attempting to reconnect...'**
   String get reconnectingTooltip;
+
+  /// No description provided for @reconnectAttemptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect Attempt'**
+  String get reconnectAttemptTitle;
+
+  /// No description provided for @reconnectAttemptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Trying to reconnect to your device...'**
+  String get reconnectAttemptBody;
+
+  /// No description provided for @reconnectSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect Successful'**
+  String get reconnectSuccessTitle;
+
+  /// No description provided for @reconnectSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully reconnected to your device.'**
+  String get reconnectSuccessBody;
+
+  /// No description provided for @reconnectFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect Failed'**
+  String get reconnectFailedTitle;
+
+  /// No description provided for @reconnectFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reconnect to device after {attempts} attempts.'**
+  String reconnectFailedBody(Object attempts);
+
+  /// No description provided for @bleReconnectChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'BLE Reconnect'**
+  String get bleReconnectChannelName;
+
+  /// No description provided for @activityWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Warning'**
+  String get activityWarningTitle;
+
+  /// No description provided for @prolongedSittingWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prolonged Sitting Alert'**
+  String get prolongedSittingWarningTitle;
+
+  /// No description provided for @prolongedLyingWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prolonged Lying (Daytime) Alert'**
+  String get prolongedLyingWarningTitle;
+
+  /// No description provided for @smartReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Reminder to Move'**
+  String get smartReminderTitle;
+
+  /// No description provided for @positiveFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Great Job!'**
+  String get positiveFeedbackTitle;
+
+  /// No description provided for @activityAlertsChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Alerts'**
+  String get activityAlertsChannelName;
+
+  /// No description provided for @activityAlertsChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for activity-related alerts'**
+  String get activityAlertsChannelDescription;
+
+  /// No description provided for @sittingAlertsChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting Time Alerts'**
+  String get sittingAlertsChannelName;
+
+  /// No description provided for @lyingAlertsChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Lying Time Alerts'**
+  String get lyingAlertsChannelName;
+
+  /// No description provided for @smartReminderChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Movement Reminders'**
+  String get smartReminderChannelName;
+
+  /// No description provided for @positiveFeedbackChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Positive Feedback'**
+  String get positiveFeedbackChannelName;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get tryAgain;
+
+  /// No description provided for @errorLoadingData.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load device data. Please try again.'**
+  String get errorLoadingData;
+
+  /// No description provided for @bluetoothRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Bluetooth'**
+  String get bluetoothRequestTitle;
+
+  /// No description provided for @bluetoothRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable Bluetooth to scan for devices.'**
+  String get bluetoothRequestMessage;
+
+  /// No description provided for @turnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn On'**
+  String get turnOn;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

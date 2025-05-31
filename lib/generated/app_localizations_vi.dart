@@ -802,4 +802,75 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get reconnectingTooltip => 'Đang thử kết nối lại...';
+
+  @override
+  String get reconnectAttemptTitle => 'Đang Thử Kết Nối Lại';
+
+  @override
+  String get reconnectAttemptBody => 'Đang cố gắng kết nối lại với thiết bị của bạn...';
+
+  @override
+  String get reconnectSuccessTitle => 'Kết nối lại thành công';
+
+  @override
+  String get reconnectSuccessBody => 'Đã kết nối lại thành công với thiết bị của bạn.';
+
+  @override
+  String get reconnectFailedTitle => 'Kết nối lại thất bại';
+
+  @override
+  String reconnectFailedBody(Object attempts) {
+    return 'Không thể kết nối lại với thiết bị sau $attempts lần thử.';
+  }
+
+  @override
+  String get bleReconnectChannelName => 'Kết nối lại BLE';
+
+  @override
+  String get activityWarningTitle => 'Cảnh báo Hoạt động';
+
+  @override
+  String get prolongedSittingWarningTitle => 'Cảnh báo Ngồi Lâu';
+
+  @override
+  String get prolongedLyingWarningTitle => 'Cảnh báo Nằm Lâu (Ban Ngày)';
+
+  @override
+  String get smartReminderTitle => 'Nhắc nhở Vận động Thông minh';
+
+  @override
+  String get positiveFeedbackTitle => 'Làm tốt lắm!';
+
+  @override
+  String get activityAlertsChannelName => 'Cảnh báo Hoạt động';
+
+  @override
+  String get activityAlertsChannelDescription => 'Thông báo liên quan đến cảnh báo hoạt động';
+
+  @override
+  String get sittingAlertsChannelName => 'Cảnh báo Thời gian Ngồi';
+
+  @override
+  String get lyingAlertsChannelName => 'Cảnh báo Thời gian Nằm';
+
+  @override
+  String get smartReminderChannelName => 'Nhắc nhở Vận động Thông minh';
+
+  @override
+  String get positiveFeedbackChannelName => 'Phản hồi Tích cực';
+
+  @override
+  String get tryAgain => 'Thử lại';
+
+  @override
+  String get errorLoadingData => 'Không thể tải dữ liệu thiết bị. Vui lòng thử lại.';
+
+  @override
+  String get bluetoothRequestTitle => 'Bật Bluetooth';
+
+  @override
+  String get bluetoothRequestMessage => 'Vui lòng bật Bluetooth để quét thiết bị.';
+
+  @override
+  String get turnOn => 'Bật';
 }

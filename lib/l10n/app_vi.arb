@@ -340,5 +340,37 @@
   "reconnectingTooltip": "Đang thử kết nối lại...",
   "@reconnectingTooltip": {
     "description": "Chữ hiển thị trong tooltip của nút quét khi đang kết nối lại"
-  }
+  },
+  "reconnectAttemptTitle": "Đang kết nối lại với thiết bị",
+  "reconnectAttemptBody": "Đang cố gắng kết nối lại với thiết bị của bạn...",
+  "reconnectSuccessTitle": "Kết nối lại thành công",
+  "reconnectSuccessBody": "Đã kết nối lại thành công với thiết bị của bạn.",
+  "reconnectFailedTitle": "Kết nối lại thất bại",
+  "reconnectFailedBody": "Không thể kết nối lại với thiết bị sau {attempts} lần thử.",
+  "@reconnectFailedBody": {
+    "placeholders": {
+      "attempts": {
+        "type": "Object"
+      }
+    }
+  },
+  "bleReconnectChannelName": "Kết nối lại BLE",
+  "activityWarningTitle": "Cảnh báo Hoạt động",
+"prolongedSittingWarningTitle": "Cảnh báo Ngồi Lâu",
+"prolongedLyingWarningTitle": "Cảnh báo Nằm Lâu (Ban Ngày)",
+"smartReminderTitle": "Nhắc nhở Vận động Thông minh",
+"positiveFeedbackTitle": "Làm tốt lắm!",
+"activityAlertsChannelName": "Cảnh báo Hoạt động",
+"activityAlertsChannelDescription": "Thông báo liên quan đến cảnh báo hoạt động",
+"sittingAlertsChannelName": "Cảnh báo Thời gian Ngồi",
+"lyingAlertsChannelName": "Cảnh báo Thời gian Nằm",
+"smartReminderChannelName": "Nhắc nhở Vận động Thông minh",
+"positiveFeedbackChannelName": "Phản hồi Tích cực",
+"tryAgain": "Thử lại",
+"reconnectAttemptTitle": "Đang Thử Kết Nối Lại",
+"reconnectAttemptBody": "Đang cố gắng kết nối lại với thiết bị của bạn...",
+"errorLoadingData": "Không thể tải dữ liệu thiết bị. Vui lòng thử lại.",
+"bluetoothRequestTitle": "Bật Bluetooth",
+  "bluetoothRequestMessage": "Vui lòng bật Bluetooth để quét thiết bị.",
+  "turnOn": "Bật"
 }

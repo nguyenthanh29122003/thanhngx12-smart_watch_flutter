@@ -699,4 +699,37 @@ class ActivityRecognitionService {
     _imuDataBuffer.clear();
     if (kDebugMode) print("[ARService] Disposed.");
   }
+
+  Future<void> prepareForLogout() async {
+    if (kDebugMode) print("[ARService] Preparing for logout...");
+    stopProcessingHealthData(); // Hàm này đã gọi _handleActivityEnd và _stopActivityTimers
+
+    // Reset các trạng thái nội bộ liên quan đến hoạt động
+    _currentActivityInternal = "Initializing..."; // Hoặc "Unknown"
+    _currentActivityStartTime = null;
+    if (!_activityPredictionController.isClosed &&
+        _activityPredictionController.valueOrNull != _currentActivityInternal) {
+      _activityPredictionController.add(_currentActivityInternal);
+    }
+    _imuDataBuffer.clear();
+    _lastWarningTypeSent = null;
+    _hasWarnedForCurrentSitting = false;
+    _hasWarnedForCurrentLyingDaytime = false;
+
+    // Xóa trạng thái đã lưu trong SharedPreferences nếu bạn muốn người dùng mới bắt đầu sạch
+    // Hoặc giữ lại nếu bạn muốn khôi phục cho cùng người dùng đó nếu họ đăng nhập lại ngay.
+    // Để đảm bảo "sạch" khi người dùng khác đăng nhập, nên xóa:
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.prefKeyLastKnownActivity);
+      await prefs.remove(AppConstants.prefKeyLastKnownActivityTimestamp);
+      if (kDebugMode)
+        print(
+            "[ARService] Cleared last known activity from SharedPreferences.");
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error clearing SharedPreferences on logout: $e");
+    }
+    if (kDebugMode) print("[ARService] State prepared for logout.");
+  }
 }

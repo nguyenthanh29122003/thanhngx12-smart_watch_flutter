@@ -400,5 +400,37 @@
   "reconnectingTooltip": "Attempting to reconnect...",
   "@reconnectingTooltip": {
     "description": "Text displayed in the tooltip of the scan button when reconnecting"
-  }
+  },
+  "reconnectAttemptTitle": "Reconnecting to Device",
+  "reconnectAttemptBody": "Attempting to reconnect to your device...",
+  "reconnectSuccessTitle": "Reconnect Successful",
+  "reconnectSuccessBody": "Successfully reconnected to your device.",
+  "reconnectFailedTitle": "Reconnect Failed",
+  "reconnectFailedBody": "Failed to reconnect to device after {attempts} attempts.",
+  "@reconnectFailedBody": {
+    "placeholders": {
+      "attempts": {
+        "type": "Object"
+      }
+    }
+  },
+  "bleReconnectChannelName": "BLE Reconnect",
+  "activityWarningTitle": "Activity Warning",
+"prolongedSittingWarningTitle": "Prolonged Sitting Alert",
+"prolongedLyingWarningTitle": "Prolonged Lying (Daytime) Alert",
+"smartReminderTitle": "Smart Reminder to Move",
+"positiveFeedbackTitle": "Great Job!",
+"activityAlertsChannelName": "Activity Alerts",
+"activityAlertsChannelDescription": "Notifications for activity-related alerts",
+"sittingAlertsChannelName": "Sitting Time Alerts",
+"lyingAlertsChannelName": "Lying Time Alerts",
+"smartReminderChannelName": "Smart Movement Reminders",
+"positiveFeedbackChannelName": "Positive Feedback",
+"tryAgain": "Try Again",
+"reconnectAttemptTitle": "Reconnect Attempt",
+"reconnectAttemptBody": "Trying to reconnect to your device...",
+"errorLoadingData": "Failed to load device data. Please try again.",
+"bluetoothRequestTitle": "Enable Bluetooth",
+  "bluetoothRequestMessage": "Please enable Bluetooth to scan for devices.",
+  "turnOn": "Turn On"
 }
