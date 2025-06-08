@@ -64,6 +64,8 @@ class AppConstants {
   static const Duration notificationCooldownDuration = Duration(minutes: 15);
 
   // Activity Recognition Timing
+  static const Duration minMovementDurationToResetWarning =
+      Duration(minutes: 5); // <<< THÊM HẰNG SỐ NÀY
   static const int daytimeStartHour = 8; // 8 AM
   static const int daytimeEndHour = 22; // 10 PM (trước 10 PM)
 

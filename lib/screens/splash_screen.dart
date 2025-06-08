@@ -8,10 +8,16 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(
-        // Hiển thị một vòng tròn loading đơn giản
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-          strokeWidth: 6.0,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // const Image.asset('assets/images/app_logo.png', width: 100), // Ví dụ
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              strokeWidth: 6.0,
+            ),
+          ],
         ),
       ),
     );
