@@ -1,6 +1,7 @@
 // lib/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/services.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -15,26 +16,27 @@ class AuthService {
   User? get currentUser => _firebaseAuth.currentUser;
 
   // --- Đăng nhập bằng Email & Password ---
-  Future<UserCredential?> signInWithEmailAndPassword(
+  Future<UserCredential> signInWithEmailAndPassword(
     String email,
     String password,
   ) async {
     try {
+      // Bây giờ hàm sẽ trả về UserCredential (không thể null)
       UserCredential userCredential =
           await _firebaseAuth.signInWithEmailAndPassword(
-        email: email.trim(), // Trim để loại bỏ khoảng trắng thừa
+        email: email.trim(),
         password: password,
       );
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      // Xử lý các lỗi cụ thể (ví dụ: sai mật khẩu, không tìm thấy user)
-      // Bạn có thể log lỗi hoặc ném ra một exception tùy chỉnh ở đây
-      print("Error signing in with email/password: ${e.code} - ${e.message}");
-      // throw AuthException(e.code); // Ví dụ ném lỗi tùy chỉnh
-      return null; // Hoặc trả về null để báo lỗi
+      // THAY ĐỔI QUAN TRỌNG: Ném lại lỗi thay vì return null
+      // Điều này cho phép AuthProvider biết chính xác lý do thất bại.
+      print("AuthService Error (signInWithEmailAndPassword): ${e.code}");
+      rethrow;
     } catch (e) {
-      print("An unexpected error occurred during email/password sign in: $e");
-      return null;
+      print("AuthService Unexpected Error (signInWithEmailAndPassword): $e");
+      // Ném một lỗi chung để báo hiệu có vấn đề không lường trước
+      throw Exception('An unexpected error occurred during sign in.');
     }
   }
 
@@ -66,42 +68,37 @@ class AuthService {
   }
 
   // --- Đăng nhập bằng Google ---
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<UserCredential> signInWithGoogle() async {
     try {
-      // Bắt đầu quy trình đăng nhập Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      // Nếu người dùng hủy bỏ
       if (googleUser == null) {
-        print("Google Sign In cancelled by user.");
-        return null;
+        // Người dùng đã hủy đăng nhập. Ném một lỗi cụ thể để AuthProvider có thể bắt.
+        throw PlatformException(
+          code: 'SIGN_IN_CANCELLED',
+          message: 'Google sign-in was cancelled by the user.',
+        );
       }
 
-      // Lấy thông tin xác thực OAuth2 từ tài khoản Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Tạo một credential Firebase từ token Google
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Đăng nhập vào Firebase bằng credential Google
-      UserCredential userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-      return userCredential;
+      // Đăng nhập vào Firebase và trả về kết quả (không thể null)
+      return await _firebaseAuth.signInWithCredential(credential);
     } on FirebaseAuthException catch (e) {
       print(
-        "FirebaseAuthException during Google sign in: ${e.code} - ${e.message}",
-      );
-      return null;
+          "FirebaseAuthException during Google sign in: ${e.code} - ${e.message}");
+      rethrow; // Ném lại lỗi Firebase để AuthProvider xử lý
     } catch (e) {
       print("An unexpected error occurred during Google sign in: $e");
       // Đảm bảo đăng xuất khỏi Google nếu có lỗi bất ngờ xảy ra giữa chừng
       await _googleSignIn.signOut();
-      return null;
+      rethrow; // Ném lại lỗi chung
     }
   }
 

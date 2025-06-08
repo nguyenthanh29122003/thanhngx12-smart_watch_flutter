@@ -70,6 +70,7 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        // --- 1. CÁC PROVIDER ĐỘC LẬP (Không phụ thuộc vào user) ---
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<NotificationService>.value(value: NotificationService()),
         Provider<app_auth_service.AuthService>(
@@ -82,51 +83,81 @@ Future<void> main() async {
         ChangeNotifierProvider<SettingsProvider>(
           create: (_) => SettingsProvider(),
         ),
+
+        // --- 2. AUTH PROVIDER (Nguồn của sự thay đổi) ---
         ChangeNotifierProvider<app_auth_provider.AuthProvider>(
           create: (context) => app_auth_provider.AuthProvider(
             context.read<app_auth_service.AuthService>(),
             context.read<FirestoreService>(),
           ),
         ),
-        Provider<BleService>(
-          create: (context) => BleService(
-            context.read<app_auth_service.AuthService>(),
-            context.read<FirestoreService>(),
-            context.read<LocalDbService>(),
-            context.read<ConnectivityService>(),
-            context.read<NotificationService>(),
-          ),
+
+        // --- 3. CÁC PROVIDER PHỤ THUỘC (Sẽ được reset khi user thay đổi) ---
+
+        // A. Cung cấp BleService, nó sẽ được tạo lại khi user thay đổi
+        ProxyProvider<app_auth_provider.AuthProvider, BleService>(
+          update: (context, auth, previousBleService) {
+            // Khi auth thay đổi (đăng nhập/đăng xuất), hủy service cũ và tạo service mới
+            previousBleService?.dispose(); // Hủy bỏ service cũ
+            return BleService(
+              context.read<app_auth_service.AuthService>(),
+              context.read<FirestoreService>(),
+              context.read<LocalDbService>(),
+              context.read<ConnectivityService>(),
+              context.read<NotificationService>(),
+            );
+          },
           dispose: (context, service) => service.dispose(),
         ),
-        ChangeNotifierProvider<BleProvider>(
+
+        // B. Cung cấp BleProvider, nó sẽ được tạo lại khi BleService thay đổi
+        ChangeNotifierProxyProvider<BleService, BleProvider>(
           create: (context) => BleProvider(context.read<BleService>()),
+          update: (context, bleService, previousBleProvider) {
+            // Khi bleService được tạo lại ở trên, chúng ta cũng tạo lại BleProvider
+            // để đảm bảo nó dùng instance BleService mới nhất.
+            // Điều này sẽ tự động gọi dispose() của previousBleProvider.
+            return BleProvider(bleService);
+          },
         ),
-        ChangeNotifierProvider<DashboardProvider>(
+
+        // C. Các provider khác
+        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
+            DashboardProvider>(
           create: (context) => DashboardProvider(
-            context.read<FirestoreService>(),
-            context.read<app_auth_service.AuthService>(),
-          ),
+              context.read<FirestoreService>(),
+              context.read<app_auth_service.AuthService>()),
+          update: (context, auth, previous) => DashboardProvider(
+              context.read<FirestoreService>(),
+              context.read<app_auth_service.AuthService>()),
         ),
-        ChangeNotifierProvider<RelativesProvider>(
+
+        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
+            RelativesProvider>(
           create: (context) => RelativesProvider(
-            context.read<FirestoreService>(),
-            context.read<app_auth_service.AuthService>(),
-          ),
+              context.read<FirestoreService>(),
+              context.read<app_auth_service.AuthService>()),
+          update: (context, auth, previous) => RelativesProvider(
+              context.read<FirestoreService>(),
+              context.read<app_auth_service.AuthService>()),
         ),
-        Provider<ActivityRecognitionService>(
-          create: (context) => ActivityRecognitionService(
+
+        ProxyProvider<app_auth_provider.AuthProvider,
+            ActivityRecognitionService>(
+          update: (context, auth, previous) => ActivityRecognitionService(
             authService: context.read<app_auth_service.AuthService>(),
           ),
           dispose: (_, service) => service.dispose(),
         ),
-        Provider<DataSyncService>(
-          create: (context) => DataSyncService(
+
+        ProxyProvider<app_auth_provider.AuthProvider, DataSyncService>(
+          update: (context, auth, previous) => DataSyncService(
             context.read<ConnectivityService>(),
             context.read<LocalDbService>(),
             context.read<FirestoreService>(),
             context.read<app_auth_service.AuthService>(),
           ),
-          dispose: (context, service) => service.dispose(),
+          dispose: (_, service) => service.dispose(),
           lazy: true,
         ),
       ],
@@ -489,31 +520,64 @@ class _AuthWrapperState extends State<AuthWrapper> {
     switch (authProvider.status) {
       case app_auth_provider.AuthStatus.uninitialized:
       case app_auth_provider.AuthStatus.authenticating:
+        // Hiển thị Splash Screen trong khi khởi tạo hoặc đang đăng nhập
         return const SplashScreen();
+
       case app_auth_provider.AuthStatus.unauthenticated:
       case app_auth_provider.AuthStatus.error:
+        // Nếu chưa đăng nhập hoặc có lỗi, quay về màn hình Login
         return const LoginScreen();
+
       case app_auth_provider.AuthStatus.authenticated:
+        // --- LOGIC ĐIỀU HƯỚNG QUAN TRỌNG KHI ĐÃ ĐĂNG NHẬP ---
+
+        // 1. Luôn hiển thị loading khi đang kiểm tra hoặc kết nối thiết bị
         if (_deviceCheckStatus == 'checking' ||
             _deviceCheckStatus == 'connecting') {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text("Connecting to device..."),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    _deviceCheckStatus == 'checking'
+                        ? "Checking for saved device..."
+                        : "Connecting to device...",
+                  ),
                 ],
               ),
             ),
           );
         }
+
+        // 2. Nếu không có thiết bị hoặc kết nối tự động thất bại -> BẮT BUỘC đến màn hình chọn thiết bị
         if (_deviceCheckStatus == 'no_device' ||
             _deviceCheckStatus == 'failed') {
+          debugPrint(
+              "[AuthWrapper build] No device or connection failed. Navigating to DeviceSelectScreen.");
+          // Sử dụng Future.microtask để điều hướng một cách an toàn sau khi build xong
+          Future.microtask(() {
+            if (mounted) {
+              // Sử dụng pushReplacement để người dùng không thể nhấn back quay lại màn hình này
+              navigatorKey.currentState?.pushReplacementNamed('/device_select');
+            }
+          });
+          // Trả về một màn hình chờ trong khi điều hướng
+          return const SplashScreen();
+        }
+
+        // 3. Nếu đã kết nối thành công, vào màn hình chính
+        if (_deviceCheckStatus == 'connected') {
+          debugPrint(
+              "[AuthWrapper build] Device connected. Navigating to MainNavigator.");
           return const MainNavigator();
         }
-        return MainNavigator();
+
+        // 4. Trường hợp mặc định (ví dụ: trạng thái 'initial' khi mới vào), hiển thị chờ
+        // trong khi logic trong initState/handleAuthChange đang chạy.
+        return const SplashScreen();
     }
   }
 }

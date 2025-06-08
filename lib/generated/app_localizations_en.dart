@@ -27,7 +27,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginTitle => 'Login';
 
   @override
-  String get selectDeviceTitle => 'Select Your Device';
+  String get selectDeviceTitle => 'Select Device';
 
   @override
   String get configureWifiTitle => 'Configure Device WiFi';
@@ -72,7 +72,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDeletion => 'Confirm Deletion';
 
   @override
-  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(Object relativeName, Object relativeRelationship) {
     return 'Are you sure you want to delete $relativeName ($relativeRelationship)?';
   }
 
@@ -92,13 +92,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmLogoutTitle => 'Confirm Logout';
 
   @override
-  String get confirmLogoutMessage => 'Are you sure you want to log out?';
+  String get confirmLogoutMessage => 'Are you sure you want to logout?';
 
   @override
   String get confirm => 'Confirm';
 
   @override
-  String get chatbotTitle => 'Chatbot';
+  String get chatbotTitle => 'Chat with AI';
 
   @override
   String get predictTitle => 'Predict';
@@ -107,7 +107,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectDevice => 'Connect Device';
 
   @override
-  String get predictPlaceholder => 'Prediction functionality is under development!';
+  String get predictPlaceholder => 'Prediction functionality coming soon!';
 
   @override
   String get sendMessage => 'Send';
@@ -122,7 +122,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSendingMessage => 'Error sending message';
 
   @override
-  String get healthDisclaimer => 'This is general information, not medical advice. Consult a doctor for professional guidance.';
+  String get healthDisclaimer => 'This is general information, not medical advice. Please consult a doctor for professional advice.';
 
   @override
   String get relativesScreenTitle => 'Relatives';
@@ -146,7 +146,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get relationshipLabel => 'Relationship';
 
   @override
-  String get relationshipHint => 'Select Relationship';
+  String get relationshipHint => 'Select relationship';
 
   @override
   String get relationshipValidation => 'Please select a relationship';
@@ -161,24 +161,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteRelativeConfirmationTitle => 'Confirm Deletion';
 
   @override
-  String relativeDeletedSnackbar(String relativeName) {
-    return 'Relative \'$relativeName\' deleted.';
+  String relativeDeletedSnackbar(Object relativeName) {
+    return 'Deleted relative \'$relativeName\'.';
   }
 
   @override
   String get pleaseLoginRelatives => 'Please login to manage relatives.';
 
   @override
-  String get noRelativesYet => 'No relatives added yet.';
+  String get noRelativesYet => 'No relatives yet.';
 
   @override
-  String get addFirstRelativeHint => 'Tap the + button above to add your first relative.';
+  String get addFirstRelativeHint => 'Press the + button above to add your first relative.';
 
   @override
   String get addRelativeEmptyButton => 'Add Relative';
 
   @override
-  String deleteRelativeTooltip(String relativeName) {
+  String deleteRelativeTooltip(Object relativeName) {
     return 'Delete $relativeName';
   }
 
@@ -195,7 +195,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get relativeUpdatedError => 'Failed to update relative.';
 
   @override
-  String editRelativeTooltip(String relativeName) {
+  String editRelativeTooltip(Object relativeName) {
     return 'Edit $relativeName';
   }
 
@@ -251,9 +251,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionNetwork => 'Network';
 
   @override
-  String get sectionNotifications => 'Notifications';
-
-  @override
   String get noDeviceConnected => 'No Device Connected';
 
   @override
@@ -266,13 +263,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeForgetDevice => 'Change / Forget Device';
 
   @override
-  String get connectDeviceFirstSnackbar => 'Connect to device first.';
+  String get connectDeviceFirstSnackbar => 'Please connect to a device first.';
 
   @override
   String get noEmail => 'No Email';
 
   @override
-  String welcomeUser(String userName) {
+  String welcomeUser(Object userName) {
     return 'Welcome, $userName!';
   }
 
@@ -307,7 +304,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get testNotificationButton => 'Test Notification';
 
   @override
-  String get testNotificationSent => 'Sent test notification! Check system tray.';
+  String get testNotificationSent => 'Test notification sent! Check system.';
 
   @override
   String get goalProgressTitle => 'Daily Goal Progress';
@@ -319,7 +316,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepsCalculating => 'Calculating steps...';
 
   @override
-  String stepsProgress(String steps, String goal) {
+  String stepsProgress(Object steps, Object goal) {
     return 'Steps: $steps / $goal';
   }
 
@@ -339,10 +336,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepsLabel => 'Steps';
 
   @override
-  String get lastUpdatedPrefix => 'Last updated:';
+  String get lastUpdatedPrefix => 'Updated:';
 
   @override
-  String get waitingForData => 'Connected. Waiting for first data packet...';
+  String get waitingForData => 'Connected. Waiting for data...';
 
   @override
   String get connectingStatus => 'Connecting...';
@@ -369,18 +366,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartCouldNotLoad => 'Could not load history';
 
   @override
-  String get chartNoDataPeriod => 'No history data available for the selected period.';
+  String get chartNoDataPeriod => 'No history data for this period.';
 
   @override
   String get chartNoValidHr => 'No valid heart rate data found in this period.';
 
   @override
-  String chartNoValidSpo2(int minSpo2) {
+  String chartNoValidSpo2(Object minSpo2) {
     return 'No valid SpO₂ data (>= $minSpo2%) found in this period.';
   }
 
   @override
-  String get chartNoStepsCalculated => 'No step data calculated for the selected period.';
+  String get chartNoStepsCalculated => 'No step data calculated for this period.';
 
   @override
   String get emailLabel => 'Email';
@@ -404,10 +401,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signUpPrompt => 'Don\'t have an account? Sign Up';
 
   @override
-  String get forgotPasswordPrompt => 'Forgot Password?';
+  String get forgotPasswordPrompt => 'Forgot password?';
 
   @override
-  String loginFailedError(String errorDetails) {
+  String loginFailedError(Object errorDetails) {
     return 'Login Failed: $errorDetails';
   }
 
@@ -445,23 +442,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendResetEmailButton => 'Send Reset Email';
 
   @override
-  String resetEmailSentSuccess(String email) {
+  String resetEmailSentSuccess(Object email) {
     return 'Password reset email sent to $email. Please check your inbox (and spam folder).';
   }
 
   @override
-  String resetEmailSentError(String errorDetails) {
+  String resetEmailSentError(Object errorDetails) {
     return 'Failed to send reset email: $errorDetails';
   }
 
   @override
-  String get wifiConfigInstruction => 'Enter the WiFi network details for your ESP32 device.';
+  String get wifiConfigInstruction => 'Enter the WiFi network information for your ESP32 device.';
 
   @override
   String get wifiSsidLabel => 'WiFi Network Name (SSID)';
 
   @override
-  String get wifiSsidHint => 'e.g., MyHomeWiFi';
+  String get wifiSsidHint => 'E.g. MyHomeWiFi';
 
   @override
   String get wifiSsidValidation => 'Please enter the WiFi network name';
@@ -470,7 +467,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wifiPasswordLabel => 'WiFi Password';
 
   @override
-  String get wifiPasswordValidationLength => 'Password should be at least 8 characters';
+  String get wifiPasswordValidationLength => 'Password needs at least 8 characters';
 
   @override
   String get wifiOpenNetworkCheckbox => 'This is an open network (no password)';
@@ -479,7 +476,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendWifiConfigButton => 'Send Configuration';
 
   @override
-  String get deviceNotConnectedToSend => 'Device must be connected to send configuration.';
+  String get deviceNotConnectedToSend => 'Device needs to be connected to send configuration.';
 
   @override
   String get wifiConfigSentSuccess => 'WiFi configuration sent!';
@@ -488,10 +485,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wifiConfigSentError => 'Failed to send configuration.';
 
   @override
-  String get wifiConfigDeviceNotConnectedError => 'Device not connected. Please connect first.';
-
-  @override
-  String get scanDevicesButton => 'Scan for Devices';
+  String get scanDevicesButton => 'Scan Devices';
 
   @override
   String get stopScanButton => 'Stop Scan';
@@ -506,19 +500,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanningStatus => 'Scanning for devices...';
 
   @override
-  String get statusDisconnectedScan => 'Disconnected. Tap scan.';
+  String get statusDisconnectedScan => 'Disconnected. Tap to scan.';
 
   @override
   String get statusConnecting => 'Connecting...';
 
   @override
-  String get statusSettingUp => 'Setting up...';
+  String get statusSettingUp => 'Setting up device...';
 
   @override
   String get statusConnected => 'Connected!';
 
   @override
-  String get statusErrorPermissions => 'Error. Check permissions/BT.';
+  String get statusErrorPermissions => 'Error. Check Permissions/Bluetooth.';
 
   @override
   String get statusUnknown => 'Unknown';
@@ -527,7 +521,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDevicesFound => 'No devices found.';
 
   @override
-  String get ensureDeviceNearby => 'Ensure your device is powered on and nearby.';
+  String get ensureDeviceNearby => 'Ensure your device is turned on and nearby.';
 
   @override
   String get pullToScan => 'Pull down to scan again.';
@@ -545,27 +539,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectButton => 'Connect';
 
   @override
-  String get connectingStatusDevice => 'Connecting...';
-
-  @override
   String get enableBluetoothPrompt => 'Please enable Bluetooth to scan for devices.';
 
   @override
-  String get permissionRequiredPrompt => 'Bluetooth and Location permissions are required to find nearby devices. Please grant permissions in app settings.';
+  String get permissionRequiredPrompt => 'Location and Bluetooth permissions are required to find nearby devices. Please grant permissions in app settings.';
 
   @override
-  String get permissionDeniedSnackbar => 'Required permissions were denied. Please grant permissions in settings.';
+  String get permissionDeniedSnackbar => 'Required permissions denied. Please grant in settings.';
 
   @override
   String get connectionFailedTitle => 'Connection Failed';
 
   @override
-  String connectionFailedMessage(String deviceName) {
-    return 'Failed to connect to $deviceName. Please ensure it\'s nearby and try again.';
+  String connectionFailedMessage(Object deviceName) {
+    return 'Could not connect to $deviceName. Please ensure the device is nearby and try again.';
   }
 
   @override
-  String get connectionFailedSnackbar => 'Failed to connect to the device. Please try again.';
+  String get connectionFailedSnackbar => 'Failed to connect to device. Please try again.';
 
   @override
   String get connectionTimeout => 'Connection timed out. Please try again.';
@@ -595,10 +586,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepsUnit => 'steps';
 
   @override
-  String get goalAchievedMessage => 'Goal Achieved! Great job! 🎉';
+  String get goalAchievedMessage => 'Goal Achieved! Well done! 🎉';
 
   @override
-  String goalRemainingMessage(String remainingSteps) {
+  String goalRemainingMessage(Object remainingSteps) {
     return '$remainingSteps steps remaining';
   }
 
@@ -606,7 +597,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setGoalDialogTitle => 'Set Daily Step Goal';
 
   @override
-  String get newGoalLabel => 'New Goal (e.g., 10000)';
+  String get newGoalLabel => 'New Goal (E.g. 10000)';
 
   @override
   String get pleaseEnterNumber => 'Please enter a number';
@@ -639,6 +630,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calculatingStepsStatus => 'Calculating steps...';
 
   @override
+  String get sectionNotifications => 'Notifications';
+
+  @override
   String get enableHealthAlerts => 'Enable Health Alerts';
 
   @override
@@ -654,35 +648,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationChannelHealthAlertsDesc => 'Notifications for abnormal health readings';
 
   @override
-  String get notificationChannelHrHighName => 'High Heart Rate Alerts';
+  String get notificationChannelHrHighName => 'High Heart Rate Alert';
 
   @override
-  String get notificationChannelHrHighDesc => 'Alerts when heart rate is too high';
+  String get notificationChannelHrHighDesc => 'Alerts for excessively high heart rate';
 
   @override
-  String get notificationChannelHrLowName => 'Low Heart Rate Alerts';
+  String get notificationChannelHrLowName => 'Low Heart Rate Alert';
 
   @override
-  String get notificationChannelHrLowDesc => 'Alerts when heart rate is too low';
+  String get notificationChannelHrLowDesc => 'Alerts for excessively low heart rate';
 
   @override
-  String get notificationChannelSpo2LowName => 'Low SpO2 Alerts';
+  String get notificationChannelSpo2LowName => 'Low SpO2 Alert';
 
   @override
-  String get notificationChannelSpo2LowDesc => 'Alerts when SpO2 level is too low';
+  String get notificationChannelSpo2LowDesc => 'Alerts for excessively low SpO2 levels';
 
   @override
   String get notificationChannelTestName => 'Test Notifications';
 
   @override
-  String get notificationChannelTestDesc => 'Channel for testing notifications manually';
+  String get notificationChannelTestDesc => 'Channel for manual test notifications';
 
   @override
   String get alertHrHighTitle => 'High Heart Rate Alert!';
 
   @override
   String alertHrHighBody(Object hrValue, Object threshold) {
-    return 'Current heart rate is $hrValue bpm, above threshold $threshold bpm.';
+    return 'Current heart rate is $hrValue bpm, which is above the threshold of $threshold bpm.';
   }
 
   @override
@@ -693,7 +687,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String alertHrLowBody(Object hrValue, Object threshold) {
-    return 'Current heart rate is $hrValue bpm, below threshold $threshold bpm.';
+    return 'Current heart rate is $hrValue bpm, which is below the threshold of $threshold bpm.';
   }
 
   @override
@@ -704,7 +698,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String alertSpo2LowBody(Object spo2Value, Object threshold) {
-    return 'Current SpO2 is $spo2Value%, below threshold $threshold%.';
+    return 'Current SpO2 is $spo2Value%, which is below the threshold of $threshold%.';
   }
 
   @override
@@ -714,7 +708,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginWelcomeTitle => 'Welcome Back!';
 
   @override
-  String get loginSubtitle => 'Sign in to continue';
+  String get loginSubtitle => 'Login to continue';
 
   @override
   String get orDividerText => 'OR';
@@ -723,7 +717,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noAccountPrompt => 'Don\'t have an account?';
 
   @override
-  String get signUpLinkText => 'Sign Up Now';
+  String get signUpLinkText => 'Sign up now';
 
   @override
   String get temperatureLabel => 'Temperature';
@@ -738,31 +732,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pressureUnitHpa => 'hPa';
 
   @override
+  String get connectingStatusDevice => 'Connecting...';
+
+  @override
   String get currentActivityTitle => 'Current Activity';
 
   @override
   String get activityInitializing => 'Initializing...';
-
-  @override
-  String get activityUnknown => 'Unknown Activity';
-
-  @override
-  String get activityError => 'Activity Error';
-
-  @override
-  String get activityLying => 'Lying';
-
-  @override
-  String get activitySitting => 'Sitting';
-
-  @override
-  String get activityStanding => 'Standing';
-
-  @override
-  String get activityWalking => 'Walking';
-
-  @override
-  String get activityRunning => 'Running';
 
   @override
   String get activityCycling => 'Cycling';
@@ -792,10 +768,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get samplesRecordedLabel => 'Samples Recorded:';
 
   @override
-  String get viewRecordedDataHint => 'Recorded data path (info)';
+  String get viewRecordedDataHint => 'Recorded data path (tap to copy)';
 
   @override
-  String get pathCopiedSnackbar => 'Path information shown in console.';
+  String pathCopiedSnackbar(String filePath) {
+    return 'Path copied (simulated): $filePath';
+  }
 
   @override
   String get statusReconnecting => 'Reconnecting...';
@@ -804,10 +782,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reconnectingTooltip => 'Attempting to reconnect...';
 
   @override
-  String get reconnectAttemptTitle => 'Reconnect Attempt';
+  String get reconnectAttemptTitle => 'Reconnecting to Device';
 
   @override
-  String get reconnectAttemptBody => 'Trying to reconnect to your device...';
+  String get reconnectAttemptBody => 'Attempting to reconnect to your device...';
 
   @override
   String get reconnectSuccessTitle => 'Reconnect Successful';
@@ -820,23 +798,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String reconnectFailedBody(Object attempts) {
-    return 'Failed to reconnect to device after $attempts attempts.';
+    return 'Could not reconnect to device after $attempts attempts.';
   }
 
   @override
   String get bleReconnectChannelName => 'BLE Reconnect';
 
   @override
-  String get activityWarningTitle => 'Activity Warning';
+  String get activityWarningTitle => 'Activity Alert';
 
   @override
   String get prolongedSittingWarningTitle => 'Prolonged Sitting Alert';
 
   @override
-  String get prolongedLyingWarningTitle => 'Prolonged Lying (Daytime) Alert';
+  String get prolongedLyingWarningTitle => 'Prolonged Lying Alert (Daytime)';
 
   @override
-  String get smartReminderTitle => 'Smart Reminder to Move';
+  String get smartReminderTitle => 'Smart Movement Reminder';
 
   @override
   String get positiveFeedbackTitle => 'Great Job!';
@@ -845,7 +823,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityAlertsChannelName => 'Activity Alerts';
 
   @override
-  String get activityAlertsChannelDescription => 'Notifications for activity-related alerts';
+  String get activityAlertsChannelDescription => 'Notifications related to activity alerts';
 
   @override
   String get sittingAlertsChannelName => 'Sitting Time Alerts';
@@ -863,7 +841,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tryAgain => 'Try Again';
 
   @override
-  String get errorLoadingData => 'Failed to load device data. Please try again.';
+  String get errorLoadingData => 'Could not load device data. Please try again.';
 
   @override
   String get bluetoothRequestTitle => 'Enable Bluetooth';
@@ -873,4 +851,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get turnOn => 'Turn On';
+
+  @override
+  String get recordScreenInitialStatus => 'Select an activity and press Start.';
+
+  @override
+  String get recordScreenSelectActivityFirst => 'Please select an activity before starting.';
+
+  @override
+  String get recordScreenAlreadyRecording => 'Recording is already in progress.';
+
+  @override
+  String get permissionDeniedStorage => 'Storage permission denied. Cannot record data.';
+
+  @override
+  String errorGettingPath(String error) {
+    return 'Error getting file path: $error';
+  }
+
+  @override
+  String recordScreenRecordingTo(String filePath) {
+    return 'Recording to:\n$filePath';
+  }
+
+  @override
+  String recordScreenSamplesRecorded(String activityName, String count) {
+    return 'Recording $activityName: $count samples (saved).';
+  }
+
+  @override
+  String recordScreenStreamError(String error) {
+    return 'Error on data stream: $error. Recording stopped.';
+  }
+
+  @override
+  String get recordScreenStreamEnded => 'Data stream ended. Recording stopped.';
+
+  @override
+  String recordScreenStartError(String error) {
+    return 'Error starting recording: $error';
+  }
+
+  @override
+  String recordScreenStopMessage(String count, String filePath) {
+    return 'Recording stopped. $count samples recorded to:\n$filePath';
+  }
+
+  @override
+  String get recordScreenSelectActivityValidation => 'Please select an activity.';
+
+  @override
+  String get copyFilePathButton => 'Copy File Path';
+
+  @override
+  String filePathCopiedSuccess(String filePath) {
+    return 'File path copied: $filePath';
+  }
+
+  @override
+  String get wifiConfigDeviceNotConnectedError => 'Device not connected. Please connect to the wearable first.';
+
+  @override
+  String get activityStanding => 'Standing';
+
+  @override
+  String get activityLying => 'Lying';
+
+  @override
+  String get activitySitting => 'Sitting';
+
+  @override
+  String get activityWalking => 'Walking';
+
+  @override
+  String get activityRunning => 'Running';
+
+  @override
+  String get activityUnknown => 'Unknown Activity';
+
+  @override
+  String get activityError => 'Activity Error';
 }

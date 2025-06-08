@@ -37,9 +37,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadDashboardStepGoal();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         print("[DashboardScreen] Starting initialization...");
+
+        // 1. Lắng nghe DashboardProvider để tính toán lại số bước
         final dashboardProvider =
             Provider.of<DashboardProvider>(context, listen: false);
         _dashboardListener = () {
@@ -48,43 +50,20 @@ class _DashboardScreenState extends State<DashboardScreen>
         dashboardProvider.addListener(_dashboardListener!);
         print("[DashboardScreen] Added dashboard listener.");
 
-        try {
-          if (dashboardProvider.historyStatus == HistoryStatus.initial) {
-            print("[DashboardScreen] Fetching health history...");
-            await dashboardProvider.fetchHealthHistory().timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                print("[DashboardScreen] fetchHealthHistory timed out.");
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            AppLocalizations.of(context)!.errorLoadingData)),
-                  );
-                }
-              },
-            );
-          } else {
-            print("[DashboardScreen] Calculating steps immediately.");
-            _calculateTodaySteps(dashboardProvider);
-          }
+        // Ban đầu, tính toán số bước với dữ liệu hiện có (nếu có)
+        _calculateTodaySteps(dashboardProvider);
 
-          final bleProvider = Provider.of<BleProvider>(context, listen: false);
-          bleProvider.connectionStatus
-              .addListener(_handleConnectionChangeForRefresh);
-          _activityServiceRef =
-              Provider.of<ActivityRecognitionService>(context, listen: false);
-          if (_activityServiceRef != null && mounted) setState(() {});
-        } catch (e) {
-          print("[DashboardScreen] Initialization error: $e");
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content:
-                      Text(AppLocalizations.of(context)!.errorLoadingData)),
-            );
-          }
-        }
+        // 2. Lắng nghe thay đổi kết nối BLE
+        final bleProvider = Provider.of<BleProvider>(context, listen: false);
+        bleProvider.connectionStatus
+            .addListener(_handleConnectionChangeForRefresh);
+
+        // 3. Lấy tham chiếu đến ActivityService
+        _activityServiceRef =
+            Provider.of<ActivityRecognitionService>(context, listen: false);
+        // Gọi setState để build lại UI nếu cần hiển thị gì đó từ activity service
+        if (_activityServiceRef != null) setState(() {});
+
         print("[DashboardScreen] Initialization completed.");
       }
     });

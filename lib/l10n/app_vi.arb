@@ -25,7 +25,7 @@
   "relativeAddedSuccess": "Đã thêm người thân thành công!",
   "relativeAddedError": "Thêm người thân thất bại.",
   "relativeDeletedSuccess": "Đã xóa người thân.",
-  "relativeDeletedError": "Xóa người thân thất bại." ,
+  "relativeDeletedError": "Xóa người thân thất bại.",
   "confirmLogoutTitle": "Xác nhận Đăng xuất",
   "confirmLogoutMessage": "Bạn có chắc chắn muốn đăng xuất?",
   "confirm": "Đồng ý",
@@ -78,14 +78,12 @@
   "relationOther": "Khác",
   "sectionDeviceManagement": "Quản lý Thiết bị",
   "sectionNetwork": "Mạng",
-  "sectionNotifications": "Thông báo",
   "noDeviceConnected": "Chưa kết nối Thiết bị",
   "connectPrompt": "Kết nối qua \"Đổi Thiết bị\"",
   "disconnectButton": "Ngắt kết nối",
   "changeForgetDevice": "Đổi / Quên Thiết bị",
   "connectDeviceFirstSnackbar": "Vui lòng kết nối thiết bị trước.",
   "noEmail": "Không có Email",
-   "dashboardTitle": "Bảng điều khiển",
   "welcomeUser": "Chào mừng, {userName}!",
   "defaultUser": "Người dùng",
   "bleStatusConnected": "BLE: Đã kết nối",
@@ -154,8 +152,6 @@
   "deviceNotConnectedToSend": "Cần kết nối thiết bị để gửi cấu hình.",
   "wifiConfigSentSuccess": "Đã gửi cấu hình WiFi!",
   "wifiConfigSentError": "Gửi cấu hình thất bại.",
-  "wifiConfigDeviceNotConnectedError": "Thiết bị chưa kết nối. Vui lòng kết nối trước.",
-  "selectDeviceTitle": "Chọn Thiết bị",
   "scanDevicesButton": "Quét Thiết bị",
   "stopScanButton": "Dừng Quét",
   "scanningTooltip": "Đang quét...",
@@ -174,7 +170,6 @@
   "unknownDeviceName": "Thiết bị không rõ",
   "deviceIdPrefix": "ID:",
   "connectButton": "Kết nối",
-  "connectingStatusDevice": "Đang kết nối...",
   "enableBluetoothPrompt": "Vui lòng bật Bluetooth để quét thiết bị.",
   "permissionRequiredPrompt": "Cần cấp quyền Vị trí và Bluetooth để tìm thiết bị xung quanh. Vui lòng cấp quyền trong cài đặt ứng dụng.",
   "permissionDeniedSnackbar": "Các quyền cần thiết bị từ chối. Vui lòng cấp quyền trong cài đặt.",
@@ -187,7 +182,6 @@
   "bluetoothRequiredMessage": "Ứng dụng này yêu cầu bật Bluetooth để quét thiết bị.",
   "turnOnButton": "Bật",
   "enableBluetoothIOS": "Vui lòng bật Bluetooth trong cài đặt hệ thống.",
-  "goalsTitle": "Mục tiêu",
   "dailyStepGoalCardTitle": "Mục tiêu Bước chân Ngày",
   "setNewGoalTooltip": "Đặt Mục tiêu Mới",
   "stepsUnit": "bước",
@@ -205,7 +199,7 @@
   "activityTimeGoalTitle": "Mục tiêu Thời gian Hoạt động",
   "activityTimeGoalProgress": "Tiến độ: ... / ... phút",
   "calculatingStepsStatus": "Đang tính số bước...",
-   "sectionNotifications": "Thông báo",
+  "sectionNotifications": "Thông báo",
   "enableHealthAlerts": "Bật Cảnh báo Sức khỏe",
   "receiveAbnormalNotifications": "Nhận thông báo khi chỉ số bất thường",
   "loadingMessage": "Đang tải...",
@@ -253,41 +247,13 @@
   "tempUnit": "°C",
   "pressureUnitHpa": "hPa",
   "connectingStatusDevice": "Đang kết nối...",
-    "currentActivityTitle": "Hoạt động Hiện tại",
+  "currentActivityTitle": "Hoạt động Hiện tại",
   "@currentActivityTitle": {
     "description": "Tiêu đề cho mục hiển thị hoạt động hiện tại của người dùng."
   },
   "activityInitializing": "Đang khởi tạo...",
   "@activityInitializing": {
     "description": "Chữ hiển thị khi nhận dạng hoạt động đang khởi động hoặc chờ dữ liệu đầu tiên."
-  },
-  "activityUnknown": "Hoạt động Không rõ",
-  "@activityUnknown": {
-    "description": "Chữ hiển thị khi không thể xác định hoạt động hiện tại hoặc không phải là một trong các loại được nhận dạng."
-  },
-  "activityError": "Lỗi Hoạt động",
-  "@activityError": {
-    "description": "Chữ hiển thị nếu có lỗi trong luồng nhận dạng hoạt động."
-  },
-  "activityLying": "Nằm",
-  "@activityLying": {
-    "description": "Tên cho hoạt động 'Nằm'."
-  },
-  "activitySitting": "Ngồi",
-  "@activitySitting": {
-    "description": "Tên cho hoạt động 'Ngồi'."
-  },
-  "activityStanding": "Đứng",
-  "@activityStanding": {
-    "description": "Tên cho hoạt động 'Đứng'."
-  },
-  "activityWalking": "Đi bộ",
-  "@activityWalking": {
-    "description": "Tên cho hoạt động 'Đi bộ'."
-  },
-  "activityRunning": "Chạy",
-  "@activityRunning": {
-    "description": "Tên cho hoạt động 'Chạy'."
   },
   "activityCycling": "Đạp xe",
   "@activityCycling": {
@@ -301,7 +267,7 @@
   "@activityDescendingStairs": {
     "description": "Tên cho hoạt động 'Xuống cầu thang'."
   },
-    "recordActivityTitle": "Ghi Dữ liệu Hoạt động",
+  "recordActivityTitle": "Ghi Dữ liệu Hoạt động",
   "@recordActivityTitle": {
     "description": "Tiêu đề cho màn hình ghi dữ liệu hoạt động"
   },
@@ -325,13 +291,18 @@
   "@samplesRecordedLabel": {
     "description": "Nhãn cho số lượng mẫu dữ liệu đã được ghi lại"
   },
-  "viewRecordedDataHint": "Đường dẫn dữ liệu đã ghi (thông tin)",
+  "viewRecordedDataHint": "Đường dẫn dữ liệu đã ghi (nhấn để sao chép)",
   "@viewRecordedDataHint": {
     "description": "Chữ gợi ý hiển thị nơi dữ liệu được/đã được lưu"
   },
-  "pathCopiedSnackbar": "Thông tin đường dẫn hiển thị trong console.",
+  "pathCopiedSnackbar": "Đã sao chép đường dẫn (mô phỏng): {filePath}",
   "@pathCopiedSnackbar": {
-    "description": "Thông báo snackbar sau khi nhấn vào gợi ý đường dẫn dữ liệu"
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
   },
   "statusReconnecting": "Đang kết nối lại...",
   "@statusReconnecting": {
@@ -341,7 +312,7 @@
   "@reconnectingTooltip": {
     "description": "Chữ hiển thị trong tooltip của nút quét khi đang kết nối lại"
   },
-  "reconnectAttemptTitle": "Đang kết nối lại với thiết bị",
+  "reconnectAttemptTitle": "Đang Thử Kết Nối Lại",
   "reconnectAttemptBody": "Đang cố gắng kết nối lại với thiết bị của bạn...",
   "reconnectSuccessTitle": "Kết nối lại thành công",
   "reconnectSuccessBody": "Đã kết nối lại thành công với thiết bị của bạn.",
@@ -350,27 +321,114 @@
   "@reconnectFailedBody": {
     "placeholders": {
       "attempts": {
-        "type": "Object"
+        "type": "Object" 
       }
     }
   },
   "bleReconnectChannelName": "Kết nối lại BLE",
   "activityWarningTitle": "Cảnh báo Hoạt động",
-"prolongedSittingWarningTitle": "Cảnh báo Ngồi Lâu",
-"prolongedLyingWarningTitle": "Cảnh báo Nằm Lâu (Ban Ngày)",
-"smartReminderTitle": "Nhắc nhở Vận động Thông minh",
-"positiveFeedbackTitle": "Làm tốt lắm!",
-"activityAlertsChannelName": "Cảnh báo Hoạt động",
-"activityAlertsChannelDescription": "Thông báo liên quan đến cảnh báo hoạt động",
-"sittingAlertsChannelName": "Cảnh báo Thời gian Ngồi",
-"lyingAlertsChannelName": "Cảnh báo Thời gian Nằm",
-"smartReminderChannelName": "Nhắc nhở Vận động Thông minh",
-"positiveFeedbackChannelName": "Phản hồi Tích cực",
-"tryAgain": "Thử lại",
-"reconnectAttemptTitle": "Đang Thử Kết Nối Lại",
-"reconnectAttemptBody": "Đang cố gắng kết nối lại với thiết bị của bạn...",
-"errorLoadingData": "Không thể tải dữ liệu thiết bị. Vui lòng thử lại.",
-"bluetoothRequestTitle": "Bật Bluetooth",
+  "prolongedSittingWarningTitle": "Cảnh báo Ngồi Lâu",
+  "prolongedLyingWarningTitle": "Cảnh báo Nằm Lâu (Ban Ngày)",
+  "smartReminderTitle": "Nhắc nhở Vận động Thông minh",
+  "positiveFeedbackTitle": "Làm tốt lắm!",
+  "activityAlertsChannelName": "Cảnh báo Hoạt động",
+  "activityAlertsChannelDescription": "Thông báo liên quan đến cảnh báo hoạt động",
+  "sittingAlertsChannelName": "Cảnh báo Thời gian Ngồi",
+  "lyingAlertsChannelName": "Cảnh báo Thời gian Nằm",
+  "smartReminderChannelName": "Nhắc nhở Vận động Thông minh",
+  "positiveFeedbackChannelName": "Phản hồi Tích cực",
+  "tryAgain": "Thử lại",
+  "errorLoadingData": "Không thể tải dữ liệu thiết bị. Vui lòng thử lại.",
+  "bluetoothRequestTitle": "Bật Bluetooth",
   "bluetoothRequestMessage": "Vui lòng bật Bluetooth để quét thiết bị.",
-  "turnOn": "Bật"
+  "turnOn": "Bật",
+  "recordScreenInitialStatus": "Chọn một hoạt động và nhấn Bắt đầu.",
+  "recordScreenSelectActivityFirst": "Vui lòng chọn một hoạt động trước khi bắt đầu.",
+  "recordScreenAlreadyRecording": "Quá trình ghi đang được thực hiện.",
+  "permissionDeniedStorage": "Quyền truy cập bộ nhớ bị từ chối. Không thể ghi dữ liệu.",
+  "errorGettingPath": "Lỗi khi lấy đường dẫn tệp: {error}",
+  "@errorGettingPath": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Permission denied"
+      }
+    }
+  },
+  "recordScreenRecordingTo": "Đang ghi vào:\n{filePath}",
+  "@recordScreenRecordingTo": {
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "recordScreenSamplesRecorded": "Đang ghi {activityName}: {count} mẫu (đã lưu).",
+  "@recordScreenSamplesRecorded": {
+    "placeholders": {
+      "activityName": {
+        "type": "String",
+        "example": "Đi bộ"
+      },
+      "count": {
+        "type": "String",
+        "example": "100"
+      }
+    }
+  },
+  "recordScreenStreamError": "Lỗi trên luồng dữ liệu: {error}. Đã dừng ghi.",
+  "@recordScreenStreamError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Connection lost"
+      }
+    }
+  },
+  "recordScreenStreamEnded": "Luồng dữ liệu đã kết thúc. Đã dừng ghi.",
+  "recordScreenStartError": "Lỗi khi bắt đầu ghi: {error}",
+  "@recordScreenStartError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "File system error"
+      }
+    }
+  },
+  "recordScreenStopMessage": "Đã dừng ghi. {count} mẫu được ghi vào:\n{filePath}",
+  "@recordScreenStopMessage": {
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "500"
+      },
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "recordScreenSelectActivityValidation": "Vui lòng chọn một hoạt động.",
+  "copyFilePathButton": "Sao chép Đường dẫn Tệp",
+  "filePathCopiedSuccess": "Đã sao chép đường dẫn tệp: {filePath}",
+  "@filePathCopiedSuccess": {
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "wifiConfigDeviceNotConnectedError": "Thiết bị chưa được kết nối. Vui lòng kết nối với thiết bị đeo trước.",
+  "activityStanding": "Đứng",
+  "activityLying": "Nằm",
+  "activitySitting": "Ngồi",
+  "activityWalking": "Đi bộ",
+  "activityRunning": "Chạy",
+  "activityUnknown": "Hoạt động không xác định",
+   "activityError": "Lỗi Hoạt động",
+  "@activityError": {
+    "description": "Chữ hiển thị nếu có lỗi trong luồng nhận dạng hoạt động."
+  }
 }

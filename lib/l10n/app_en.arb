@@ -1,15 +1,12 @@
 {
   "@@locale": "en",
   "appTitle": "Smart Wearable App",
-  "@appTitle": {
-    "description": "The title of the application"
-  },
   "settingsTitle": "Settings",
   "dashboardTitle": "Dashboard",
   "relativesTitle": "Relatives",
   "goalsTitle": "Goals",
   "loginTitle": "Login",
-  "selectDeviceTitle": "Select Your Device",
+  "selectDeviceTitle": "Select Device",
   "configureWifiTitle": "Configure Device WiFi",
   "language": "Language",
   "appearance": "Appearance",
@@ -26,37 +23,27 @@
   "confirmDeletion": "Confirm Deletion",
   "confirmDeleteRelative": "Are you sure you want to delete {relativeName} ({relativeRelationship})?",
   "@confirmDeleteRelative": {
-     "description": "Confirmation message for deleting a relative.",
-     "placeholders": {
-        "relativeName": { "type": "String", "example": "John Doe"},
-        "relativeRelationship": { "type": "String", "example": "Father" }
-     }
+    "placeholders": {
+      "relativeName": {},
+      "relativeRelationship": {}
+    }
   },
   "relativeAddedSuccess": "Relative added successfully!",
   "relativeAddedError": "Failed to add relative.",
   "relativeDeletedSuccess": "Relative deleted.",
   "relativeDeletedError": "Failed to delete relative.",
   "confirmLogoutTitle": "Confirm Logout",
-  "@confirmLogoutTitle": {
-    "description": "Title for logout confirmation dialog."
-  },
-  "confirmLogoutMessage": "Are you sure you want to log out?",
-  "@confirmLogoutMessage": {
-    "description": "Confirmation message shown when the user wants to log out."
-  },
+  "confirmLogoutMessage": "Are you sure you want to logout?",
   "confirm": "Confirm",
-  "@confirm": {
-    "description": "Label for confirm butto n in dialogs."
-  },
-  "chatbotTitle": "Chatbot",
+  "chatbotTitle": "Chat with AI",
   "predictTitle": "Predict",
   "connectDevice": "Connect Device",
-  "predictPlaceholder": "Prediction functionality is under development!",
+  "predictPlaceholder": "Prediction functionality coming soon!",
   "sendMessage": "Send",
   "enterMessage": "Enter your message or question",
   "imageUrlLabel": "Enter image URL (optional)",
   "errorSendingMessage": "Error sending message",
-  "healthDisclaimer": "This is general information, not medical advice. Consult a doctor for professional guidance.",
+  "healthDisclaimer": "This is general information, not medical advice. Please consult a doctor for professional advice.",
   "relativesScreenTitle": "Relatives",
   "addRelativeTooltip": "Add Relative",
   "addRelativeDialogTitle": "Add New Relative",
@@ -64,27 +51,25 @@
   "relativeNameHint": "Enter relative's full name",
   "relativeNameValidation": "Please enter a name",
   "relationshipLabel": "Relationship",
-  "relationshipHint": "Select Relationship",
+  "relationshipHint": "Select relationship",
   "relationshipValidation": "Please select a relationship",
   "addRelativeButton": "Add Relative",
   "deleteButton": "Delete",
   "deleteRelativeConfirmationTitle": "Confirm Deletion",
-  "relativeDeletedSnackbar": "Relative '{relativeName}' deleted.",
+  "relativeDeletedSnackbar": "Deleted relative '{relativeName}'.",
   "@relativeDeletedSnackbar": {
-    "description": "Snackbar message shown after successfully deleting a relative.",
     "placeholders": {
-      "relativeName": { "type": "String", "example": "Jane Doe" }
+      "relativeName": {}
     }
   },
   "pleaseLoginRelatives": "Please login to manage relatives.",
-  "noRelativesYet": "No relatives added yet.",
-  "addFirstRelativeHint": "Tap the + button above to add your first relative.",
+  "noRelativesYet": "No relatives yet.",
+  "addFirstRelativeHint": "Press the + button above to add your first relative.",
   "addRelativeEmptyButton": "Add Relative",
   "deleteRelativeTooltip": "Delete {relativeName}",
-   "@deleteRelativeTooltip": {
-    "description": "Tooltip for the delete icon next to a relative's name.",
+  "@deleteRelativeTooltip": {
     "placeholders": {
-      "relativeName": { "type": "String", "example": "John Doe" }
+      "relativeName": {}
     }
   },
   "editRelativeDialogTitle": "Edit Relative",
@@ -93,12 +78,11 @@
   "relativeUpdatedError": "Failed to update relative.",
   "editRelativeTooltip": "Edit {relativeName}",
   "@editRelativeTooltip": {
-    "description": "Tooltip for the edit icon next to a relative's name.",
     "placeholders": {
-      "relativeName": { "type": "String", "example": "John Doe" }
+      "relativeName": {}
     }
   },
-   "relationFather": "Father",
+  "relationFather": "Father",
   "relationMother": "Mother",
   "relationSon": "Son",
   "relationDaughter": "Daughter",
@@ -115,16 +99,18 @@
   "relationOther": "Other",
   "sectionDeviceManagement": "Device Management",
   "sectionNetwork": "Network",
-  "sectionNotifications": "Notifications",
   "noDeviceConnected": "No Device Connected",
   "connectPrompt": "Connect via \"Change Device\"",
   "disconnectButton": "Disconnect",
   "changeForgetDevice": "Change / Forget Device",
-  "connectDeviceFirstSnackbar": "Connect to device first.",
+  "connectDeviceFirstSnackbar": "Please connect to a device first.",
   "noEmail": "No Email",
-  "dashboardTitle": "Dashboard",
   "welcomeUser": "Welcome, {userName}!",
-  "@welcomeUser": { "placeholders": { "userName": { "type": "String", "example": "John" } } },
+  "@welcomeUser": {
+    "placeholders": {
+      "userName": {}
+    }
+  },
   "defaultUser": "User",
   "bleStatusConnected": "BLE: Connected",
   "bleStatusConnecting": "BLE: Connecting",
@@ -135,15 +121,15 @@
   "wifiStatusOn": "WiFi On",
   "wifiStatusOff": "WiFi Off",
   "testNotificationButton": "Test Notification",
-  "testNotificationSent": "Sent test notification! Check system tray.",
+  "testNotificationSent": "Test notification sent! Check system.",
   "goalProgressTitle": "Daily Goal Progress",
   "goalLoading": "Loading goal...",
   "stepsCalculating": "Calculating steps...",
   "stepsProgress": "Steps: {steps} / {goal}",
   "@stepsProgress": {
     "placeholders": {
-      "steps": { "type": "String", "example": "5321" },
-      "goal": { "type": "String", "example": "10000" }
+      "steps": {},
+      "goal": {}
     }
   },
   "errorNavigateGoals": "Could not navigate to Goals screen.",
@@ -151,8 +137,8 @@
   "heartRateLabel": "Heart Rate",
   "spo2Label": "SpO2",
   "stepsLabel": "Steps",
-  "lastUpdatedPrefix": "Last updated:",
-  "waitingForData": "Connected. Waiting for first data packet...",
+  "lastUpdatedPrefix": "Updated:",
+  "waitingForData": "Connected. Waiting for data...",
   "connectingStatus": "Connecting...",
   "connectionErrorStatus": "Connection error.",
   "disconnectedStatus": "Device disconnected.",
@@ -161,14 +147,15 @@
   "stepsHistoryTitle": "Hourly Steps (Last 24h)",
   "chartErrorPrefix": "Error:",
   "chartCouldNotLoad": "Could not load history",
-  "chartNoDataPeriod": "No history data available for the selected period.",
+  "chartNoDataPeriod": "No history data for this period.",
   "chartNoValidHr": "No valid heart rate data found in this period.",
   "chartNoValidSpo2": "No valid SpO₂ data (>= {minSpo2}%) found in this period.",
   "@chartNoValidSpo2": {
-     "description": "Message shown when no valid SpO2 readings are found in the history.",
-     "placeholders": { "minSpo2": { "type": "int", "example": "85" } } 
+    "placeholders": {
+      "minSpo2": {}
+    }
   },
-  "chartNoStepsCalculated": "No step data calculated for the selected period.",
+  "chartNoStepsCalculated": "No step data calculated for this period.",
   "emailLabel": "Email",
   "emailValidation": "Please enter a valid email",
   "passwordLabel": "Password",
@@ -176,10 +163,12 @@
   "signInButton": "Sign In",
   "signInWithGoogleButton": "Sign In with Google",
   "signUpPrompt": "Don't have an account? Sign Up",
-  "forgotPasswordPrompt": "Forgot Password?",
+  "forgotPasswordPrompt": "Forgot password?",
   "loginFailedError": "Login Failed: {errorDetails}",
-   "@loginFailedError": {
-     "placeholders": { "errorDetails": { "type": "String", "example": "Invalid credentials" } }
+  "@loginFailedError": {
+    "placeholders": {
+      "errorDetails": {}
+    }
   },
   "signUpTitle": "Sign Up",
   "displayNameLabel": "Display Name",
@@ -193,65 +182,75 @@
   "enterYourEmailHint": "Enter your account email",
   "sendResetEmailButton": "Send Reset Email",
   "resetEmailSentSuccess": "Password reset email sent to {email}. Please check your inbox (and spam folder).",
-  "@resetEmailSentSuccess": { "placeholders": { "email": { "type": "String" } } },
+  "@resetEmailSentSuccess": {
+    "placeholders": {
+      "email": {}
+    }
+  },
   "resetEmailSentError": "Failed to send reset email: {errorDetails}",
-   "@resetEmailSentError": { "placeholders": { "errorDetails": { "type": "String" } } },
-     "wifiConfigInstruction": "Enter the WiFi network details for your ESP32 device.",
+  "@resetEmailSentError": {
+    "placeholders": {
+      "errorDetails": {}
+    }
+  },
+  "wifiConfigInstruction": "Enter the WiFi network information for your ESP32 device.",
   "wifiSsidLabel": "WiFi Network Name (SSID)",
-  "wifiSsidHint": "e.g., MyHomeWiFi",
+  "wifiSsidHint": "E.g. MyHomeWiFi",
   "wifiSsidValidation": "Please enter the WiFi network name",
   "wifiPasswordLabel": "WiFi Password",
-  "wifiPasswordValidationLength": "Password should be at least 8 characters",
+  "wifiPasswordValidationLength": "Password needs at least 8 characters",
   "wifiOpenNetworkCheckbox": "This is an open network (no password)",
   "sendWifiConfigButton": "Send Configuration",
-  "deviceNotConnectedToSend": "Device must be connected to send configuration.",
+  "deviceNotConnectedToSend": "Device needs to be connected to send configuration.",
   "wifiConfigSentSuccess": "WiFi configuration sent!",
   "wifiConfigSentError": "Failed to send configuration.",
-  "wifiConfigDeviceNotConnectedError": "Device not connected. Please connect first.",
-  "selectDeviceTitle": "Select Your Device",
-  "scanDevicesButton": "Scan for Devices",
+  "scanDevicesButton": "Scan Devices",
   "stopScanButton": "Stop Scan",
   "scanningTooltip": "Scanning...",
   "scanTooltip": "Scan for devices",
   "scanningStatus": "Scanning for devices...",
-  "statusDisconnectedScan": "Disconnected. Tap scan.",
+  "statusDisconnectedScan": "Disconnected. Tap to scan.",
   "statusConnecting": "Connecting...",
-  "statusSettingUp": "Setting up...",
+  "statusSettingUp": "Setting up device...",
   "statusConnected": "Connected!",
-  "statusErrorPermissions": "Error. Check permissions/BT.",
+  "statusErrorPermissions": "Error. Check Permissions/Bluetooth.",
   "statusUnknown": "Unknown",
   "noDevicesFound": "No devices found.",
-  "ensureDeviceNearby": "Ensure your device is powered on and nearby.",
+  "ensureDeviceNearby": "Ensure your device is turned on and nearby.",
   "pullToScan": "Pull down to scan again.",
   "availableDevices": "Available Devices",
   "unknownDeviceName": "Unknown Device",
   "deviceIdPrefix": "ID:",
   "connectButton": "Connect",
-  "connectingStatusDevice": "Connecting...",
   "enableBluetoothPrompt": "Please enable Bluetooth to scan for devices.",
-  "permissionRequiredPrompt": "Bluetooth and Location permissions are required to find nearby devices. Please grant permissions in app settings.",
-  "permissionDeniedSnackbar": "Required permissions were denied. Please grant permissions in settings.",
+  "permissionRequiredPrompt": "Location and Bluetooth permissions are required to find nearby devices. Please grant permissions in app settings.",
+  "permissionDeniedSnackbar": "Required permissions denied. Please grant in settings.",
   "connectionFailedTitle": "Connection Failed",
-  "connectionFailedMessage": "Failed to connect to {deviceName}. Please ensure it's nearby and try again.",
-   "@connectionFailedMessage": { "placeholders": { "deviceName": {"type": "String", "example": "ESP32_SmartWatch"} } },
-  "connectionFailedSnackbar": "Failed to connect to the device. Please try again.",
+  "connectionFailedMessage": "Could not connect to {deviceName}. Please ensure the device is nearby and try again.",
+  "@connectionFailedMessage": {
+    "placeholders": {
+      "deviceName": {}
+    }
+  },
+  "connectionFailedSnackbar": "Failed to connect to device. Please try again.",
   "connectionTimeout": "Connection timed out. Please try again.",
   "deviceDisconnectedUnexpectedly": "Device disconnected unexpectedly.",
   "bluetoothRequiredTitle": "Bluetooth Required",
   "bluetoothRequiredMessage": "This app requires Bluetooth to be enabled to scan for devices.",
   "turnOnButton": "Turn On",
   "enableBluetoothIOS": "Please enable Bluetooth in system settings.",
-  "goalsTitle": "Goals",
   "dailyStepGoalCardTitle": "Daily Step Goal",
   "setNewGoalTooltip": "Set New Goal",
   "stepsUnit": "steps",
-  "goalAchievedMessage": "Goal Achieved! Great job! 🎉",
+  "goalAchievedMessage": "Goal Achieved! Well done! 🎉",
   "goalRemainingMessage": "{remainingSteps} steps remaining",
   "@goalRemainingMessage": {
-    "placeholders": { "remainingSteps": { "type": "String", "example": "1234" } }
+    "placeholders": {
+      "remainingSteps": {}
+    }
   },
   "setGoalDialogTitle": "Set Daily Step Goal",
-  "newGoalLabel": "New Goal (e.g., 10000)",
+  "newGoalLabel": "New Goal (E.g. 10000)",
   "pleaseEnterNumber": "Please enter a number",
   "invalidNumber": "Invalid number",
   "goalGreaterThanZero": "Goal must be > 0",
@@ -268,145 +267,137 @@
   "loadingMessage": "Loading...",
   "notificationChannelHealthAlertsName": "Health Alerts",
   "notificationChannelHealthAlertsDesc": "Notifications for abnormal health readings",
-  "notificationChannelHrHighName": "High Heart Rate Alerts",
-  "notificationChannelHrHighDesc": "Alerts when heart rate is too high",
-  "notificationChannelHrLowName": "Low Heart Rate Alerts",
-  "notificationChannelHrLowDesc": "Alerts when heart rate is too low",
-  "notificationChannelSpo2LowName": "Low SpO2 Alerts",
-  "notificationChannelSpo2LowDesc": "Alerts when SpO2 level is too low",
+  "notificationChannelHrHighName": "High Heart Rate Alert",
+  "notificationChannelHrHighDesc": "Alerts for excessively high heart rate",
+  "notificationChannelHrLowName": "Low Heart Rate Alert",
+  "notificationChannelHrLowDesc": "Alerts for excessively low heart rate",
+  "notificationChannelSpo2LowName": "Low SpO2 Alert",
+  "notificationChannelSpo2LowDesc": "Alerts for excessively low SpO2 levels",
   "notificationChannelTestName": "Test Notifications",
-  "notificationChannelTestDesc": "Channel for testing notifications manually",
+  "notificationChannelTestDesc": "Channel for manual test notifications",
   "alertHrHighTitle": "High Heart Rate Alert!",
-  "alertHrHighBody": "Current heart rate is {hrValue} bpm, above threshold {threshold} bpm.",
-  "@alertHrHighBody": { "placeholders": { "hrValue": {}, "threshold": {} } },
+  "alertHrHighBody": "Current heart rate is {hrValue} bpm, which is above the threshold of {threshold} bpm.",
+  "@alertHrHighBody": {
+    "placeholders": {
+      "hrValue": {},
+      "threshold": {}
+    }
+  },
   "channelNameHrHigh": "High Heart Rate Alerts",
   "alertHrLowTitle": "Low Heart Rate Alert!",
-  "alertHrLowBody": "Current heart rate is {hrValue} bpm, below threshold {threshold} bpm.",
-  "@alertHrLowBody": { "placeholders": { "hrValue": {}, "threshold": {} } },
+  "alertHrLowBody": "Current heart rate is {hrValue} bpm, which is below the threshold of {threshold} bpm.",
+  "@alertHrLowBody": {
+    "placeholders": {
+      "hrValue": {},
+      "threshold": {}
+    }
+  },
   "channelNameHrLow": "Low Heart Rate Alerts",
   "alertSpo2LowTitle": "Low SpO2 Alert!",
-  "alertSpo2LowBody": "Current SpO2 is {spo2Value}%, below threshold {threshold}%.",
-  "@alertSpo2LowBody": { "placeholders": { "spo2Value": {}, "threshold": {} } },
+  "alertSpo2LowBody": "Current SpO2 is {spo2Value}%, which is below the threshold of {threshold}%.",
+  "@alertSpo2LowBody": {
+    "placeholders": {
+      "spo2Value": {},
+      "threshold": {}
+    }
+  },
   "channelNameSpo2Low": "Low SpO2 Alerts",
-   "loginWelcomeTitle": "Welcome Back!",
+  "loginWelcomeTitle": "Welcome Back!",
   "@loginWelcomeTitle": {
     "description": "Main title on the login screen"
   },
-  "loginSubtitle": "Sign in to continue",
+  "loginSubtitle": "Login to continue",
   "@loginSubtitle": {
     "description": "Subtitle below the main title on the login screen"
   },
   "orDividerText": "OR",
   "@orDividerText": {
-    "description": "Text used as a divider between login methods (e.g., Email / Google)"
+    "description": "Text used to separate login methods (e.g. Email / Google)"
   },
   "noAccountPrompt": "Don't have an account?",
   "@noAccountPrompt": {
-    "description": "Text prompting the user to sign up if they don't have an account"
+    "description": "Text prompting user to sign up if they don't have an account"
   },
-  "signUpLinkText": "Sign Up Now",
+  "signUpLinkText": "Sign up now",
   "@signUpLinkText": {
-    "description": "The text for the link/button that takes the user to the sign-up screen"
+    "description": "Text for the link/button leading user to the sign-up screen"
   },
   "temperatureLabel": "Temperature",
   "pressureLabel": "Pressure",
   "tempUnit": "°C",
   "pressureUnitHpa": "hPa",
   "connectingStatusDevice": "Connecting...",
-    "currentActivityTitle": "Current Activity",
+  "currentActivityTitle": "Current Activity",
   "@currentActivityTitle": {
     "description": "Title for the section displaying the user's current activity."
   },
   "activityInitializing": "Initializing...",
   "@activityInitializing": {
-    "description": "Text shown when the activity recognition is starting up or waiting for the first data."
-  },
-  "activityUnknown": "Unknown Activity",
-  "@activityUnknown": {
-    "description": "Text shown when the current activity cannot be determined or is not one of the recognized types."
-  },
-  "activityError": "Activity Error",
-  "@activityError": {
-    "description": "Text shown if there's an error in the activity recognition stream."
-  },
-  "activityLying": "Lying",
-  "@activityLying": {
-    "description": "Name for the 'Lying' activity."
-  },
-  "activitySitting": "Sitting",
-  "@activitySitting": {
-    "description": "Name for the 'Sitting' activity."
-  },
-  "activityStanding": "Standing",
-  "@activityStanding": {
-    "description": "Name for the 'Standing' activity."
-  },
-  "activityWalking": "Walking",
-  "@activityWalking": {
-    "description": "Name for the 'Walking' activity."
-  },
-  "activityRunning": "Running",
-  "@activityRunning": {
-    "description": "Name for the 'Running' activity."
+    "description": "Text displayed when activity recognition is starting or awaiting initial data."
   },
   "activityCycling": "Cycling",
   "@activityCycling": {
-    "description": "Name for the 'Cycling' activity."
+    "description": "Name for 'Cycling' activity."
   },
   "activityAscendingStairs": "Ascending Stairs",
   "@activityAscendingStairs": {
-    "description": "Name for the 'Ascending Stairs' activity."
+    "description": "Name for 'Ascending Stairs' activity."
   },
   "activityDescendingStairs": "Descending Stairs",
   "@activityDescendingStairs": {
-    "description": "Name for the 'Descending Stairs' activity."
+    "description": "Name for 'Descending Stairs' activity."
   },
-    "recordActivityTitle": "Record Activity Data",
+  "recordActivityTitle": "Record Activity Data",
   "@recordActivityTitle": {
     "description": "Title for the activity data recording screen"
   },
   "selectActivityLabel": "Select Activity to Record",
   "@selectActivityLabel": {
-    "description": "Label for the dropdown to select an activity"
+    "description": "Label for the dropdown menu to select an activity"
   },
   "startRecordingButton": "Start Recording",
   "@startRecordingButton": {
-    "description": "Label for the button to start recording data"
+    "description": "Label for the button to start data recording"
   },
   "stopRecordingButton": "Stop Recording",
   "@stopRecordingButton": {
-    "description": "Label for the button to stop recording data"
+    "description": "Label for the button to stop data recording"
   },
   "statusLabel": "Status:",
   "@statusLabel": {
-    "description": "Label for the status message area"
+    "description": "Label for the status message display area"
   },
   "samplesRecordedLabel": "Samples Recorded:",
   "@samplesRecordedLabel": {
     "description": "Label for the count of recorded data samples"
   },
-  "viewRecordedDataHint": "Recorded data path (info)",
+  "viewRecordedDataHint": "Recorded data path (tap to copy)",
   "@viewRecordedDataHint": {
-    "description": "Hint text showing where data is/was saved"
+    "description": "Hint text displaying where data is/was saved"
   },
-  "pathCopiedSnackbar": "Path information shown in console.",
+  "pathCopiedSnackbar": "Path copied (simulated): {filePath}",
   "@pathCopiedSnackbar": {
-    "description": "Snackbar message after tapping the data path hint"
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
   },
   "statusReconnecting": "Reconnecting...",
   "@statusReconnecting": {
-    "description": "Text displayed when the app is attempting to reconnect to a Bluetooth device"
+    "description": "Text displayed when the app is attempting to reconnect to the Bluetooth device"
   },
   "reconnectingTooltip": "Attempting to reconnect...",
   "@reconnectingTooltip": {
-    "description": "Text displayed in the tooltip of the scan button when reconnecting"
+    "description": "Tooltip text for the scan button when reconnecting"
   },
   "reconnectAttemptTitle": "Reconnecting to Device",
   "reconnectAttemptBody": "Attempting to reconnect to your device...",
   "reconnectSuccessTitle": "Reconnect Successful",
   "reconnectSuccessBody": "Successfully reconnected to your device.",
   "reconnectFailedTitle": "Reconnect Failed",
-  "reconnectFailedBody": "Failed to reconnect to device after {attempts} attempts.",
+  "reconnectFailedBody": "Could not reconnect to device after {attempts} attempts.",
   "@reconnectFailedBody": {
     "placeholders": {
       "attempts": {
@@ -415,22 +406,109 @@
     }
   },
   "bleReconnectChannelName": "BLE Reconnect",
-  "activityWarningTitle": "Activity Warning",
-"prolongedSittingWarningTitle": "Prolonged Sitting Alert",
-"prolongedLyingWarningTitle": "Prolonged Lying (Daytime) Alert",
-"smartReminderTitle": "Smart Reminder to Move",
-"positiveFeedbackTitle": "Great Job!",
-"activityAlertsChannelName": "Activity Alerts",
-"activityAlertsChannelDescription": "Notifications for activity-related alerts",
-"sittingAlertsChannelName": "Sitting Time Alerts",
-"lyingAlertsChannelName": "Lying Time Alerts",
-"smartReminderChannelName": "Smart Movement Reminders",
-"positiveFeedbackChannelName": "Positive Feedback",
-"tryAgain": "Try Again",
-"reconnectAttemptTitle": "Reconnect Attempt",
-"reconnectAttemptBody": "Trying to reconnect to your device...",
-"errorLoadingData": "Failed to load device data. Please try again.",
-"bluetoothRequestTitle": "Enable Bluetooth",
+  "activityWarningTitle": "Activity Alert",
+  "prolongedSittingWarningTitle": "Prolonged Sitting Alert",
+  "prolongedLyingWarningTitle": "Prolonged Lying Alert (Daytime)",
+  "smartReminderTitle": "Smart Movement Reminder",
+  "positiveFeedbackTitle": "Great Job!",
+  "activityAlertsChannelName": "Activity Alerts",
+  "activityAlertsChannelDescription": "Notifications related to activity alerts",
+  "sittingAlertsChannelName": "Sitting Time Alerts",
+  "lyingAlertsChannelName": "Lying Time Alerts",
+  "smartReminderChannelName": "Smart Movement Reminders",
+  "positiveFeedbackChannelName": "Positive Feedback",
+  "tryAgain": "Try Again",
+  "errorLoadingData": "Could not load device data. Please try again.",
+  "bluetoothRequestTitle": "Enable Bluetooth",
   "bluetoothRequestMessage": "Please enable Bluetooth to scan for devices.",
-  "turnOn": "Turn On"
+  "turnOn": "Turn On",
+  "recordScreenInitialStatus": "Select an activity and press Start.",
+  "recordScreenSelectActivityFirst": "Please select an activity before starting.",
+  "recordScreenAlreadyRecording": "Recording is already in progress.",
+  "permissionDeniedStorage": "Storage permission denied. Cannot record data.",
+  "errorGettingPath": "Error getting file path: {error}",
+  "@errorGettingPath": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Permission denied"
+      }
+    }
+  },
+  "recordScreenRecordingTo": "Recording to:\n{filePath}",
+  "@recordScreenRecordingTo": {
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "recordScreenSamplesRecorded": "Recording {activityName}: {count} samples (saved).",
+  "@recordScreenSamplesRecorded": {
+    "placeholders": {
+      "activityName": {
+        "type": "String",
+        "example": "Walking"
+      },
+      "count": {
+        "type": "String",
+        "example": "100"
+      }
+    }
+  },
+  "recordScreenStreamError": "Error on data stream: {error}. Recording stopped.",
+  "@recordScreenStreamError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Connection lost"
+      }
+    }
+  },
+  "recordScreenStreamEnded": "Data stream ended. Recording stopped.",
+  "recordScreenStartError": "Error starting recording: {error}",
+  "@recordScreenStartError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "File system error"
+      }
+    }
+  },
+  "recordScreenStopMessage": "Recording stopped. {count} samples recorded to:\n{filePath}",
+  "@recordScreenStopMessage": {
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "500"
+      },
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "recordScreenSelectActivityValidation": "Please select an activity.",
+  "copyFilePathButton": "Copy File Path",
+  "filePathCopiedSuccess": "File path copied: {filePath}",
+  "@filePathCopiedSuccess": {
+    "placeholders": {
+      "filePath": {
+        "type": "String",
+        "example": "/data/user/0/com.example.smart_wearable_app/app_flutter/sensor_data_walking_3_20231027_103000.csv"
+      }
+    }
+  },
+  "wifiConfigDeviceNotConnectedError": "Device not connected. Please connect to the wearable first.",
+  "activityStanding": "Standing",
+  "activityLying": "Lying",
+  "activitySitting": "Sitting",
+  "activityWalking": "Walking",
+  "activityRunning": "Running",
+  "activityUnknown": "Unknown Activity",
+  "activityError": "Activity Error",
+  "@activityError": {
+    "description": "Text displayed if there is an error in the activity recognition stream."
+  }
 }

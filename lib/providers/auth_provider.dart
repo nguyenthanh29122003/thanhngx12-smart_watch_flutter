@@ -253,29 +253,39 @@ class AuthProvider with ChangeNotifier {
 
   /// Đăng nhập bằng Email và Password.
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
-    _updateStatus(AuthStatus.authenticating, "Signing in..."); // TODO: i18n
+    _updateStatus(AuthStatus.authenticating, "Signing in...");
     _lastErrorMessage = '';
+
     try {
+      // Gọi service, userCredential có thể là null nếu bạn chưa làm Bước 3
       final userCredential = await _authService
           .signInWithEmailAndPassword(email.trim(), password)
           .timeout(const Duration(seconds: 15));
 
+      // >>> SỬA LỖI NULL-SAFETY TẠI ĐÂY <<<
+      // Kiểm tra cả userCredential và userCredential.user đều không phải là null
       if (userCredential?.user != null) {
-        // _listenToAuthChanges sẽ được trigger và gọi _loadUserProfile.
-        // Tuy nhiên, để cập nhật lastLogin ngay, ta vẫn gọi updateUserProfile.
-        await _firestoreService.updateUserProfile(userCredential!.user!,
+        print(
+            "[AuthProvider signIn] Firebase Sign-In successful for ${userCredential!.user!.uid}.");
+
+        // Cập nhật lastLogin trên Firestore.
+        _firestoreService.updateUserProfile(userCredential.user!,
             updateLastLogin: true);
-        // Không cần set status authenticated ở đây, stream sẽ làm
+
+        // KẾT THÚC trạng thái loading -> Chuyển sang thành công
+        _updateStatus(AuthStatus.authenticated, "Sign in successful");
+
         return true;
       } else {
+        // Trường hợp này xảy ra nếu service trả về null
         _lastErrorMessage =
-            "Sign in failed: Invalid credentials or user not found."; // TODO: i18n
+            "Sign in failed: Invalid credentials or user not found.";
         _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
         return false;
       }
     } on TimeoutException {
       _lastErrorMessage =
-          "Sign in attempt timed out. Please check your connection."; // TODO: i18n
+          "Sign in attempt timed out. Please check your connection.";
       _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     } on FirebaseAuthException catch (e) {
@@ -283,8 +293,8 @@ class AuthProvider with ChangeNotifier {
       _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     } catch (e) {
-      _lastErrorMessage =
-          "An unexpected error occurred during sign in."; // TODO: i18n
+      print("[AuthProvider signIn] Unexpected Error: ${e.toString()}");
+      _lastErrorMessage = "An unexpected error occurred during sign in.";
       _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
       return false;
     }
@@ -400,25 +410,40 @@ class AuthProvider with ChangeNotifier {
       final userCredential = await _authService
           .signInWithGoogle()
           .timeout(const Duration(seconds: 20));
+
+      // >>> SỬA LỖI NULL-SAFETY TẠI ĐÂY <<<
+      // Kiểm tra xem kết quả trả về có hợp lệ không
       if (userCredential?.user != null) {
-        // _listenToAuthChanges sẽ xử lý việc tải profile.
-        // Chỉ cần gọi updateUserProfile để đảm bảo thông tin từ Google (nếu là user mới) và lastLogin được cập nhật.
+        // Bên trong khối này, ta có thể chắc chắn userCredential không null
         await _firestoreService.updateUserProfile(userCredential!.user!,
             displayName: userCredential.user!.displayName,
             photoURL: userCredential.user!.photoURL,
             isNewUser: userCredential.additionalUserInfo?.isNewUser ?? false,
             updateLastLogin: true);
-        // Nếu là user mới và profile được tạo, _loadUserProfile sẽ được gọi trong _listenToAuthChanges
+
+        // DÒNG QUAN TRỌNG NHẤT: Cập nhật trạng thái để tắt loading
+        _updateStatus(AuthStatus.authenticated, "Google sign-in successful");
+
         return true;
       } else {
-        /* ... */ return false;
+        // Xảy ra khi người dùng hủy đăng nhập Google, service sẽ trả về null
+        _lastErrorMessage = "Google sign-in was cancelled or failed.";
+        _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
+        return false;
       }
     } on TimeoutException {
-      /* ... */ return false;
+      _lastErrorMessage =
+          "Google sign-in timed out. Please check your connection.";
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
+      return false;
     } on PlatformException catch (e) {
-      /* ... */ return false;
+      _lastErrorMessage = e.message ?? "An unknown platform error occurred.";
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
+      return false;
     } catch (e) {
-      /* ... */ return false;
+      _lastErrorMessage = "An unexpected error occurred during Google sign-in.";
+      _updateStatus(AuthStatus.unauthenticated, _lastErrorMessage);
+      return false;
     }
   }
 

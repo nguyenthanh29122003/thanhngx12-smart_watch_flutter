@@ -95,7 +95,7 @@ abstract class AppLocalizations {
     Locale('vi')
   ];
 
-  /// The title of the application
+  /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
   /// **'Smart Wearable App'**
@@ -134,7 +134,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectDeviceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Select Your Device'**
+  /// **'Select Device'**
   String get selectDeviceTitle;
 
   /// No description provided for @configureWifiTitle.
@@ -221,11 +221,11 @@ abstract class AppLocalizations {
   /// **'Confirm Deletion'**
   String get confirmDeletion;
 
-  /// Confirmation message for deleting a relative.
+  /// No description provided for @confirmDeleteRelative.
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delete {relativeName} ({relativeRelationship})?'**
-  String confirmDeleteRelative(String relativeName, String relativeRelationship);
+  String confirmDeleteRelative(Object relativeName, Object relativeRelationship);
 
   /// No description provided for @relativeAddedSuccess.
   ///
@@ -251,19 +251,19 @@ abstract class AppLocalizations {
   /// **'Failed to delete relative.'**
   String get relativeDeletedError;
 
-  /// Title for logout confirmation dialog.
+  /// No description provided for @confirmLogoutTitle.
   ///
   /// In en, this message translates to:
   /// **'Confirm Logout'**
   String get confirmLogoutTitle;
 
-  /// Confirmation message shown when the user wants to log out.
+  /// No description provided for @confirmLogoutMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to log out?'**
+  /// **'Are you sure you want to logout?'**
   String get confirmLogoutMessage;
 
-  /// Label for confirm butto n in dialogs.
+  /// No description provided for @confirm.
   ///
   /// In en, this message translates to:
   /// **'Confirm'**
@@ -272,7 +272,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatbotTitle.
   ///
   /// In en, this message translates to:
-  /// **'Chatbot'**
+  /// **'Chat with AI'**
   String get chatbotTitle;
 
   /// No description provided for @predictTitle.
@@ -290,7 +290,7 @@ abstract class AppLocalizations {
   /// No description provided for @predictPlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Prediction functionality is under development!'**
+  /// **'Prediction functionality coming soon!'**
   String get predictPlaceholder;
 
   /// No description provided for @sendMessage.
@@ -320,7 +320,7 @@ abstract class AppLocalizations {
   /// No description provided for @healthDisclaimer.
   ///
   /// In en, this message translates to:
-  /// **'This is general information, not medical advice. Consult a doctor for professional guidance.'**
+  /// **'This is general information, not medical advice. Please consult a doctor for professional advice.'**
   String get healthDisclaimer;
 
   /// No description provided for @relativesScreenTitle.
@@ -368,7 +368,7 @@ abstract class AppLocalizations {
   /// No description provided for @relationshipHint.
   ///
   /// In en, this message translates to:
-  /// **'Select Relationship'**
+  /// **'Select relationship'**
   String get relationshipHint;
 
   /// No description provided for @relationshipValidation.
@@ -395,11 +395,11 @@ abstract class AppLocalizations {
   /// **'Confirm Deletion'**
   String get deleteRelativeConfirmationTitle;
 
-  /// Snackbar message shown after successfully deleting a relative.
+  /// No description provided for @relativeDeletedSnackbar.
   ///
   /// In en, this message translates to:
-  /// **'Relative \'{relativeName}\' deleted.'**
-  String relativeDeletedSnackbar(String relativeName);
+  /// **'Deleted relative \'{relativeName}\'.'**
+  String relativeDeletedSnackbar(Object relativeName);
 
   /// No description provided for @pleaseLoginRelatives.
   ///
@@ -410,13 +410,13 @@ abstract class AppLocalizations {
   /// No description provided for @noRelativesYet.
   ///
   /// In en, this message translates to:
-  /// **'No relatives added yet.'**
+  /// **'No relatives yet.'**
   String get noRelativesYet;
 
   /// No description provided for @addFirstRelativeHint.
   ///
   /// In en, this message translates to:
-  /// **'Tap the + button above to add your first relative.'**
+  /// **'Press the + button above to add your first relative.'**
   String get addFirstRelativeHint;
 
   /// No description provided for @addRelativeEmptyButton.
@@ -425,11 +425,11 @@ abstract class AppLocalizations {
   /// **'Add Relative'**
   String get addRelativeEmptyButton;
 
-  /// Tooltip for the delete icon next to a relative's name.
+  /// No description provided for @deleteRelativeTooltip.
   ///
   /// In en, this message translates to:
   /// **'Delete {relativeName}'**
-  String deleteRelativeTooltip(String relativeName);
+  String deleteRelativeTooltip(Object relativeName);
 
   /// No description provided for @editRelativeDialogTitle.
   ///
@@ -455,11 +455,11 @@ abstract class AppLocalizations {
   /// **'Failed to update relative.'**
   String get relativeUpdatedError;
 
-  /// Tooltip for the edit icon next to a relative's name.
+  /// No description provided for @editRelativeTooltip.
   ///
   /// In en, this message translates to:
   /// **'Edit {relativeName}'**
-  String editRelativeTooltip(String relativeName);
+  String editRelativeTooltip(Object relativeName);
 
   /// No description provided for @relationFather.
   ///
@@ -563,12 +563,6 @@ abstract class AppLocalizations {
   /// **'Network'**
   String get sectionNetwork;
 
-  /// No description provided for @sectionNotifications.
-  ///
-  /// In en, this message translates to:
-  /// **'Notifications'**
-  String get sectionNotifications;
-
   /// No description provided for @noDeviceConnected.
   ///
   /// In en, this message translates to:
@@ -596,7 +590,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectDeviceFirstSnackbar.
   ///
   /// In en, this message translates to:
-  /// **'Connect to device first.'**
+  /// **'Please connect to a device first.'**
   String get connectDeviceFirstSnackbar;
 
   /// No description provided for @noEmail.
@@ -609,7 +603,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Welcome, {userName}!'**
-  String welcomeUser(String userName);
+  String welcomeUser(Object userName);
 
   /// No description provided for @defaultUser.
   ///
@@ -674,7 +668,7 @@ abstract class AppLocalizations {
   /// No description provided for @testNotificationSent.
   ///
   /// In en, this message translates to:
-  /// **'Sent test notification! Check system tray.'**
+  /// **'Test notification sent! Check system.'**
   String get testNotificationSent;
 
   /// No description provided for @goalProgressTitle.
@@ -699,7 +693,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Steps: {steps} / {goal}'**
-  String stepsProgress(String steps, String goal);
+  String stepsProgress(Object steps, Object goal);
 
   /// No description provided for @errorNavigateGoals.
   ///
@@ -734,13 +728,13 @@ abstract class AppLocalizations {
   /// No description provided for @lastUpdatedPrefix.
   ///
   /// In en, this message translates to:
-  /// **'Last updated:'**
+  /// **'Updated:'**
   String get lastUpdatedPrefix;
 
   /// No description provided for @waitingForData.
   ///
   /// In en, this message translates to:
-  /// **'Connected. Waiting for first data packet...'**
+  /// **'Connected. Waiting for data...'**
   String get waitingForData;
 
   /// No description provided for @connectingStatus.
@@ -794,7 +788,7 @@ abstract class AppLocalizations {
   /// No description provided for @chartNoDataPeriod.
   ///
   /// In en, this message translates to:
-  /// **'No history data available for the selected period.'**
+  /// **'No history data for this period.'**
   String get chartNoDataPeriod;
 
   /// No description provided for @chartNoValidHr.
@@ -803,16 +797,16 @@ abstract class AppLocalizations {
   /// **'No valid heart rate data found in this period.'**
   String get chartNoValidHr;
 
-  /// Message shown when no valid SpO2 readings are found in the history.
+  /// No description provided for @chartNoValidSpo2.
   ///
   /// In en, this message translates to:
   /// **'No valid SpO₂ data (>= {minSpo2}%) found in this period.'**
-  String chartNoValidSpo2(int minSpo2);
+  String chartNoValidSpo2(Object minSpo2);
 
   /// No description provided for @chartNoStepsCalculated.
   ///
   /// In en, this message translates to:
-  /// **'No step data calculated for the selected period.'**
+  /// **'No step data calculated for this period.'**
   String get chartNoStepsCalculated;
 
   /// No description provided for @emailLabel.
@@ -860,14 +854,14 @@ abstract class AppLocalizations {
   /// No description provided for @forgotPasswordPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Forgot Password?'**
+  /// **'Forgot password?'**
   String get forgotPasswordPrompt;
 
   /// No description provided for @loginFailedError.
   ///
   /// In en, this message translates to:
   /// **'Login Failed: {errorDetails}'**
-  String loginFailedError(String errorDetails);
+  String loginFailedError(Object errorDetails);
 
   /// No description provided for @signUpTitle.
   ///
@@ -939,18 +933,18 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Password reset email sent to {email}. Please check your inbox (and spam folder).'**
-  String resetEmailSentSuccess(String email);
+  String resetEmailSentSuccess(Object email);
 
   /// No description provided for @resetEmailSentError.
   ///
   /// In en, this message translates to:
   /// **'Failed to send reset email: {errorDetails}'**
-  String resetEmailSentError(String errorDetails);
+  String resetEmailSentError(Object errorDetails);
 
   /// No description provided for @wifiConfigInstruction.
   ///
   /// In en, this message translates to:
-  /// **'Enter the WiFi network details for your ESP32 device.'**
+  /// **'Enter the WiFi network information for your ESP32 device.'**
   String get wifiConfigInstruction;
 
   /// No description provided for @wifiSsidLabel.
@@ -962,7 +956,7 @@ abstract class AppLocalizations {
   /// No description provided for @wifiSsidHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g., MyHomeWiFi'**
+  /// **'E.g. MyHomeWiFi'**
   String get wifiSsidHint;
 
   /// No description provided for @wifiSsidValidation.
@@ -980,7 +974,7 @@ abstract class AppLocalizations {
   /// No description provided for @wifiPasswordValidationLength.
   ///
   /// In en, this message translates to:
-  /// **'Password should be at least 8 characters'**
+  /// **'Password needs at least 8 characters'**
   String get wifiPasswordValidationLength;
 
   /// No description provided for @wifiOpenNetworkCheckbox.
@@ -998,7 +992,7 @@ abstract class AppLocalizations {
   /// No description provided for @deviceNotConnectedToSend.
   ///
   /// In en, this message translates to:
-  /// **'Device must be connected to send configuration.'**
+  /// **'Device needs to be connected to send configuration.'**
   String get deviceNotConnectedToSend;
 
   /// No description provided for @wifiConfigSentSuccess.
@@ -1013,16 +1007,10 @@ abstract class AppLocalizations {
   /// **'Failed to send configuration.'**
   String get wifiConfigSentError;
 
-  /// No description provided for @wifiConfigDeviceNotConnectedError.
-  ///
-  /// In en, this message translates to:
-  /// **'Device not connected. Please connect first.'**
-  String get wifiConfigDeviceNotConnectedError;
-
   /// No description provided for @scanDevicesButton.
   ///
   /// In en, this message translates to:
-  /// **'Scan for Devices'**
+  /// **'Scan Devices'**
   String get scanDevicesButton;
 
   /// No description provided for @stopScanButton.
@@ -1052,7 +1040,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusDisconnectedScan.
   ///
   /// In en, this message translates to:
-  /// **'Disconnected. Tap scan.'**
+  /// **'Disconnected. Tap to scan.'**
   String get statusDisconnectedScan;
 
   /// No description provided for @statusConnecting.
@@ -1064,7 +1052,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusSettingUp.
   ///
   /// In en, this message translates to:
-  /// **'Setting up...'**
+  /// **'Setting up device...'**
   String get statusSettingUp;
 
   /// No description provided for @statusConnected.
@@ -1076,7 +1064,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusErrorPermissions.
   ///
   /// In en, this message translates to:
-  /// **'Error. Check permissions/BT.'**
+  /// **'Error. Check Permissions/Bluetooth.'**
   String get statusErrorPermissions;
 
   /// No description provided for @statusUnknown.
@@ -1094,7 +1082,7 @@ abstract class AppLocalizations {
   /// No description provided for @ensureDeviceNearby.
   ///
   /// In en, this message translates to:
-  /// **'Ensure your device is powered on and nearby.'**
+  /// **'Ensure your device is turned on and nearby.'**
   String get ensureDeviceNearby;
 
   /// No description provided for @pullToScan.
@@ -1127,12 +1115,6 @@ abstract class AppLocalizations {
   /// **'Connect'**
   String get connectButton;
 
-  /// No description provided for @connectingStatusDevice.
-  ///
-  /// In en, this message translates to:
-  /// **'Connecting...'**
-  String get connectingStatusDevice;
-
   /// No description provided for @enableBluetoothPrompt.
   ///
   /// In en, this message translates to:
@@ -1142,13 +1124,13 @@ abstract class AppLocalizations {
   /// No description provided for @permissionRequiredPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Bluetooth and Location permissions are required to find nearby devices. Please grant permissions in app settings.'**
+  /// **'Location and Bluetooth permissions are required to find nearby devices. Please grant permissions in app settings.'**
   String get permissionRequiredPrompt;
 
   /// No description provided for @permissionDeniedSnackbar.
   ///
   /// In en, this message translates to:
-  /// **'Required permissions were denied. Please grant permissions in settings.'**
+  /// **'Required permissions denied. Please grant in settings.'**
   String get permissionDeniedSnackbar;
 
   /// No description provided for @connectionFailedTitle.
@@ -1160,13 +1142,13 @@ abstract class AppLocalizations {
   /// No description provided for @connectionFailedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Failed to connect to {deviceName}. Please ensure it\'s nearby and try again.'**
-  String connectionFailedMessage(String deviceName);
+  /// **'Could not connect to {deviceName}. Please ensure the device is nearby and try again.'**
+  String connectionFailedMessage(Object deviceName);
 
   /// No description provided for @connectionFailedSnackbar.
   ///
   /// In en, this message translates to:
-  /// **'Failed to connect to the device. Please try again.'**
+  /// **'Failed to connect to device. Please try again.'**
   String get connectionFailedSnackbar;
 
   /// No description provided for @connectionTimeout.
@@ -1226,14 +1208,14 @@ abstract class AppLocalizations {
   /// No description provided for @goalAchievedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Goal Achieved! Great job! 🎉'**
+  /// **'Goal Achieved! Well done! 🎉'**
   String get goalAchievedMessage;
 
   /// No description provided for @goalRemainingMessage.
   ///
   /// In en, this message translates to:
   /// **'{remainingSteps} steps remaining'**
-  String goalRemainingMessage(String remainingSteps);
+  String goalRemainingMessage(Object remainingSteps);
 
   /// No description provided for @setGoalDialogTitle.
   ///
@@ -1244,7 +1226,7 @@ abstract class AppLocalizations {
   /// No description provided for @newGoalLabel.
   ///
   /// In en, this message translates to:
-  /// **'New Goal (e.g., 10000)'**
+  /// **'New Goal (E.g. 10000)'**
   String get newGoalLabel;
 
   /// No description provided for @pleaseEnterNumber.
@@ -1307,6 +1289,12 @@ abstract class AppLocalizations {
   /// **'Calculating steps...'**
   String get calculatingStepsStatus;
 
+  /// No description provided for @sectionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get sectionNotifications;
+
   /// No description provided for @enableHealthAlerts.
   ///
   /// In en, this message translates to:
@@ -1340,37 +1328,37 @@ abstract class AppLocalizations {
   /// No description provided for @notificationChannelHrHighName.
   ///
   /// In en, this message translates to:
-  /// **'High Heart Rate Alerts'**
+  /// **'High Heart Rate Alert'**
   String get notificationChannelHrHighName;
 
   /// No description provided for @notificationChannelHrHighDesc.
   ///
   /// In en, this message translates to:
-  /// **'Alerts when heart rate is too high'**
+  /// **'Alerts for excessively high heart rate'**
   String get notificationChannelHrHighDesc;
 
   /// No description provided for @notificationChannelHrLowName.
   ///
   /// In en, this message translates to:
-  /// **'Low Heart Rate Alerts'**
+  /// **'Low Heart Rate Alert'**
   String get notificationChannelHrLowName;
 
   /// No description provided for @notificationChannelHrLowDesc.
   ///
   /// In en, this message translates to:
-  /// **'Alerts when heart rate is too low'**
+  /// **'Alerts for excessively low heart rate'**
   String get notificationChannelHrLowDesc;
 
   /// No description provided for @notificationChannelSpo2LowName.
   ///
   /// In en, this message translates to:
-  /// **'Low SpO2 Alerts'**
+  /// **'Low SpO2 Alert'**
   String get notificationChannelSpo2LowName;
 
   /// No description provided for @notificationChannelSpo2LowDesc.
   ///
   /// In en, this message translates to:
-  /// **'Alerts when SpO2 level is too low'**
+  /// **'Alerts for excessively low SpO2 levels'**
   String get notificationChannelSpo2LowDesc;
 
   /// No description provided for @notificationChannelTestName.
@@ -1382,7 +1370,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationChannelTestDesc.
   ///
   /// In en, this message translates to:
-  /// **'Channel for testing notifications manually'**
+  /// **'Channel for manual test notifications'**
   String get notificationChannelTestDesc;
 
   /// No description provided for @alertHrHighTitle.
@@ -1394,7 +1382,7 @@ abstract class AppLocalizations {
   /// No description provided for @alertHrHighBody.
   ///
   /// In en, this message translates to:
-  /// **'Current heart rate is {hrValue} bpm, above threshold {threshold} bpm.'**
+  /// **'Current heart rate is {hrValue} bpm, which is above the threshold of {threshold} bpm.'**
   String alertHrHighBody(Object hrValue, Object threshold);
 
   /// No description provided for @channelNameHrHigh.
@@ -1412,7 +1400,7 @@ abstract class AppLocalizations {
   /// No description provided for @alertHrLowBody.
   ///
   /// In en, this message translates to:
-  /// **'Current heart rate is {hrValue} bpm, below threshold {threshold} bpm.'**
+  /// **'Current heart rate is {hrValue} bpm, which is below the threshold of {threshold} bpm.'**
   String alertHrLowBody(Object hrValue, Object threshold);
 
   /// No description provided for @channelNameHrLow.
@@ -1430,7 +1418,7 @@ abstract class AppLocalizations {
   /// No description provided for @alertSpo2LowBody.
   ///
   /// In en, this message translates to:
-  /// **'Current SpO2 is {spo2Value}%, below threshold {threshold}%.'**
+  /// **'Current SpO2 is {spo2Value}%, which is below the threshold of {threshold}%.'**
   String alertSpo2LowBody(Object spo2Value, Object threshold);
 
   /// No description provided for @channelNameSpo2Low.
@@ -1448,25 +1436,25 @@ abstract class AppLocalizations {
   /// Subtitle below the main title on the login screen
   ///
   /// In en, this message translates to:
-  /// **'Sign in to continue'**
+  /// **'Login to continue'**
   String get loginSubtitle;
 
-  /// Text used as a divider between login methods (e.g., Email / Google)
+  /// Text used to separate login methods (e.g. Email / Google)
   ///
   /// In en, this message translates to:
   /// **'OR'**
   String get orDividerText;
 
-  /// Text prompting the user to sign up if they don't have an account
+  /// Text prompting user to sign up if they don't have an account
   ///
   /// In en, this message translates to:
   /// **'Don\'t have an account?'**
   String get noAccountPrompt;
 
-  /// The text for the link/button that takes the user to the sign-up screen
+  /// Text for the link/button leading user to the sign-up screen
   ///
   /// In en, this message translates to:
-  /// **'Sign Up Now'**
+  /// **'Sign up now'**
   String get signUpLinkText;
 
   /// No description provided for @temperatureLabel.
@@ -1493,73 +1481,37 @@ abstract class AppLocalizations {
   /// **'hPa'**
   String get pressureUnitHpa;
 
+  /// No description provided for @connectingStatusDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get connectingStatusDevice;
+
   /// Title for the section displaying the user's current activity.
   ///
   /// In en, this message translates to:
   /// **'Current Activity'**
   String get currentActivityTitle;
 
-  /// Text shown when the activity recognition is starting up or waiting for the first data.
+  /// Text displayed when activity recognition is starting or awaiting initial data.
   ///
   /// In en, this message translates to:
   /// **'Initializing...'**
   String get activityInitializing;
 
-  /// Text shown when the current activity cannot be determined or is not one of the recognized types.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown Activity'**
-  String get activityUnknown;
-
-  /// Text shown if there's an error in the activity recognition stream.
-  ///
-  /// In en, this message translates to:
-  /// **'Activity Error'**
-  String get activityError;
-
-  /// Name for the 'Lying' activity.
-  ///
-  /// In en, this message translates to:
-  /// **'Lying'**
-  String get activityLying;
-
-  /// Name for the 'Sitting' activity.
-  ///
-  /// In en, this message translates to:
-  /// **'Sitting'**
-  String get activitySitting;
-
-  /// Name for the 'Standing' activity.
-  ///
-  /// In en, this message translates to:
-  /// **'Standing'**
-  String get activityStanding;
-
-  /// Name for the 'Walking' activity.
-  ///
-  /// In en, this message translates to:
-  /// **'Walking'**
-  String get activityWalking;
-
-  /// Name for the 'Running' activity.
-  ///
-  /// In en, this message translates to:
-  /// **'Running'**
-  String get activityRunning;
-
-  /// Name for the 'Cycling' activity.
+  /// Name for 'Cycling' activity.
   ///
   /// In en, this message translates to:
   /// **'Cycling'**
   String get activityCycling;
 
-  /// Name for the 'Ascending Stairs' activity.
+  /// Name for 'Ascending Stairs' activity.
   ///
   /// In en, this message translates to:
   /// **'Ascending Stairs'**
   String get activityAscendingStairs;
 
-  /// Name for the 'Descending Stairs' activity.
+  /// Name for 'Descending Stairs' activity.
   ///
   /// In en, this message translates to:
   /// **'Descending Stairs'**
@@ -1571,25 +1523,25 @@ abstract class AppLocalizations {
   /// **'Record Activity Data'**
   String get recordActivityTitle;
 
-  /// Label for the dropdown to select an activity
+  /// Label for the dropdown menu to select an activity
   ///
   /// In en, this message translates to:
   /// **'Select Activity to Record'**
   String get selectActivityLabel;
 
-  /// Label for the button to start recording data
+  /// Label for the button to start data recording
   ///
   /// In en, this message translates to:
   /// **'Start Recording'**
   String get startRecordingButton;
 
-  /// Label for the button to stop recording data
+  /// Label for the button to stop data recording
   ///
   /// In en, this message translates to:
   /// **'Stop Recording'**
   String get stopRecordingButton;
 
-  /// Label for the status message area
+  /// Label for the status message display area
   ///
   /// In en, this message translates to:
   /// **'Status:'**
@@ -1601,25 +1553,25 @@ abstract class AppLocalizations {
   /// **'Samples Recorded:'**
   String get samplesRecordedLabel;
 
-  /// Hint text showing where data is/was saved
+  /// Hint text displaying where data is/was saved
   ///
   /// In en, this message translates to:
-  /// **'Recorded data path (info)'**
+  /// **'Recorded data path (tap to copy)'**
   String get viewRecordedDataHint;
 
-  /// Snackbar message after tapping the data path hint
+  /// No description provided for @pathCopiedSnackbar.
   ///
   /// In en, this message translates to:
-  /// **'Path information shown in console.'**
-  String get pathCopiedSnackbar;
+  /// **'Path copied (simulated): {filePath}'**
+  String pathCopiedSnackbar(String filePath);
 
-  /// Text displayed when the app is attempting to reconnect to a Bluetooth device
+  /// Text displayed when the app is attempting to reconnect to the Bluetooth device
   ///
   /// In en, this message translates to:
   /// **'Reconnecting...'**
   String get statusReconnecting;
 
-  /// Text displayed in the tooltip of the scan button when reconnecting
+  /// Tooltip text for the scan button when reconnecting
   ///
   /// In en, this message translates to:
   /// **'Attempting to reconnect...'**
@@ -1628,13 +1580,13 @@ abstract class AppLocalizations {
   /// No description provided for @reconnectAttemptTitle.
   ///
   /// In en, this message translates to:
-  /// **'Reconnect Attempt'**
+  /// **'Reconnecting to Device'**
   String get reconnectAttemptTitle;
 
   /// No description provided for @reconnectAttemptBody.
   ///
   /// In en, this message translates to:
-  /// **'Trying to reconnect to your device...'**
+  /// **'Attempting to reconnect to your device...'**
   String get reconnectAttemptBody;
 
   /// No description provided for @reconnectSuccessTitle.
@@ -1658,7 +1610,7 @@ abstract class AppLocalizations {
   /// No description provided for @reconnectFailedBody.
   ///
   /// In en, this message translates to:
-  /// **'Failed to reconnect to device after {attempts} attempts.'**
+  /// **'Could not reconnect to device after {attempts} attempts.'**
   String reconnectFailedBody(Object attempts);
 
   /// No description provided for @bleReconnectChannelName.
@@ -1670,7 +1622,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityWarningTitle.
   ///
   /// In en, this message translates to:
-  /// **'Activity Warning'**
+  /// **'Activity Alert'**
   String get activityWarningTitle;
 
   /// No description provided for @prolongedSittingWarningTitle.
@@ -1682,13 +1634,13 @@ abstract class AppLocalizations {
   /// No description provided for @prolongedLyingWarningTitle.
   ///
   /// In en, this message translates to:
-  /// **'Prolonged Lying (Daytime) Alert'**
+  /// **'Prolonged Lying Alert (Daytime)'**
   String get prolongedLyingWarningTitle;
 
   /// No description provided for @smartReminderTitle.
   ///
   /// In en, this message translates to:
-  /// **'Smart Reminder to Move'**
+  /// **'Smart Movement Reminder'**
   String get smartReminderTitle;
 
   /// No description provided for @positiveFeedbackTitle.
@@ -1706,7 +1658,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityAlertsChannelDescription.
   ///
   /// In en, this message translates to:
-  /// **'Notifications for activity-related alerts'**
+  /// **'Notifications related to activity alerts'**
   String get activityAlertsChannelDescription;
 
   /// No description provided for @sittingAlertsChannelName.
@@ -1742,7 +1694,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorLoadingData.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load device data. Please try again.'**
+  /// **'Could not load device data. Please try again.'**
   String get errorLoadingData;
 
   /// No description provided for @bluetoothRequestTitle.
@@ -1762,6 +1714,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn On'**
   String get turnOn;
+
+  /// No description provided for @recordScreenInitialStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an activity and press Start.'**
+  String get recordScreenInitialStatus;
+
+  /// No description provided for @recordScreenSelectActivityFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an activity before starting.'**
+  String get recordScreenSelectActivityFirst;
+
+  /// No description provided for @recordScreenAlreadyRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording is already in progress.'**
+  String get recordScreenAlreadyRecording;
+
+  /// No description provided for @permissionDeniedStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage permission denied. Cannot record data.'**
+  String get permissionDeniedStorage;
+
+  /// No description provided for @errorGettingPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Error getting file path: {error}'**
+  String errorGettingPath(String error);
+
+  /// No description provided for @recordScreenRecordingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording to:\n{filePath}'**
+  String recordScreenRecordingTo(String filePath);
+
+  /// No description provided for @recordScreenSamplesRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording {activityName}: {count} samples (saved).'**
+  String recordScreenSamplesRecorded(String activityName, String count);
+
+  /// No description provided for @recordScreenStreamError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error on data stream: {error}. Recording stopped.'**
+  String recordScreenStreamError(String error);
+
+  /// No description provided for @recordScreenStreamEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Data stream ended. Recording stopped.'**
+  String get recordScreenStreamEnded;
+
+  /// No description provided for @recordScreenStartError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error starting recording: {error}'**
+  String recordScreenStartError(String error);
+
+  /// No description provided for @recordScreenStopMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording stopped. {count} samples recorded to:\n{filePath}'**
+  String recordScreenStopMessage(String count, String filePath);
+
+  /// No description provided for @recordScreenSelectActivityValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an activity.'**
+  String get recordScreenSelectActivityValidation;
+
+  /// No description provided for @copyFilePathButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy File Path'**
+  String get copyFilePathButton;
+
+  /// No description provided for @filePathCopiedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'File path copied: {filePath}'**
+  String filePathCopiedSuccess(String filePath);
+
+  /// No description provided for @wifiConfigDeviceNotConnectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Device not connected. Please connect to the wearable first.'**
+  String get wifiConfigDeviceNotConnectedError;
+
+  /// No description provided for @activityStanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Standing'**
+  String get activityStanding;
+
+  /// No description provided for @activityLying.
+  ///
+  /// In en, this message translates to:
+  /// **'Lying'**
+  String get activityLying;
+
+  /// No description provided for @activitySitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting'**
+  String get activitySitting;
+
+  /// No description provided for @activityWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get activityWalking;
+
+  /// No description provided for @activityRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get activityRunning;
+
+  /// No description provided for @activityUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Activity'**
+  String get activityUnknown;
+
+  /// Text displayed if there is an error in the activity recognition stream.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Error'**
+  String get activityError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

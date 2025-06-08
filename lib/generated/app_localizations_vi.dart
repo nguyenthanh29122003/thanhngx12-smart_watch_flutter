@@ -72,7 +72,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get confirmDeletion => 'Xác nhận Xóa';
 
   @override
-  String confirmDeleteRelative(String relativeName, String relativeRelationship) {
+  String confirmDeleteRelative(Object relativeName, Object relativeRelationship) {
     return 'Bạn chắc chắn muốn xóa $relativeName ($relativeRelationship)?';
   }
 
@@ -161,7 +161,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get deleteRelativeConfirmationTitle => 'Xác nhận Xóa';
 
   @override
-  String relativeDeletedSnackbar(String relativeName) {
+  String relativeDeletedSnackbar(Object relativeName) {
     return 'Đã xóa người thân \'$relativeName\'.';
   }
 
@@ -178,7 +178,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addRelativeEmptyButton => 'Thêm Người thân';
 
   @override
-  String deleteRelativeTooltip(String relativeName) {
+  String deleteRelativeTooltip(Object relativeName) {
     return 'Xóa $relativeName';
   }
 
@@ -195,7 +195,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get relativeUpdatedError => 'Cập nhật người thân thất bại.';
 
   @override
-  String editRelativeTooltip(String relativeName) {
+  String editRelativeTooltip(Object relativeName) {
     return 'Sửa $relativeName';
   }
 
@@ -251,9 +251,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get sectionNetwork => 'Mạng';
 
   @override
-  String get sectionNotifications => 'Thông báo';
-
-  @override
   String get noDeviceConnected => 'Chưa kết nối Thiết bị';
 
   @override
@@ -272,7 +269,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noEmail => 'Không có Email';
 
   @override
-  String welcomeUser(String userName) {
+  String welcomeUser(Object userName) {
     return 'Chào mừng, $userName!';
   }
 
@@ -319,7 +316,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get stepsCalculating => 'Đang tính số bước...';
 
   @override
-  String stepsProgress(String steps, String goal) {
+  String stepsProgress(Object steps, Object goal) {
     return 'Bước: $steps / $goal';
   }
 
@@ -375,7 +372,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get chartNoValidHr => 'Không tìm thấy dữ liệu nhịp tim hợp lệ trong khoảng này.';
 
   @override
-  String chartNoValidSpo2(int minSpo2) {
+  String chartNoValidSpo2(Object minSpo2) {
     return 'Không tìm thấy dữ liệu SpO₂ hợp lệ (>= $minSpo2%) trong khoảng này.';
   }
 
@@ -407,7 +404,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get forgotPasswordPrompt => 'Quên mật khẩu?';
 
   @override
-  String loginFailedError(String errorDetails) {
+  String loginFailedError(Object errorDetails) {
     return 'Đăng nhập Thất bại: $errorDetails';
   }
 
@@ -445,12 +442,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get sendResetEmailButton => 'Gửi Email Đặt lại';
 
   @override
-  String resetEmailSentSuccess(String email) {
+  String resetEmailSentSuccess(Object email) {
     return 'Email đặt lại mật khẩu đã được gửi đến $email. Vui lòng kiểm tra hộp thư đến (và thư mục spam).';
   }
 
   @override
-  String resetEmailSentError(String errorDetails) {
+  String resetEmailSentError(Object errorDetails) {
     return 'Gửi email đặt lại thất bại: $errorDetails';
   }
 
@@ -486,9 +483,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get wifiConfigSentError => 'Gửi cấu hình thất bại.';
-
-  @override
-  String get wifiConfigDeviceNotConnectedError => 'Thiết bị chưa kết nối. Vui lòng kết nối trước.';
 
   @override
   String get scanDevicesButton => 'Quét Thiết bị';
@@ -545,9 +539,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get connectButton => 'Kết nối';
 
   @override
-  String get connectingStatusDevice => 'Đang kết nối...';
-
-  @override
   String get enableBluetoothPrompt => 'Vui lòng bật Bluetooth để quét thiết bị.';
 
   @override
@@ -560,7 +551,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get connectionFailedTitle => 'Kết nối Thất bại';
 
   @override
-  String connectionFailedMessage(String deviceName) {
+  String connectionFailedMessage(Object deviceName) {
     return 'Không thể kết nối đến $deviceName. Vui lòng đảm bảo thiết bị ở gần và thử lại.';
   }
 
@@ -598,7 +589,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get goalAchievedMessage => 'Đã đạt Mục tiêu! Làm tốt lắm! 🎉';
 
   @override
-  String goalRemainingMessage(String remainingSteps) {
+  String goalRemainingMessage(Object remainingSteps) {
     return 'Còn lại $remainingSteps bước';
   }
 
@@ -637,6 +628,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get calculatingStepsStatus => 'Đang tính số bước...';
+
+  @override
+  String get sectionNotifications => 'Thông báo';
 
   @override
   String get enableHealthAlerts => 'Bật Cảnh báo Sức khỏe';
@@ -738,31 +732,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pressureUnitHpa => 'hPa';
 
   @override
+  String get connectingStatusDevice => 'Đang kết nối...';
+
+  @override
   String get currentActivityTitle => 'Hoạt động Hiện tại';
 
   @override
   String get activityInitializing => 'Đang khởi tạo...';
-
-  @override
-  String get activityUnknown => 'Hoạt động Không rõ';
-
-  @override
-  String get activityError => 'Lỗi Hoạt động';
-
-  @override
-  String get activityLying => 'Nằm';
-
-  @override
-  String get activitySitting => 'Ngồi';
-
-  @override
-  String get activityStanding => 'Đứng';
-
-  @override
-  String get activityWalking => 'Đi bộ';
-
-  @override
-  String get activityRunning => 'Chạy';
 
   @override
   String get activityCycling => 'Đạp xe';
@@ -792,10 +768,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get samplesRecordedLabel => 'Số mẫu đã ghi:';
 
   @override
-  String get viewRecordedDataHint => 'Đường dẫn dữ liệu đã ghi (thông tin)';
+  String get viewRecordedDataHint => 'Đường dẫn dữ liệu đã ghi (nhấn để sao chép)';
 
   @override
-  String get pathCopiedSnackbar => 'Thông tin đường dẫn hiển thị trong console.';
+  String pathCopiedSnackbar(String filePath) {
+    return 'Đã sao chép đường dẫn (mô phỏng): $filePath';
+  }
 
   @override
   String get statusReconnecting => 'Đang kết nối lại...';
@@ -873,4 +851,84 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get turnOn => 'Bật';
+
+  @override
+  String get recordScreenInitialStatus => 'Chọn một hoạt động và nhấn Bắt đầu.';
+
+  @override
+  String get recordScreenSelectActivityFirst => 'Vui lòng chọn một hoạt động trước khi bắt đầu.';
+
+  @override
+  String get recordScreenAlreadyRecording => 'Quá trình ghi đang được thực hiện.';
+
+  @override
+  String get permissionDeniedStorage => 'Quyền truy cập bộ nhớ bị từ chối. Không thể ghi dữ liệu.';
+
+  @override
+  String errorGettingPath(String error) {
+    return 'Lỗi khi lấy đường dẫn tệp: $error';
+  }
+
+  @override
+  String recordScreenRecordingTo(String filePath) {
+    return 'Đang ghi vào:\n$filePath';
+  }
+
+  @override
+  String recordScreenSamplesRecorded(String activityName, String count) {
+    return 'Đang ghi $activityName: $count mẫu (đã lưu).';
+  }
+
+  @override
+  String recordScreenStreamError(String error) {
+    return 'Lỗi trên luồng dữ liệu: $error. Đã dừng ghi.';
+  }
+
+  @override
+  String get recordScreenStreamEnded => 'Luồng dữ liệu đã kết thúc. Đã dừng ghi.';
+
+  @override
+  String recordScreenStartError(String error) {
+    return 'Lỗi khi bắt đầu ghi: $error';
+  }
+
+  @override
+  String recordScreenStopMessage(String count, String filePath) {
+    return 'Đã dừng ghi. $count mẫu được ghi vào:\n$filePath';
+  }
+
+  @override
+  String get recordScreenSelectActivityValidation => 'Vui lòng chọn một hoạt động.';
+
+  @override
+  String get copyFilePathButton => 'Sao chép Đường dẫn Tệp';
+
+  @override
+  String filePathCopiedSuccess(String filePath) {
+    return 'Đã sao chép đường dẫn tệp: $filePath';
+  }
+
+  @override
+  String get wifiConfigDeviceNotConnectedError => 'Thiết bị chưa được kết nối. Vui lòng kết nối với thiết bị đeo trước.';
+
+  @override
+  String get activityStanding => 'Đứng';
+
+  @override
+  String get activityLying => 'Nằm';
+
+  @override
+  String get activitySitting => 'Ngồi';
+
+  @override
+  String get activityWalking => 'Đi bộ';
+
+  @override
+  String get activityRunning => 'Chạy';
+
+  @override
+  String get activityUnknown => 'Hoạt động không xác định';
+
+  @override
+  String get activityError => 'Lỗi Hoạt động';
 }
