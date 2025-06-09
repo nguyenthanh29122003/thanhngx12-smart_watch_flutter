@@ -1846,6 +1846,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity Error'**
   String get activityError;
+
+  /// No description provided for @activitySummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Activity Summary'**
+  String get activitySummaryTitle;
+
+  /// No description provided for @activitySummaryNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity data available for today.'**
+  String get activitySummaryNoData;
+
+  /// No description provided for @activitySummaryNoDataToDisplay.
+  ///
+  /// In en, this message translates to:
+  /// **'No significant activity to display.'**
+  String get activitySummaryNoDataToDisplay;
+
+  /// No description provided for @activitySummaryDetailScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Details'**
+  String get activitySummaryDetailScreenTitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

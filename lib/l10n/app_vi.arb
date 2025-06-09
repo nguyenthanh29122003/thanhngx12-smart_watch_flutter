@@ -430,5 +430,9 @@
    "activityError": "Lỗi Hoạt động",
   "@activityError": {
     "description": "Chữ hiển thị nếu có lỗi trong luồng nhận dạng hoạt động."
-  }
+  },
+  "activitySummaryTitle": "Tổng kết Hoạt động Hôm nay",
+  "activitySummaryNoData": "Không có dữ liệu hoạt động cho hôm nay.",
+  "activitySummaryNoDataToDisplay": "Không có hoạt động nào đáng kể để hiển thị.",
+  "activitySummaryDetailScreenTitle": "Chi tiết Hoạt động"
 }

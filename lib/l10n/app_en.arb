@@ -510,5 +510,9 @@
   "activityError": "Activity Error",
   "@activityError": {
     "description": "Text displayed if there is an error in the activity recognition stream."
-  }
+  },
+  "activitySummaryTitle": "Today's Activity Summary",
+  "activitySummaryNoData": "No activity data available for today.",
+  "activitySummaryNoDataToDisplay": "No significant activity to display.",
+  "activitySummaryDetailScreenTitle": "Activity Details"
 }

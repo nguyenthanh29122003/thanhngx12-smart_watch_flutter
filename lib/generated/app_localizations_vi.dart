@@ -931,4 +931,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get activityError => 'Lỗi Hoạt động';
+
+  @override
+  String get activitySummaryTitle => 'Tổng kết Hoạt động Hôm nay';
+
+  @override
+  String get activitySummaryNoData => 'Không có dữ liệu hoạt động cho hôm nay.';
+
+  @override
+  String get activitySummaryNoDataToDisplay => 'Không có hoạt động nào đáng kể để hiển thị.';
+
+  @override
+  String get activitySummaryDetailScreenTitle => 'Chi tiết Hoạt động';
 }

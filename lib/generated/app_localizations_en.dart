@@ -931,4 +931,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activityError => 'Activity Error';
+
+  @override
+  String get activitySummaryTitle => 'Today\'s Activity Summary';
+
+  @override
+  String get activitySummaryNoData => 'No activity data available for today.';
+
+  @override
+  String get activitySummaryNoDataToDisplay => 'No significant activity to display.';
+
+  @override
+  String get activitySummaryDetailScreenTitle => 'Activity Details';
 }

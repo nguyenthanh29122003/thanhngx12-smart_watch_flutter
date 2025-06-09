@@ -1,5 +1,4 @@
 // lib/services/activity_recognition_service.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -63,6 +62,7 @@ class ActivityWarning {
 }
 
 class ActivityRecognitionService {
+  // --- TFLite & Scaler ---
   Interpreter? _harInterpreter;
   bool _isHarModelLoaded = false;
   List<int>? _harInputShape;
@@ -72,44 +72,48 @@ class ActivityRecognitionService {
   List<double>? _scalerMeans;
   List<double>? _scalerStdDevs;
 
+  // --- Buffers & Streams ---
   final List<List<double>> _imuDataBuffer = [];
-
   final BehaviorSubject<String> _activityPredictionController =
       BehaviorSubject<String>.seeded("Initializing...");
+  final PublishSubject<ActivityWarning> _warningController =
+      PublishSubject<ActivityWarning>();
+  StreamSubscription? _healthDataSubscriptionForHar;
+
   Stream<String> get activityPredictionStream =>
       _activityPredictionController.stream;
   String? get currentActivityValue => _activityPredictionController.valueOrNull;
-
-  final PublishSubject<ActivityWarning> _warningController =
-      PublishSubject<ActivityWarning>();
   Stream<ActivityWarning> get warningStream => _warningController.stream;
 
-  String _currentActivityInternal = "Initializing...";
-  DateTime? _currentActivityStartTime;
-
+  // --- Dependencies ---
   final LocalDbService _localDbService = LocalDbService.instance;
   final AuthService _authService;
 
-  Timer? _sittingTimer;
-  Timer? _lyingTimer;
-  Duration _sittingDuration = Duration.zero;
-  Duration _lyingDuration = Duration.zero;
+  // --- State Nội bộ ---
+  String _currentActivityInternal = "Initializing...";
+  DateTime? _currentActivityStartTime;
+  bool _isDisposed = false;
 
-  // <<< KHAI BÁO CÁC BIẾN CỜ VÀ THEO DÕI CẢNH BÁO >>>
-  bool _hasWarnedForCurrentSitting = false;
-  bool _hasWarnedForCurrentLyingDaytime = false;
-  ActivityWarningType?
-      _lastWarningTypeSent; // Để theo dõi loại cảnh báo cuối cùng đã gửi
-  // ----------------------------------------------------
-
+  // --- Cài đặt (tải từ SharedPreferences) ---
   Duration _sittingWarningThreshold =
       AppConstants.defaultSittingWarningThreshold;
   Duration _lyingDaytimeWarningThreshold =
       AppConstants.defaultLyingWarningDaytimeThreshold;
   bool _smartRemindersEnabled = AppConstants.defaultSmartRemindersEnabled;
 
-  StreamSubscription? _healthDataSubscriptionForHar;
-  bool _isDisposed = false;
+  // --- State cho Cảnh báo Ngưỡng ---
+  Timer? _sittingTimer;
+  Timer? _lyingTimer;
+  Duration _sittingDuration = Duration.zero;
+  Duration _lyingDuration = Duration.zero;
+  bool _hasWarnedForCurrentSitting = false;
+  bool _hasWarnedForCurrentLyingDaytime = false;
+  ActivityWarningType? _lastWarningTypeSent;
+  Timer? _sittingWarningResetTimer;
+  Timer? _lyingWarningResetTimer;
+
+  // --- State cho Phân tích Định kỳ ---
+  Timer? _periodicAnalysisTimer;
 
   ActivityRecognitionService({required AuthService authService})
       : _authService = authService {
@@ -120,7 +124,6 @@ class ActivityRecognitionService {
   Future<void> _initializeService() async {
     await _loadSettings();
     await _loadResources();
-    // _restoreLastKnownActivity sẽ được gọi trong _loadResources sau khi model sẵn sàng
   }
 
   Future<void> _loadSettings() async {
@@ -141,64 +144,6 @@ class ActivityRecognitionService {
     } catch (e) {
       if (kDebugMode)
         print("!!! [ARService] Error loading settings, using defaults: $e");
-    }
-  }
-
-  Future<void> _restoreLastKnownActivity() async {
-    if (_isDisposed || !_isHarModelLoaded) {
-      if (kDebugMode)
-        print(
-            "[ARService] Conditions not met for restoring last activity (disposed: $_isDisposed, modelLoaded: $_isHarModelLoaded).");
-      if (!_isHarModelLoaded && !_activityPredictionController.isClosed) {
-        _activityPredictionController.add("Model Loading...");
-      }
-      return;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final lastActivity =
-          prefs.getString(AppConstants.prefKeyLastKnownActivity);
-      final lastActivityTimeStr =
-          prefs.getString(AppConstants.prefKeyLastKnownActivityTimestamp);
-
-      if (lastActivity != null &&
-          lastActivity.isNotEmpty &&
-          lastActivity != "Initializing..." &&
-          lastActivity != "Model Loading...") {
-        _currentActivityInternal = lastActivity;
-        _currentActivityStartTime = (lastActivityTimeStr != null)
-            ? DateTime.tryParse(lastActivityTimeStr)?.toUtc()
-            : null;
-        _currentActivityStartTime ??= DateTime.now().toUtc();
-
-        if (!_activityPredictionController.isClosed &&
-            _activityPredictionController.valueOrNull !=
-                _currentActivityInternal) {
-          _activityPredictionController.add(_currentActivityInternal);
-        }
-        // Khởi động lại timer và tính toán duration đã trôi qua
-        _handleActivityChange(_currentActivityInternal, isInitialRestore: true);
-        if (kDebugMode)
-          print(
-              "[ARService] Restored last known activity: $_currentActivityInternal since $_currentActivityStartTime");
-      } else {
-        _currentActivityInternal = "Unknown";
-        _currentActivityStartTime = DateTime.now().toUtc();
-        if (!_activityPredictionController.isClosed &&
-            _activityPredictionController.valueOrNull !=
-                _currentActivityInternal) {
-          _activityPredictionController.add(_currentActivityInternal);
-        }
-        if (kDebugMode)
-          print(
-              "[ARService] No valid last known activity found, starting fresh.");
-        // Gọi handleActivityChange để đảm bảo timer không chạy cho "Unknown"
-        _handleActivityChange(_currentActivityInternal,
-            isInitialRestore: false);
-      }
-    } catch (e) {
-      if (kDebugMode)
-        print("!!! [ARService] Error restoring last known activity: $e");
     }
   }
 
@@ -237,8 +182,8 @@ class ActivityRecognitionService {
         _harOutputType = _harInterpreter!.getOutputTensor(0).type;
         _isHarModelLoaded = true;
         if (kDebugMode)
-          print("[ARService] HAR Model and Scaler loaded successfully.");
-        // ... (log debug và kiểm tra shape/type như trước) ...
+          print(
+              "[ARService] HAR Model and Scaler loaded successfully. Input: $_harInputShape $_harInputType, Output: $_harOutputShape $_harOutputType");
         await _restoreLastKnownActivity();
       } else {
         throw Exception(
@@ -257,6 +202,63 @@ class ActivityRecognitionService {
     }
   }
 
+  Future<void> _restoreLastKnownActivity() async {
+    if (_isDisposed || !_isHarModelLoaded) {
+      if (kDebugMode)
+        print(
+            "[ARService] Conditions not met for restoring last activity (disposed: $_isDisposed, modelLoaded: $_isHarModelLoaded).");
+      if (!_isHarModelLoaded && !_activityPredictionController.isClosed) {
+        _activityPredictionController.add("Model Loading...");
+      }
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastActivity =
+          prefs.getString(AppConstants.prefKeyLastKnownActivity);
+      final lastActivityTimeStr =
+          prefs.getString(AppConstants.prefKeyLastKnownActivityTimestamp);
+
+      if (lastActivity != null &&
+          lastActivity.isNotEmpty &&
+          lastActivity != "Initializing..." &&
+          lastActivity != "Model Loading...") {
+        _currentActivityInternal = lastActivity;
+        _currentActivityStartTime = (lastActivityTimeStr != null)
+            ? DateTime.tryParse(lastActivityTimeStr)?.toUtc()
+            : null;
+        _currentActivityStartTime ??= DateTime.now().toUtc();
+
+        if (!_activityPredictionController.isClosed &&
+            _activityPredictionController.valueOrNull !=
+                _currentActivityInternal) {
+          _activityPredictionController.add(_currentActivityInternal);
+        }
+
+        _handleActivityChange(_currentActivityInternal, isInitialRestore: true);
+        if (kDebugMode)
+          print(
+              "[ARService] Restored last known activity: $_currentActivityInternal since $_currentActivityStartTime");
+      } else {
+        _currentActivityInternal = "Unknown";
+        _currentActivityStartTime = DateTime.now().toUtc();
+        if (!_activityPredictionController.isClosed &&
+            _activityPredictionController.valueOrNull !=
+                _currentActivityInternal) {
+          _activityPredictionController.add(_currentActivityInternal);
+        }
+        if (kDebugMode)
+          print(
+              "[ARService] No valid last known activity found, starting fresh.");
+        _handleActivityChange(_currentActivityInternal,
+            isInitialRestore: false);
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error restoring last known activity: $e");
+    }
+  }
+
   void startProcessingHealthData(Stream<HealthData> healthDataStream) {
     if (_isDisposed) return;
     if (!_isHarModelLoaded || _scalerMeans == null || _scalerStdDevs == null) {
@@ -264,10 +266,7 @@ class ActivityRecognitionService {
         print(
             "[ARService] Model/Scaler not ready. Attempting to load then start.");
       _loadResources().then((_) {
-        if (!_isDisposed &&
-            _isHarModelLoaded &&
-            _scalerMeans != null &&
-            _scalerStdDevs != null) {
+        if (!_isDisposed && _isHarModelLoaded) {
           startProcessingHealthData(healthDataStream);
         } else if (!_isDisposed) {
           if (kDebugMode)
@@ -279,6 +278,7 @@ class ActivityRecognitionService {
       });
       return;
     }
+
     _healthDataSubscriptionForHar?.cancel();
     if (kDebugMode)
       print("[ARService] Subscribing to health data stream for HAR...");
@@ -290,7 +290,7 @@ class ActivityRecognitionService {
         healthData.az,
         healthData.gx,
         healthData.gy,
-        healthData.gz,
+        healthData.gz
       ]);
     }, onError: (error) {
       if (_isDisposed) return;
@@ -302,20 +302,34 @@ class ActivityRecognitionService {
       if (_isDisposed) return;
       if (kDebugMode) print("[ARService] Health data stream for HAR closed.");
     });
+
+    _periodicAnalysisTimer?.cancel();
+    _periodicAnalysisTimer =
+        Timer.periodic(AppConstants.periodicAnalysisInterval, (_) {
+      _runPeriodicAnalysis();
+    });
+    if (kDebugMode) print("[ARService] Periodic analysis timer started.");
   }
 
   void stopProcessingHealthData() {
     if (kDebugMode)
       print("[ARService] Stopping health data processing for HAR.");
+
     _healthDataSubscriptionForHar?.cancel();
     _healthDataSubscriptionForHar = null;
-    // Lưu segment cuối cùng nếu có hoạt động đang diễn ra có ý nghĩa
+
+    _periodicAnalysisTimer?.cancel();
+    _periodicAnalysisTimer = null;
+    if (kDebugMode) print("[ARService] Periodic analysis timer stopped.");
+
     if (_currentActivityInternal != "Initializing..." &&
         _currentActivityInternal != "Unknown" &&
         _currentActivityStartTime != null) {
       _handleActivityEnd(_currentActivityInternal);
     }
-    _stopActivityTimers(); // Dừng và reset timer, cờ warning
+
+    _manageTimersOnActivityChange(_currentActivityInternal, "Unknown");
+
     _currentActivityInternal = "Unknown";
     _currentActivityStartTime = null;
     if (!_isDisposed &&
@@ -323,7 +337,7 @@ class ActivityRecognitionService {
         _activityPredictionController.valueOrNull != _currentActivityInternal) {
       _activityPredictionController.add(_currentActivityInternal);
     }
-    _saveLastKnownActivity(); // Lưu trạng thái "Unknown"
+    _saveLastKnownActivity();
   }
 
   void _addImuToBufferAndPredict(List<double> imuSample) {
@@ -333,6 +347,7 @@ class ActivityRecognitionService {
         _scalerMeans == null ||
         _scalerStdDevs == null) return;
     if (imuSample.length != HAR_NUM_FEATURES) return;
+
     _imuDataBuffer.add(imuSample);
 
     if (_imuDataBuffer.length >= HAR_WINDOW_SIZE) {
@@ -362,57 +377,18 @@ class ActivityRecognitionService {
             predictedIndex = i;
           }
         }
+
         String predictedActivityName =
             HAR_ACTIVITY_LABELS[predictedIndex] ?? "Unknown";
 
         if (predictedActivityName != "Unknown" &&
             maxProbability > AppConstants.harMinConfidenceThreshold) {
-          String oldActivity =
-              _currentActivityInternal; // Lưu lại hoạt động cũ TRƯỚC KHI cập nhật
-
+          final String oldActivity = _currentActivityInternal;
           if (predictedActivityName != oldActivity) {
-            // Chỉ gọi _handleActivityEnd nếu hoạt động cũ có ý nghĩa
-            if (oldActivity != "Initializing..." &&
-                oldActivity != "Unknown" &&
-                _currentActivityStartTime != null) {
-              _handleActivityEnd(oldActivity);
-            }
-
-            // Cập nhật sang hoạt động mới
-            _currentActivityInternal = predictedActivityName;
-            _currentActivityStartTime = DateTime.now().toUtc();
-
             if (kDebugMode)
               print(
-                  ">>> HAR New Activity: $_currentActivityInternal (Prob: ${maxProbability.toStringAsFixed(2)})");
-            if (!_isDisposed &&
-                !_activityPredictionController.isClosed &&
-                _activityPredictionController.valueOrNull !=
-                    _currentActivityInternal) {
-              _activityPredictionController.add(_currentActivityInternal);
-            }
-            _saveLastKnownActivity(); // Lưu trạng thái mới
-
-            // Xử lý logic phản hồi tích cực
-            if (_smartRemindersEnabled &&
-                _lastWarningTypeSent == ActivityWarningType.prolongedSitting &&
-                oldActivity == 'Sitting' &&
-                (_currentActivityInternal == 'Standing' ||
-                    _currentActivityInternal == 'Walking' ||
-                    _currentActivityInternal == 'Running')) {
-              final positiveWarning = ActivityWarning(
-                type: ActivityWarningType.positiveReinforcement,
-                message:
-                    "Tuyệt vời! Bạn đã đứng dậy và vận động sau khi ngồi lâu.",
-                timestamp: DateTime.now(),
-              );
-              if (!_warningController.isClosed)
-                _warningController.add(positiveWarning);
-              _lastWarningTypeSent = null; // Reset
-            }
-            // Gọi _handleActivityChange cho hoạt động mới
-            _handleActivityChange(_currentActivityInternal,
-                isInitialRestore: false);
+                  ">>> HAR New Activity: $predictedActivityName (Prob: ${maxProbability.toStringAsFixed(2)})");
+            _handleActivityChange(predictedActivityName);
           }
         }
       } catch (e) {
@@ -421,105 +397,118 @@ class ActivityRecognitionService {
         if (!_activityPredictionController.isClosed)
           _activityPredictionController.addError("HAR Inference Error");
       }
-      if (_imuDataBuffer.length >= HAR_STEP_SIZE)
+
+      if (_imuDataBuffer.length >= HAR_STEP_SIZE) {
         _imuDataBuffer.removeRange(0, HAR_STEP_SIZE);
-      else
-        _imuDataBuffer.clear();
-    }
-  }
-
-  Future<void> _saveLastKnownActivity() async {
-    if (_isDisposed) return;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          AppConstants.prefKeyLastKnownActivity, _currentActivityInternal);
-      if (_currentActivityStartTime != null) {
-        await prefs.setString(AppConstants.prefKeyLastKnownActivityTimestamp,
-            _currentActivityStartTime!.toIso8601String());
       } else {
-        // Nếu startTime là null (ví dụ sau khi stop), xóa timestamp đã lưu
-        await prefs.remove(AppConstants.prefKeyLastKnownActivityTimestamp);
+        _imuDataBuffer.clear();
       }
-    } catch (e) {
-      if (kDebugMode)
-        print("!!! [ARService] Error saving last known activity: $e");
     }
-  }
-
-  Future<void> _handleActivityEnd(String endedActivity) async {
-    if (_isDisposed ||
-        _currentActivityStartTime == null ||
-        endedActivity == "Unknown" ||
-        endedActivity == "Initializing...") return;
-
-    final endTime = DateTime.now().toUtc();
-    final duration = endTime.difference(_currentActivityStartTime!);
-
-    if (duration.inSeconds < AppConstants.minActivityDurationToLogSeconds) {
-      if (kDebugMode)
-        print(
-            "[ARService] Activity '$endedActivity' (ended) duration ${duration.inSeconds}s < ${AppConstants.minActivityDurationToLogSeconds}s. Not logging.");
-      // Không reset _currentActivityStartTime ở đây nếu không log, vì hoạt động "ngắn" này
-      // không nên làm gián đoạn việc theo dõi một hoạt động dài hơn nếu nó quay lại ngay.
-      // Tuy nhiên, logic _addImuToBufferAndPredict sẽ cập nhật _currentActivityStartTime khi có hoạt động MỚI.
-      return;
-    }
-
-    final segment = ActivitySegment(
-      activityName: endedActivity,
-      startTime: _currentActivityStartTime!,
-      endTime: endTime,
-      durationInSeconds: duration.inSeconds,
-      userId: _authService.currentUser?.uid,
-      isSynced: false,
-    );
-
-    try {
-      final id = await _localDbService.insertActivitySegment(segment);
-      if (id > 0 && kDebugMode) {
-        print(
-            "[ARService] Activity Segment Saved to Local DB: ID $id, ${segment.activityName}, Duration: ${segment.durationInSeconds}s");
-      }
-    } catch (e) {
-      if (kDebugMode)
-        print("!!! [ARService] Error saving activity segment to local DB: $e");
-    }
-    // _currentActivityStartTime sẽ được reset khi một hoạt động MỚI bắt đầu trong _addImuToBufferAndPredict
   }
 
   void _handleActivityChange(String newActivity,
       {bool isInitialRestore = false}) {
     if (_isDisposed) return;
 
-    // Dừng timer cũ và reset cờ warning nếu hoạt động thay đổi hoặc không phải restore
-    _stopActivityTimers(
-        preserveCurrentActivityDuration: isInitialRestore,
-        resetSittingWarningFlag:
-            (newActivity != 'Sitting') || !isInitialRestore,
-        resetLyingWarningFlag: (newActivity != 'Lying') || !isInitialRestore);
+    final String oldActivity = _currentActivityInternal;
 
-    // Tính toán lại duration nếu là khôi phục trạng thái
-    if (isInitialRestore && _currentActivityStartTime != null) {
-      final now = DateTime.now().toUtc();
-      if (now.isAfter(_currentActivityStartTime!)) {
-        final restoredDuration = now.difference(_currentActivityStartTime!);
-        if (newActivity == 'Sitting') _sittingDuration = restoredDuration;
-        if (newActivity == 'Lying') _lyingDuration = restoredDuration;
-        if (kDebugMode)
-          print(
-              "[ARService] Restored duration for $newActivity: ${_getActivityDuration(newActivity).inMinutes}min. SittingWarned: $_hasWarnedForCurrentSitting, LyingWarned: $_hasWarnedForCurrentLyingDaytime");
-      } else {
-        if (kDebugMode)
-          print(
-              "[ARService] Start time for restored activity is in the future. Resetting duration.");
-        if (newActivity == 'Sitting') _sittingDuration = Duration.zero;
-        if (newActivity == 'Lying') _lyingDuration = Duration.zero;
-      }
+    if (oldActivity != "Initializing..." &&
+        oldActivity != "Unknown" &&
+        _currentActivityStartTime != null &&
+        oldActivity != newActivity) {
+      _handleActivityEnd(oldActivity);
     }
-    // Nếu không phải restore, duration đã được reset bởi _stopActivityTimers
 
-    // Khởi động timer cho hoạt động mới
+    _currentActivityInternal = newActivity;
+    if (!isInitialRestore || _currentActivityStartTime == null) {
+      _currentActivityStartTime = DateTime.now().toUtc();
+    }
+
+    _manageTimersOnActivityChange(oldActivity, newActivity,
+        isInitialRestore: isInitialRestore);
+
+    if (!_activityPredictionController.isClosed &&
+        _activityPredictionController.valueOrNull != _currentActivityInternal) {
+      _activityPredictionController.add(_currentActivityInternal);
+    }
+    _saveLastKnownActivity();
+
+    _checkPositiveReinforcement(oldActivity, newActivity);
+  }
+
+  void _manageTimersOnActivityChange(String oldActivity, String newActivity,
+      {bool isInitialRestore = false}) {
+    _sittingTimer?.cancel();
+    _lyingTimer?.cancel();
+    _sittingTimer = null;
+    _lyingTimer = null;
+
+    final bool isMovingNow = (newActivity == 'Standing' ||
+        newActivity == 'Walking' ||
+        newActivity == 'Running');
+
+    if (oldActivity == 'Sitting' && isMovingNow) {
+      if (_hasWarnedForCurrentSitting) {
+        if (kDebugMode)
+          print(
+              "[ARService] User is moving after sitting warning. Starting cooldown timer to reset flag.");
+        _sittingWarningResetTimer?.cancel();
+        _sittingWarningResetTimer =
+            Timer(AppConstants.minMovementDurationToResetWarning, () {
+          if (kDebugMode)
+            print(
+                "[ARService] Cooldown period for sitting warning ended. Resetting flag.");
+          _hasWarnedForCurrentSitting = false;
+          _sittingWarningResetTimer = null;
+        });
+      }
+    } else if (oldActivity != newActivity &&
+        _sittingWarningResetTimer != null) {
+      if (kDebugMode)
+        print(
+            "[ARService] User stopped moving during sitting cooldown. Cancelling warning reset timer.");
+      _sittingWarningResetTimer?.cancel();
+      _sittingWarningResetTimer = null;
+    }
+
+    if (oldActivity == 'Lying' && isMovingNow) {
+      if (_hasWarnedForCurrentLyingDaytime) {
+        if (kDebugMode)
+          print(
+              "[ARService] User is moving after lying warning. Starting cooldown timer to reset flag.");
+        _lyingWarningResetTimer?.cancel();
+        _lyingWarningResetTimer =
+            Timer(AppConstants.minMovementDurationToResetWarning, () {
+          if (kDebugMode)
+            print(
+                "[ARService] Cooldown period for lying warning ended. Resetting flag.");
+          _hasWarnedForCurrentLyingDaytime = false;
+          _lyingWarningResetTimer = null;
+        });
+      }
+    } else if (oldActivity != newActivity && _lyingWarningResetTimer != null) {
+      if (kDebugMode)
+        print(
+            "[ARService] User stopped moving during lying cooldown. Cancelling warning reset timer.");
+      _lyingWarningResetTimer?.cancel();
+      _lyingWarningResetTimer = null;
+    }
+
+    if (!isInitialRestore) {
+      _sittingDuration = Duration.zero;
+      _lyingDuration = Duration.zero;
+    } else if (_currentActivityStartTime != null) {
+      final restoredDuration =
+          DateTime.now().toUtc().difference(_currentActivityStartTime!);
+      _sittingDuration =
+          (newActivity == 'Sitting') ? restoredDuration : Duration.zero;
+      _lyingDuration =
+          (newActivity == 'Lying') ? restoredDuration : Duration.zero;
+      if (kDebugMode)
+        print(
+            "[ARService] Restored duration for $newActivity: ${restoredDuration.inMinutes}min.");
+    }
+
     if (newActivity == 'Sitting') {
       _sittingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
         if (_isDisposed || _currentActivityInternal != 'Sitting') {
@@ -570,6 +559,7 @@ class ActivityRecognitionService {
         if (kDebugMode)
           print(
               "[ARService] Lying duration: ${_lyingDuration.inHours}h ${_lyingDuration.inMinutes % 60}m. Warned: $_hasWarnedForCurrentLyingDaytime");
+
         final now = DateTime.now();
         bool isDaytime = now.hour >= AppConstants.daytimeStartHour &&
             now.hour < AppConstants.daytimeEndHour;
@@ -588,43 +578,150 @@ class ActivityRecognitionService {
         }
       });
     }
-    // Logic phản hồi tích cực đã được chuyển vào _addImuToBufferAndPredict
   }
 
-  // Helper để lấy duration hiện tại của một hoạt động cụ thể
-  Duration _getActivityDuration(String activity) {
-    if (activity == 'Sitting') return _sittingDuration;
-    if (activity == 'Lying') return _lyingDuration;
-    return Duration.zero;
-  }
-
-  void _stopActivityTimers({
-    bool preserveCurrentActivityDuration = false,
-    bool resetSittingWarningFlag = true, // Mặc định là reset cờ khi dừng timer
-    bool resetLyingWarningFlag = true,
-  }) {
-    _sittingTimer?.cancel();
-    _sittingTimer = null;
-    _lyingTimer?.cancel();
-    _lyingTimer = null;
-
-    if (!preserveCurrentActivityDuration) {
-      _sittingDuration = Duration.zero;
-      _lyingDuration = Duration.zero;
+  void _checkPositiveReinforcement(String oldActivity, String newActivity) {
+    bool isMovingNow = (newActivity == 'Standing' ||
+        newActivity == 'Walking' ||
+        newActivity == 'Running');
+    if (_smartRemindersEnabled &&
+        _lastWarningTypeSent == ActivityWarningType.prolongedSitting &&
+        oldActivity == 'Sitting' &&
+        isMovingNow) {
+      final positiveWarning = ActivityWarning(
+        type: ActivityWarningType.positiveReinforcement,
+        message: "Tuyệt vời! Bạn đã đứng dậy và vận động sau khi ngồi lâu.",
+        timestamp: DateTime.now(),
+      );
+      if (!_warningController.isClosed) _warningController.add(positiveWarning);
+      _lastWarningTypeSent = null; // Reset
     }
-    // Chỉ reset cờ nếu được yêu cầu (thường là khi hoạt động thay đổi, không phải khi restore)
-    if (resetSittingWarningFlag) _hasWarnedForCurrentSitting = false;
-    if (resetLyingWarningFlag) _hasWarnedForCurrentLyingDaytime = false;
+  }
 
-    if (kDebugMode) {
-      String log = "[ARService] Activity timers stopped.";
-      if (!preserveCurrentActivityDuration) log += " Durations reset.";
-      if (resetSittingWarningFlag && !preserveCurrentActivityDuration)
-        log +=
-            " Sitting warning flag reset."; // Chỉ log reset nếu duration cũng reset
-      if (resetLyingWarningFlag && !preserveCurrentActivityDuration)
-        log += " Lying warning flag reset.";
-      print(log);
+  Future<void> _handleActivityEnd(String endedActivity) async {
+    if (_isDisposed ||
+        _currentActivityStartTime == null ||
+        endedActivity == "Unknown" ||
+        endedActivity == "Initializing...") return;
+
+    final endTime = DateTime.now().toUtc();
+    final duration = endTime.difference(_currentActivityStartTime!);
+
+    if (duration.inSeconds < AppConstants.minActivityDurationToLogSeconds) {
+      if (kDebugMode)
+        print(
+            "[ARService] Activity '$endedActivity' (ended) duration ${duration.inSeconds}s < ${AppConstants.minActivityDurationToLogSeconds}s. Not logging.");
+      return;
+    }
+
+    final segment = ActivitySegment(
+      activityName: endedActivity,
+      startTime: _currentActivityStartTime!,
+      endTime: endTime,
+      durationInSeconds: duration.inSeconds,
+      userId: _authService.currentUser?.uid,
+      isSynced: false,
+    );
+
+    try {
+      final id = await _localDbService.insertActivitySegment(segment);
+      if (id > 0 && kDebugMode) {
+        print(
+            "[ARService] Activity Segment Saved to Local DB: ID $id, ${segment.activityName}, Duration: ${segment.durationInSeconds}s");
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error saving activity segment to local DB: $e");
+    }
+  }
+
+  Future<void> _runPeriodicAnalysis() async {
+    if (_isDisposed || _authService.currentUser == null) {
+      if (kDebugMode)
+        print(
+            "[ARService] Skipping periodic analysis: Service disposed or user not logged in.");
+      return;
+    }
+
+    final String currentUserId = _authService.currentUser!.uid;
+    if (kDebugMode)
+      print(
+          "[ARService] Running periodic analysis for the last ${AppConstants.periodicAnalysisInterval.inHours} hour(s)...");
+
+    final now = DateTime.now();
+    final startTime = now.subtract(AppConstants.periodicAnalysisInterval);
+
+    try {
+      final segments = await _localDbService.getActivitySegmentsForDateRange(
+          startTime, now,
+          userId: currentUserId);
+
+      if (segments.isEmpty) {
+        if (kDebugMode)
+          print(
+              "[ARService] No activity segments found for periodic analysis.");
+        return;
+      }
+
+      int totalSittingSeconds = 0;
+      int totalMovementSeconds = 0;
+
+      for (var segment in segments) {
+        if (segment.activityName == 'Sitting') {
+          totalSittingSeconds += segment.durationInSeconds;
+        } else if (segment.activityName == 'Walking' ||
+            segment.activityName == 'Running' ||
+            segment.activityName == 'Standing') {
+          totalMovementSeconds += segment.durationInSeconds;
+        }
+      }
+
+      final int totalSittingMinutes = totalSittingSeconds ~/ 60;
+      final int totalMovementMinutes = totalMovementSeconds ~/ 60;
+      final int totalMinutes = AppConstants.periodicAnalysisInterval.inMinutes;
+
+      if (kDebugMode)
+        print(
+            "[ARService] Analysis result: Sitting=${totalSittingMinutes}min, Movement=${totalMovementMinutes}min in a ${totalMinutes}min period.");
+
+      if (totalSittingMinutes > totalMinutes * 0.75) {
+        final warning = ActivityWarning(
+          type: ActivityWarningType.smartReminderToMove,
+          message:
+              "Trong giờ qua, bạn đã ngồi khoảng $totalSittingMinutes phút. Hãy cố gắng vận động nhiều hơn trong giờ tới nhé!",
+          timestamp: now,
+        );
+        if (!_warningController.isClosed) _warningController.add(warning);
+      } else if (totalMovementMinutes > totalMinutes * 0.20) {
+        final warning = ActivityWarning(
+          type: ActivityWarningType.positiveReinforcement,
+          message:
+              "Làm tốt lắm! Bạn đã vận động khoảng $totalMovementMinutes phút trong giờ qua. Hãy tiếp tục duy trì nhé!",
+          timestamp: now,
+        );
+        if (!_warningController.isClosed) _warningController.add(warning);
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error during periodic analysis: $e");
+    }
+  }
+
+  Future<void> _saveLastKnownActivity() async {
+    if (_isDisposed) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          AppConstants.prefKeyLastKnownActivity, _currentActivityInternal);
+      if (_currentActivityStartTime != null) {
+        await prefs.setString(AppConstants.prefKeyLastKnownActivityTimestamp,
+            _currentActivityStartTime!.toIso8601String());
+      } else {
+        await prefs.remove(AppConstants.prefKeyLastKnownActivityTimestamp);
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error saving last known activity: $e");
     }
   }
 
@@ -644,7 +741,6 @@ class ActivityRecognitionService {
           newSittingThreshold.inMinutes);
       changed = true;
     }
-    // ... (tương tự cho lying và smartReminders)
     if (newLyingThreshold != null &&
         newLyingThreshold != _lyingDaytimeWarningThreshold) {
       _lyingDaytimeWarningThreshold = newLyingThreshold;
@@ -663,13 +759,9 @@ class ActivityRecognitionService {
       if (kDebugMode)
         print(
             "[ARService] Warning settings updated and saved. SitThr: ${_sittingWarningThreshold.inMinutes}m, LieThr: ${_lyingDaytimeWarningThreshold.inHours}h, SmartRem: $_smartRemindersEnabled");
-      // Nếu cài đặt thay đổi và có hoạt động đang được theo dõi, khởi động lại logic _handleActivityChange
-      // để áp dụng ngưỡng mới ngay lập tức.
       if (_currentActivityInternal != "Initializing..." &&
           _currentActivityInternal != "Unknown") {
-        _handleActivityChange(_currentActivityInternal,
-            isInitialRestore:
-                true); // Coi như restore để nó tính lại duration và áp dụng ngưỡng mới
+        _handleActivityChange(_currentActivityInternal, isInitialRestore: true);
       }
     }
   }
@@ -684,12 +776,15 @@ class ActivityRecognitionService {
         _currentActivityStartTime != null) {
       _handleActivityEnd(_currentActivityInternal);
     }
-    _stopActivityTimers(
-        resetSittingWarningFlag: true,
-        resetLyingWarningFlag: true); // Reset hết cờ khi dispose
 
     _healthDataSubscriptionForHar?.cancel();
     _harInterpreter?.close();
+
+    _sittingTimer?.cancel();
+    _lyingTimer?.cancel();
+    _sittingWarningResetTimer?.cancel();
+    _lyingWarningResetTimer?.cancel();
+    _periodicAnalysisTimer?.cancel();
 
     if (!_activityPredictionController.isClosed)
       _activityPredictionController.close();
@@ -702,10 +797,9 @@ class ActivityRecognitionService {
 
   Future<void> prepareForLogout() async {
     if (kDebugMode) print("[ARService] Preparing for logout...");
-    stopProcessingHealthData(); // Hàm này đã gọi _handleActivityEnd và _stopActivityTimers
+    stopProcessingHealthData();
 
-    // Reset các trạng thái nội bộ liên quan đến hoạt động
-    _currentActivityInternal = "Initializing..."; // Hoặc "Unknown"
+    _currentActivityInternal = "Initializing...";
     _currentActivityStartTime = null;
     if (!_activityPredictionController.isClosed &&
         _activityPredictionController.valueOrNull != _currentActivityInternal) {
@@ -716,9 +810,6 @@ class ActivityRecognitionService {
     _hasWarnedForCurrentSitting = false;
     _hasWarnedForCurrentLyingDaytime = false;
 
-    // Xóa trạng thái đã lưu trong SharedPreferences nếu bạn muốn người dùng mới bắt đầu sạch
-    // Hoặc giữ lại nếu bạn muốn khôi phục cho cùng người dùng đó nếu họ đăng nhập lại ngay.
-    // Để đảm bảo "sạch" khi người dùng khác đăng nhập, nên xóa:
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.prefKeyLastKnownActivity);

@@ -1,19 +1,27 @@
-//lib/screens/core/dashboard_screen.dart
+// lib/providers/dashboard_provider.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+// Import các Providers cần thiết
 import '../../providers/auth_provider.dart';
 import '../../providers/ble_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/goals_provider.dart';
+
+// Import các Services và Models
 import '../../services/ble_service.dart';
 import '../../services/activity_recognition_service.dart';
+
+// Import các Widgets và Constants
 import '../../widgets/dashboard/realtime_metrics_card.dart';
 import '../../widgets/dashboard/history_chart_card.dart';
 import '../../widgets/dashboard/spo2_history_chart_card.dart';
 import '../../widgets/dashboard/steps_history_chart_card.dart';
+import '../../widgets/dashboard/activity_summary_chart_card.dart';
 import '../../app_constants.dart';
 import '../../generated/app_localizations.dart';
-import 'main_navigator.dart'; // Import MainNavigator để truy cập MainNavigatorState
+import 'main_navigator.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,45 +32,35 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
-  int _dashboardStepGoal = AppConstants.defaultDailyStepGoal;
-  bool _isLoadingGoal = true;
-  int _todaySteps = 0;
-  bool _isLoadingTodaySteps = true;
-  VoidCallback? _dashboardListener;
+  // Vẫn cần tham chiếu đến service này để lắng nghe stream
   ActivityRecognitionService? _activityServiceRef;
+
+  // <<< SỬA Ở ĐÂY: Thay vì StreamSubscription, chúng ta sẽ dùng lại VoidCallback listener >>>
+  VoidCallback? _connectionStatusListener;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadDashboardStepGoal();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         print("[DashboardScreen] Starting initialization...");
 
-        // 1. Lắng nghe DashboardProvider để tính toán lại số bước
-        final dashboardProvider =
-            Provider.of<DashboardProvider>(context, listen: false);
-        _dashboardListener = () {
-          if (mounted) _calculateTodaySteps(dashboardProvider);
-        };
-        dashboardProvider.addListener(_dashboardListener!);
-        print("[DashboardScreen] Added dashboard listener.");
-
-        // Ban đầu, tính toán số bước với dữ liệu hiện có (nếu có)
-        _calculateTodaySteps(dashboardProvider);
-
-        // 2. Lắng nghe thay đổi kết nối BLE
         final bleProvider = Provider.of<BleProvider>(context, listen: false);
-        bleProvider.connectionStatus
-            .addListener(_handleConnectionChangeForRefresh);
-
-        // 3. Lấy tham chiếu đến ActivityService
         _activityServiceRef =
             Provider.of<ActivityRecognitionService>(context, listen: false);
-        // Gọi setState để build lại UI nếu cần hiển thị gì đó từ activity service
-        if (_activityServiceRef != null) setState(() {});
+
+        // <<< SỬA LỖI: Sử dụng addListener cho ValueNotifier thay vì .stream.listen >>>
+        _connectionStatusListener = () {
+          _handleConnectionChangeForRefresh(bleProvider.connectionStatus.value);
+        };
+        bleProvider.connectionStatus.addListener(_connectionStatusListener!);
+        // --------------------------------------------------------------------
+
+        if (_activityServiceRef != null) {
+          setState(() {});
+        }
 
         print("[DashboardScreen] Initialization completed.");
       }
@@ -72,21 +70,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    try {
-      Provider.of<DashboardProvider>(context, listen: false)
-          .removeListener(_dashboardListener!);
-      print("[DashboardScreen] Removed dashboard listener.");
-    } catch (e) {
-      print("Error removing dashboard listener in Dashboard dispose: $e");
+
+    // <<< SỬA Ở ĐÂY: Hủy listener một cách an toàn >>>
+    if (_connectionStatusListener != null) {
+      try {
+        // Cần truy cập provider một lần nữa để xóa listener
+        Provider.of<BleProvider>(context, listen: false)
+            .connectionStatus
+            .removeListener(_connectionStatusListener!);
+      } catch (e) {
+        print(
+            "Error removing connection listener in DashboardScreen dispose: $e");
+      }
     }
-    try {
-      context
-          .read<BleProvider>()
-          .connectionStatus
-          .removeListener(_handleConnectionChangeForRefresh);
-    } catch (e) {
-      print("Error removing connection listener in Dashboard dispose: $e");
-    }
+    // ----------------------------------------------------
+
     _activityServiceRef = null;
     super.dispose();
   }
@@ -96,42 +94,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && mounted) {
       print(
-          "[DashboardScreen] App Resumed - Reloading goal and recalculating steps.");
-      _loadDashboardStepGoal();
-      Provider.of<DashboardProvider>(context, listen: false)
-          .fetchHealthHistory();
+          "[DashboardScreen] App Resumed - Triggering data refresh from providers.");
+      final dashboardProvider =
+          Provider.of<DashboardProvider>(context, listen: false);
+      final goalsProvider = Provider.of<GoalsProvider>(context, listen: false);
+
+      dashboardProvider.fetchHealthHistory();
+      goalsProvider.loadDailyGoal();
     }
   }
 
-  Future<void> _loadDashboardStepGoal() async {
-    if (!mounted) return;
-    if (!_isLoadingGoal) setStateIfMounted(() => _isLoadingGoal = true);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedGoal = prefs.getInt(AppConstants.prefKeyDailyStepGoal);
-      if (mounted) {
-        setStateIfMounted(() {
-          _dashboardStepGoal = savedGoal ?? AppConstants.defaultDailyStepGoal;
-          _isLoadingGoal = false;
-        });
-        print(
-            "[DashboardScreen] Loaded step goal from SharedPreferences: $_dashboardStepGoal");
-      }
-    } catch (e) {
-      print("Error loading step goal: $e");
-      setStateIfMounted(() {
-        _dashboardStepGoal = AppConstants.defaultDailyStepGoal;
-        _isLoadingGoal = false;
-      });
-    }
-  }
-
-  void _handleConnectionChangeForRefresh() {
-    if (!mounted) return;
-    final bleStatus =
-        Provider.of<BleProvider>(context, listen: false).connectionStatus.value;
-    if (bleStatus == BleConnectionStatus.connected) {
-      print("[DashboardScreen] Reconnected to BLE, refreshing history.");
+  void _handleConnectionChangeForRefresh(BleConnectionStatus status) {
+    // Không cần truy cập provider ở đây nữa vì status đã được truyền vào
+    if (status == BleConnectionStatus.connected) {
+      print(
+          "[DashboardScreen] Reconnected to BLE, refreshing history after a short delay.");
+      // Dùng Future.delayed để chờ thiết bị ổn định một chút
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           Provider.of<DashboardProvider>(context, listen: false)
@@ -141,8 +119,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Widget _buildBleStatusChip(BleConnectionStatus status) {
-    final l10n = AppLocalizations.of(context)!;
+  // --- Các hàm build widget (_build...Chip, _buildReconnectStatusCard) không thay đổi ---
+  Widget _buildBleStatusChip(
+      BleConnectionStatus status, AppLocalizations l10n) {
     String statusText;
     Color color;
     IconData icon;
@@ -186,21 +165,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildWifiStatusChip(bool? isWifiConnected) {
-    final l10n = AppLocalizations.of(context)!;
-    String statusText;
-    Color color;
-    IconData icon;
+  Widget _buildWifiStatusChip(bool? isWifiConnected, AppLocalizations l10n) {
     bool connected = isWifiConnected ?? false;
-    if (connected) {
-      statusText = l10n.wifiStatusOn;
-      color = Colors.teal;
-      icon = Icons.wifi;
-    } else {
-      statusText = l10n.wifiStatusOff;
-      color = Colors.grey;
-      icon = Icons.wifi_off;
-    }
+    String statusText = connected ? l10n.wifiStatusOn : l10n.wifiStatusOff;
+    Color color = connected ? Colors.teal : Colors.grey;
+    IconData icon = connected ? Icons.wifi : Icons.wifi_off;
+
     return Chip(
       avatar: Icon(icon, color: Colors.white, size: 16),
       label: Text(statusText,
@@ -212,90 +182,38 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildReconnectStatusCard() {
+  Widget _buildReconnectStatusCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Lắng nghe notifier từ BleProvider
     return ValueListenableBuilder<bool>(
-      valueListenable: Provider.of<BleProvider>(context).isReconnectingNotifier,
+      valueListenable: context.read<BleProvider>().isReconnectingNotifier,
       builder: (context, isReconnecting, child) {
         if (!isReconnecting) return const SizedBox.shrink();
         return Card(
           elevation: 2.0,
+          color:
+              Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.7),
           margin: const EdgeInsets.only(bottom: 16.0),
           child: ListTile(
             leading: const SizedBox(
-              width: 32,
-              height: 32,
+              width: 24,
+              height: 24,
               child: CircularProgressIndicator(strokeWidth: 3),
             ),
-            title: Text(
-              l10n.reconnectAttemptTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            subtitle: Text(
-              l10n.reconnectAttemptBody,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            title: Text(l10n.reconnectAttemptTitle,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            subtitle: Text(l10n.reconnectAttemptBody,
+                style: Theme.of(context).textTheme.bodyMedium),
           ),
         );
       },
     );
   }
 
-  void _calculateTodaySteps(DashboardProvider dashboardProvider) {
-    if (dashboardProvider.historyStatus == HistoryStatus.loading ||
-        dashboardProvider.historyStatus == HistoryStatus.initial) {
-      print(
-          "[DashboardScreen] Waiting for DashboardProvider to load history...");
-      if (!_isLoadingTodaySteps)
-        setStateIfMounted(() => _isLoadingTodaySteps = true);
-      return;
-    }
-
-    if (dashboardProvider.healthHistory.isEmpty &&
-        dashboardProvider.historyStatus != HistoryStatus.loading) {
-      print("[DashboardScreen] No health history data available.");
-      setStateIfMounted(() {
-        _todaySteps = 0;
-        _isLoadingTodaySteps = false;
-      });
-      return;
-    }
-
-    print("[DashboardScreen] Calculating today's steps...");
-    if (!_isLoadingTodaySteps)
-      setStateIfMounted(() => _isLoadingTodaySteps = true);
-
-    final List<HourlyStepsData> hourlyStepsList =
-        dashboardProvider.hourlyStepsData;
-    int calculatedSteps = 0;
-
-    if (hourlyStepsList.isNotEmpty) {
-      final nowLocal = DateTime.now();
-      final todayStart = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-      final todayEnd = todayStart.add(const Duration(days: 1));
-
-      for (var hourlyData in hourlyStepsList) {
-        final dataHourLocal = hourlyData.hourStart.toLocal();
-        if (!dataHourLocal.isBefore(todayStart) &&
-            dataHourLocal.isBefore(todayEnd)) {
-          calculatedSteps += hourlyData.steps;
-        }
-      }
-    } else {
-      print("[DashboardScreen] Hourly steps data is empty.");
-    }
-
-    setStateIfMounted(() {
-      _todaySteps = calculatedSteps;
-      _isLoadingTodaySteps = false;
-      print("[DashboardScreen] Today's steps: $_todaySteps");
-    });
-  }
-
-  void setStateIfMounted(VoidCallback fn) {
-    if (mounted) setState(fn);
-  }
-
+  // --- Các hàm helper cho activity (không thay đổi) ---
   String _getLocalizedActivityName(String activityKey, AppLocalizations l10n) {
     switch (activityKey) {
       case 'Standing':
@@ -332,15 +250,16 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final bleProvider = context.watch<BleProvider>();
-    final connectionStatus = bleProvider.connectionStatus.value;
-    final latestData = bleProvider.latestHealthData;
-    final isDeviceConnected = connectionStatus == BleConnectionStatus.connected;
-    final bool? espWifiStatus = isDeviceConnected ? latestData?.wifi : null;
-
     final l10n = AppLocalizations.of(context)!;
-    final bool isLoadingScreen = _isLoadingGoal;
+
+    final authProvider = context.watch<AuthProvider>();
+    final bleProvider = context.watch<BleProvider>();
+    final dashboardProvider = context.watch<DashboardProvider>();
+    final goalsProvider = context.watch<GoalsProvider>();
+
+    final user = authProvider.user;
+    final connectionStatus = bleProvider.connectionStatus.value;
+    final isDeviceConnected = connectionStatus == BleConnectionStatus.connected;
 
     return Scaffold(
       appBar: AppBar(
@@ -354,160 +273,153 @@ class _DashboardScreenState extends State<DashboardScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isDeviceConnected)
-                    _buildWifiStatusChip(espWifiStatus)
-                  else
-                    const SizedBox.shrink(),
+                    ValueListenableBuilder<bool?>(
+                        valueListenable: bleProvider.deviceWifiStatusNotifier,
+                        builder: (context, isWifiOn, child) {
+                          return _buildWifiStatusChip(isWifiOn, l10n);
+                        }),
                   if (isDeviceConnected) const SizedBox(width: 4),
-                  ValueListenableBuilder<BleConnectionStatus>(
-                    valueListenable: bleProvider.connectionStatus,
-                    builder: (context, status, child) =>
-                        _buildBleStatusChip(status),
-                  ),
+                  _buildBleStatusChip(connectionStatus, l10n),
                 ],
               ),
             ),
           ),
         ],
       ),
-      body: isLoadingScreen
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async {
-                print("[DashboardScreen] Pull to refresh triggered.");
-                await _loadDashboardStepGoal();
-                await Provider.of<DashboardProvider>(context, listen: false)
-                    .fetchHealthHistory();
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  if (user != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Text(
-                        l10n.welcomeUser(
-                            user.displayName ?? user.email ?? l10n.defaultUser),
-                        style: Theme.of(context).textTheme.headlineSmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  _buildReconnectStatusCard(),
-                  if (_activityServiceRef != null)
-                    Card(
-                      elevation: 2.0,
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      child: StreamBuilder<String>(
-                        stream: _activityServiceRef!.activityPredictionStream,
-                        builder: (context, snapshot) {
-                          IconData activityIcon = Icons.person_outline;
-                          String activityText = l10n.activityInitializing;
+      body: RefreshIndicator(
+        onRefresh: () async {
+          print("[DashboardScreen] Pull to refresh triggered.");
+          await Future.wait([
+            dashboardProvider.fetchHealthHistory(),
+            goalsProvider.loadDailyGoal()
+          ]);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            if (user != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  l10n.welcomeUser(
+                      authProvider.preferredDisplayName ?? l10n.defaultUser),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+              ),
 
-                          if (snapshot.hasError) {
-                            activityText = l10n.activityError;
-                            activityIcon = Icons.error_outline;
-                            print(
-                                "[DashboardScreen] Error on activity stream: ${snapshot.error}");
-                          } else if (snapshot.hasData &&
-                              snapshot.data!.isNotEmpty) {
-                            final currentActivity = snapshot.data!;
-                            activityText = _getLocalizedActivityName(
-                                currentActivity, l10n);
-                            activityIcon = _getActivityIcon(currentActivity);
-                          } else if (snapshot.connectionState ==
-                                  ConnectionState.waiting &&
-                              !snapshot.hasData) {
-                            activityIcon = Icons.hourglass_empty_outlined;
-                          } else if (!snapshot.hasData) {
-                            activityText = l10n.activityUnknown;
-                            activityIcon = Icons.help_outline;
-                          }
+            _buildReconnectStatusCard(context),
 
-                          return ListTile(
-                            leading: Icon(activityIcon,
-                                size: 32,
-                                color: Theme.of(context).colorScheme.primary),
-                            title: Text(l10n.currentActivityTitle,
-                                style: Theme.of(context).textTheme.titleMedium),
-                            subtitle: Text(
-                              activityText,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  const RealtimeMetricsCard(),
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 2.0,
-                    child: ListTile(
-                      leading: const Icon(Icons.flag_outlined,
-                          color: Colors.orangeAccent),
-                      title: Text(l10n.goalProgressTitle),
-                      subtitle: _isLoadingTodaySteps
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                                const SizedBox(width: 8),
-                                Text(l10n.stepsCalculating),
-                              ],
-                            )
-                          : Text(l10n.stepsProgress(
-                              '$_todaySteps', '$_dashboardStepGoal')),
-                      trailing: Icon(Icons.settings_outlined,
+            if (_activityServiceRef != null)
+              Card(
+                elevation: 2.0,
+                margin: const EdgeInsets.only(bottom: 16.0),
+                child: StreamBuilder<String>(
+                  stream: _activityServiceRef!.activityPredictionStream,
+                  builder: (context, snapshot) {
+                    IconData activityIcon;
+                    String activityText;
+
+                    if (snapshot.hasError) {
+                      activityText = l10n.activityError;
+                      activityIcon = Icons.error_outline;
+                    } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                      final currentActivity = snapshot.data!;
+                      activityText =
+                          _getLocalizedActivityName(currentActivity, l10n);
+                      activityIcon = _getActivityIcon(currentActivity);
+                    } else {
+                      activityText = l10n.activityInitializing;
+                      activityIcon = Icons.hourglass_empty_outlined;
+                    }
+
+                    return ListTile(
+                      leading: Icon(activityIcon,
+                          size: 32,
                           color: Theme.of(context).colorScheme.primary),
-                      onTap: () {
-                        try {
-                          // Tìm MainNavigatorState trong context
-                          final mainNavigatorState = context
-                              .findAncestorStateOfType<MainNavigatorState>();
-                          if (mainNavigatorState != null) {
-                            mainNavigatorState
-                                .navigateTo(AppConstants.goalsScreenIndex);
-                          } else {
-                            print(
-                                "[DashboardScreen] MainNavigatorState not found in context.");
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.errorNavigateGoals),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          print("Error navigating to GoalsScreen: $e");
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.errorNavigateGoals),
-                              backgroundColor: Colors.redAccent,
+                      title: Text(l10n.currentActivityTitle,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      subtitle: Text(
+                        activityText,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.secondary,
                             ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const HistoryChartCard(),
-                  const SizedBox(height: 16),
-                  const Spo2HistoryChartCard(),
-                  const SizedBox(height: 16),
-                  StepsHistoryChartCard(),
-                  const SizedBox(height: 16),
-                ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            const RealtimeMetricsCard(),
+            const SizedBox(height: 16),
+
+            // <<< SỬA LỖI Ở ĐÂY: Mỗi widget biểu đồ chỉ được gọi MỘT lần >>>
+            const ActivitySummaryChartCard(),
+            const SizedBox(height: 16),
+            // -----------------------------------------------------------
+
+            Card(
+              elevation: 2.0,
+              child: ListTile(
+                leading:
+                    const Icon(Icons.flag_outlined, color: Colors.orangeAccent),
+                title: Text(l10n.goalProgressTitle),
+                subtitle: (dashboardProvider.historyStatus ==
+                            HistoryStatus.loading ||
+                        goalsProvider.isLoadingGoal)
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(width: 8),
+                          Text(l10n.loadingMessage),
+                        ],
+                      )
+                    : Text(l10n.stepsProgress(
+                        dashboardProvider.todayTotalSteps.toString(),
+                        goalsProvider.currentStepGoal.toString(),
+                      )),
+                trailing: Icon(Icons.settings_outlined,
+                    color: Theme.of(context).colorScheme.primary),
+                onTap: () {
+                  try {
+                    final mainNavigatorState =
+                        context.findAncestorStateOfType<MainNavigatorState>();
+                    if (mainNavigatorState != null) {
+                      mainNavigatorState
+                          .navigateTo(AppConstants.goalsScreenIndex);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(l10n.errorNavigateGoals),
+                              backgroundColor: Colors.redAccent),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    print("Error navigating to GoalsScreen: $e");
+                  }
+                },
               ),
             ),
+            const SizedBox(height: 16),
+
+            // <<< SỬA LỖI Ở ĐÂY: Xóa dòng HistoryChartCard bị lặp lại >>>
+            const HistoryChartCard(),
+            const SizedBox(height: 16),
+            const Spo2HistoryChartCard(),
+            const SizedBox(height: 16),
+            StepsHistoryChartCard(),
+            const SizedBox(height: 16),
+            // ----------------------------------------------------
+          ],
+        ),
+      ),
     );
   }
 }

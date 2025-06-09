@@ -7,7 +7,8 @@ import '../core/relatives_screen.dart';
 import '../core/goals_screen.dart';
 import '../core/settings_screen.dart';
 import 'chatbot_screen.dart';
-import '../debug/record_activity_screen.dart'; // <<< THÊM IMPORT NÀY
+import '../debug/record_activity_screen.dart';
+import 'activity_history_screen.dart';
 
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
@@ -99,14 +100,16 @@ class MainNavigatorState extends State<MainNavigator> {
             },
           ),
           SpeedDialChild(
-            child: const Icon(Icons.analytics),
-            label: AppLocalizations.of(context)!.predictTitle,
-            backgroundColor: Colors.green,
+            child:
+                const Icon(Icons.history_edu_outlined), // Chọn một icon phù hợp
+            label:
+                "Activity History", // TODO: Thêm key 'activityHistoryTitle' vào .arb
+            backgroundColor: Colors.indigo, // Chọn một màu mới
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                // Sử dụng key dịch thuật nếu có, ví dụ l10n.predictPlaceholder
-                const SnackBar(
-                    content: Text('Prediction functionality coming soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ActivityHistoryScreen()),
               );
             },
           ),

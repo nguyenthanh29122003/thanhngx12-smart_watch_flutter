@@ -1,12 +1,20 @@
 // lib/providers/dashboard_provider.dart
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'; // <<< Cần thiết cho 'Color'
+
+// Import các Services
 import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
-import '../models/health_data.dart';
-import 'dart:math';
+import '../services/local_db_service.dart';
 
-// Cấu trúc dữ liệu và Enum không đổi...
+// Import các Models
+import '../models/health_data.dart';
+import '../models/activity_segment.dart';
+
+// --- Cấu trúc dữ liệu và Enum ---
+
 class HourlyStepsData {
   final DateTime hourStart;
   final int steps;
@@ -16,39 +24,82 @@ class HourlyStepsData {
       'HourlyStepsData(hour: ${hourStart.hour}, steps: $steps)';
 }
 
+class ActivitySummaryData {
+  final String activityName;
+  final Duration totalDuration;
+  final Color color;
+
+  ActivitySummaryData({
+    required this.activityName,
+    required this.totalDuration,
+    required this.color,
+  });
+}
+
 enum HistoryStatus { initial, loading, loaded, error }
 
 class DashboardProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthService _authService;
+  final LocalDbService _localDbService = LocalDbService.instance;
 
-  // CỜ QUAN TRỌNG ĐỂ THEO DÕI TRẠNG THÁI DISPOSE
   bool _isDisposed = false;
 
-  List<HourlyStepsData> _hourlyStepsData = [];
+  // --- State cho Health History ---
   List<HealthData> _healthHistory = [];
+  List<HourlyStepsData> _hourlyStepsData = [];
   HistoryStatus _historyStatus = HistoryStatus.initial;
   String? _historyError;
 
+  // --- State cho Activity History ---
+  List<ActivitySegment> _activityHistory = [];
+  List<ActivitySummaryData> _activitySummary = [];
+
+  // --- Getters ---
   List<HealthData> get healthHistory => _healthHistory;
   HistoryStatus get historyStatus => _historyStatus;
   String? get historyError => _historyError;
   List<HourlyStepsData> get hourlyStepsData => _hourlyStepsData;
+  List<ActivitySummaryData> get activitySummary => _activitySummary;
+
+  // <<< SỬA LỖI: THÊM GETTER CÒN THIẾU Ở ĐÂY >>>
+  List<ActivitySegment> get activityHistory => _activityHistory;
+  // ---------------------------------------------
+
+  Duration get todayTotalActivityDuration {
+    if (_activitySummary.isEmpty) return Duration.zero;
+    return _activitySummary.fold(Duration.zero,
+        (previousValue, element) => previousValue + element.totalDuration);
+  }
+
+  int get todayTotalSteps {
+    if (_hourlyStepsData.isEmpty) return 0;
+    int calculatedSteps = 0;
+    final nowLocal = DateTime.now();
+    final todayStart = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+    for (var hourlyData in _hourlyStepsData) {
+      final dataHourLocal = hourlyData.hourStart.toLocal();
+      if (!dataHourLocal.isBefore(todayStart) &&
+          dataHourLocal.isBefore(todayEnd)) {
+        calculatedSteps += hourlyData.steps;
+      }
+    }
+    return calculatedSteps;
+  }
 
   // Constructor
   DashboardProvider(this._firestoreService, this._authService) {
-    print("[DashboardProvider] Initialized.");
-    // TỰ ĐỘNG TẢI DỮ LIỆU KHI PROVIDER ĐƯỢC TẠO VÀ CÓ USER
+    if (kDebugMode) print("[DashboardProvider] Initialized.");
     if (_authService.currentUser != null) {
-      print(
-          "[DashboardProvider] User found on init. Fetching initial history.");
+      if (kDebugMode)
+        print(
+            "[DashboardProvider] User found on init. Fetching initial history.");
       fetchHealthHistory();
     }
   }
 
-  // --- HÀM TÍNH TOÁN (Không đổi) ---
   List<HourlyStepsData> _calculateHourlySteps(List<HealthData> history) {
-    // ... code của bạn ở đây, không cần thay đổi ...
     if (history.isEmpty) return [];
     Map<DateTime, int> hourlyStepsMap = {};
     int previousSteps = -1;
@@ -73,8 +124,9 @@ class DashboardProvider with ChangeNotifier {
           stepsInThisInterval = currentSteps - previousSteps;
         } else {
           stepsInThisInterval = currentSteps;
-          print(
-              "[_calculateHourlySteps] Detected step count decrease/reset: prev=$previousSteps, curr=$currentSteps at ${currentData.timestamp.toLocal()}");
+          if (kDebugMode)
+            print(
+                "[_calculateHourlySteps] Detected step count decrease/reset: prev=$previousSteps, curr=$currentSteps at ${currentData.timestamp.toLocal()}");
         }
       } else {
         stepsInThisInterval = currentSteps;
@@ -90,12 +142,41 @@ class DashboardProvider with ChangeNotifier {
         .map((entry) => HourlyStepsData(entry.key, entry.value))
         .toList();
     result.sort((a, b) => a.hourStart.compareTo(b.hourStart));
-    print(
-        "[_calculateHourlySteps] Calculated hourly steps result: ${result.length} hours");
+    if (kDebugMode)
+      print(
+          "[_calculateHourlySteps] Calculated hourly steps result: ${result.length} hours");
     return result;
   }
 
-  // --- HÀM TẢI DỮ LIỆU (ĐÃ SỬA LỖI) ---
+  List<ActivitySummaryData> _calculateActivitySummary(
+      List<ActivitySegment> segments) {
+    if (segments.isEmpty) return [];
+    final Map<String, int> durationMap = {};
+    for (final segment in segments) {
+      durationMap.update(
+        segment.activityName,
+        (value) => value + segment.durationInSeconds,
+        ifAbsent: () => segment.durationInSeconds,
+      );
+    }
+    final Map<String, Color> colorMap = {
+      'Sitting': Colors.orange.shade400,
+      'Standing': Colors.blue.shade400,
+      'Walking': Colors.green.shade400,
+      'Running': Colors.red.shade400,
+      'Lying': Colors.purple.shade400,
+      'Unknown': Colors.grey.shade400,
+    };
+    return durationMap.entries.map((entry) {
+      return ActivitySummaryData(
+        activityName: entry.key,
+        totalDuration: Duration(seconds: entry.value),
+        color: colorMap[entry.key] ?? Colors.grey,
+      );
+    }).toList()
+      ..sort((a, b) => b.totalDuration.compareTo(a.totalDuration));
+  }
+
   Future<void> fetchHealthHistory({
     Duration duration = const Duration(hours: 24),
     bool useDummyData = false,
@@ -113,35 +194,48 @@ class DashboardProvider with ChangeNotifier {
     _clearHistoryData();
 
     try {
-      List<HealthData> fetchedData;
-      if (useDummyData) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        fetchedData = generateDummyHealthData(
-            count: 200, duration: duration, simulateGaps: true);
-      } else {
-        final endTime = DateTime.now();
-        final startTime = endTime.subtract(duration);
-        fetchedData = await _firestoreService.getHealthDataForPeriod(
-            currentUser!.uid, startTime, endTime);
-      }
+      final results = await Future.wait([
+        if (useDummyData)
+          Future.value(generateDummyHealthData(
+              count: 200, duration: duration, simulateGaps: true))
+        else
+          _firestoreService.getHealthDataForPeriod(currentUser!.uid,
+              DateTime.now().subtract(duration), DateTime.now()),
+        if (!useDummyData)
+          _localDbService.getActivitySegmentsForDay(DateTime.now(),
+              userId: currentUser!.uid)
+        else
+          Future.value(<ActivitySegment>[])
+      ]);
 
-      // KIỂM TRA TRƯỚC KHI CẬP NHẬT STATE
       if (_isDisposed) {
-        print(
-            "[DashboardProvider] Aborting state update because provider was disposed.");
+        if (kDebugMode)
+          print(
+              "[DashboardProvider] Aborting state update because provider was disposed.");
         return;
       }
 
-      _healthHistory = fetchedData;
+      final List<HealthData> fetchedHealthData = results[0] as List<HealthData>;
+      final List<ActivitySegment> fetchedActivitySegments =
+          results[1] as List<ActivitySegment>;
+
+      _healthHistory = fetchedHealthData;
       _hourlyStepsData = _calculateHourlySteps(_healthHistory);
+
+      _activityHistory = fetchedActivitySegments;
+      _activitySummary = _calculateActivitySummary(_activityHistory);
+
       _updateHistoryStatus(HistoryStatus.loaded);
-      print("[DashboardProvider] Data fetch/calculation successful.");
-    } catch (e) {
-      print("!!! [DashboardProvider] Error during fetchHealthHistory: $e");
-      // KIỂM TRA TRƯỚC KHI CẬP NHẬT STATE LỖI
-      if (_isDisposed) {
+      if (kDebugMode)
         print(
-            "[DashboardProvider] Aborting error state update because provider was disposed.");
+            "[DashboardProvider] Data fetch/calculation successful (including ${fetchedActivitySegments.length} activity segments).");
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [DashboardProvider] Error during fetchHealthHistory: $e");
+      if (_isDisposed) {
+        if (kDebugMode)
+          print(
+              "[DashboardProvider] Aborting error state update because provider was disposed.");
         return;
       }
       _updateHistoryStatus(HistoryStatus.error, "Failed to load history data.");
@@ -149,32 +243,36 @@ class DashboardProvider with ChangeNotifier {
     }
   }
 
-  // Hàm helper để xóa dữ liệu lịch sử
   void _clearHistoryData() {
     _healthHistory = [];
     _hourlyStepsData = [];
+    _activityHistory = [];
+    _activitySummary = [];
   }
 
-  // Hàm helper cập nhật trạng thái
   void _updateHistoryStatus(HistoryStatus newStatus, [String? errorMessage]) {
-    // KIỂM TRA Ở ĐÂY NỮA CHO CHẮC
     if (_isDisposed) return;
     _historyStatus = newStatus;
     _historyError = errorMessage;
     notifyListeners();
   }
 
-  // --- HÀM DISPOSE (ĐÃ CẬP NHẬT) ---
   @override
   void dispose() {
-    print("[DashboardProvider] Disposing...");
-    _isDisposed = true; // Đặt cờ này thành true
+    if (kDebugMode) print("[DashboardProvider] Disposing...");
+    _isDisposed = true;
     super.dispose();
   }
 
-  // --- HÀM TẠO DỮ LIỆU GIẢ (Không đổi) ---
+  void clearDataOnLogout() {
+    _clearHistoryData();
+    _historyStatus = HistoryStatus.initial;
+    _historyError = null;
+    notifyListeners();
+    if (kDebugMode) print("[DashboardProvider] Cleared data on logout.");
+  }
+
   List<HealthData> generateDummyHealthData({
-    // ... code của bạn ở đây, không cần thay đổi ...
     int count = 100,
     Duration duration = const Duration(hours: 24),
     DateTime? endTime,
