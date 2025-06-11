@@ -434,5 +434,15 @@
   "activitySummaryTitle": "Tổng kết Hoạt động Hôm nay",
   "activitySummaryNoData": "Không có dữ liệu hoạt động cho hôm nay.",
   "activitySummaryNoDataToDisplay": "Không có hoạt động nào đáng kể để hiển thị.",
-  "activitySummaryDetailScreenTitle": "Chi tiết Hoạt động"
+  "activitySummaryDetailScreenTitle": "Chi tiết Hoạt động",
+  "sectionActivityRecognition": "Cảnh báo Hoạt động",
+  "settingUserWeightTitle": "Cân nặng của bạn",
+  "settingUserWeightDesc": "Dùng để tính toán calo chính xác hơn",
+  "settingUserWeightLabel": "Cân nặng",
+  "settingSittingThresholdTitle": "Ngưỡng Cảnh báo Ngồi lâu",
+  "settingLyingThresholdTitle": "Ngưỡng Cảnh báo Nằm lâu (Ban ngày)",
+  "settingThresholdMinutesDesc": "{minutes} phút",
+  "settingThresholdHoursDesc": "{hours} giờ",
+  "settingSmartRemindersTitle": "Bật Nhắc nhở Thông minh",
+  "settingSmartRemindersDesc": "Nhận các nhắc nhở nhẹ trước khi có cảnh báo chính"
 }

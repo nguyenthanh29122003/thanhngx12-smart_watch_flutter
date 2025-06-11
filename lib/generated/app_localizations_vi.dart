@@ -943,4 +943,38 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get activitySummaryDetailScreenTitle => 'Chi tiết Hoạt động';
+
+  @override
+  String get sectionActivityRecognition => 'Cảnh báo Hoạt động';
+
+  @override
+  String get settingUserWeightTitle => 'Cân nặng của bạn';
+
+  @override
+  String get settingUserWeightDesc => 'Dùng để tính toán calo chính xác hơn';
+
+  @override
+  String get settingUserWeightLabel => 'Cân nặng';
+
+  @override
+  String get settingSittingThresholdTitle => 'Ngưỡng Cảnh báo Ngồi lâu';
+
+  @override
+  String get settingLyingThresholdTitle => 'Ngưỡng Cảnh báo Nằm lâu (Ban ngày)';
+
+  @override
+  String settingThresholdMinutesDesc(Object minutes) {
+    return '$minutes phút';
+  }
+
+  @override
+  String settingThresholdHoursDesc(Object hours) {
+    return '$hours giờ';
+  }
+
+  @override
+  String get settingSmartRemindersTitle => 'Bật Nhắc nhở Thông minh';
+
+  @override
+  String get settingSmartRemindersDesc => 'Nhận các nhắc nhở nhẹ trước khi có cảnh báo chính';
 }

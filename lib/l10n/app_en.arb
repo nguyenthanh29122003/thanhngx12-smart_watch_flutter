@@ -514,5 +514,25 @@
   "activitySummaryTitle": "Today's Activity Summary",
   "activitySummaryNoData": "No activity data available for today.",
   "activitySummaryNoDataToDisplay": "No significant activity to display.",
-  "activitySummaryDetailScreenTitle": "Activity Details"
+  "activitySummaryDetailScreenTitle": "Activity Details",
+  "sectionActivityRecognition": "Activity Alerts",
+  "settingUserWeightTitle": "Your Weight",
+  "settingUserWeightDesc": "Used for more accurate calorie calculation",
+  "settingUserWeightLabel": "Weight",
+  "settingSittingThresholdTitle": "Sitting Warning Threshold",
+  "settingLyingThresholdTitle": "Lying Warning Threshold (Daytime)",
+  "settingThresholdMinutesDesc": "{minutes} min",
+  "@settingThresholdMinutesDesc": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "settingThresholdHoursDesc": "{hours} hr",
+  "@settingThresholdHoursDesc": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "settingSmartRemindersTitle": "Enable Smart Reminders",
+  "settingSmartRemindersDesc": "Receive gentle reminders before the main alert"
 }

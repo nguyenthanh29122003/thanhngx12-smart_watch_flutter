@@ -943,4 +943,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activitySummaryDetailScreenTitle => 'Activity Details';
+
+  @override
+  String get sectionActivityRecognition => 'Activity Alerts';
+
+  @override
+  String get settingUserWeightTitle => 'Your Weight';
+
+  @override
+  String get settingUserWeightDesc => 'Used for more accurate calorie calculation';
+
+  @override
+  String get settingUserWeightLabel => 'Weight';
+
+  @override
+  String get settingSittingThresholdTitle => 'Sitting Warning Threshold';
+
+  @override
+  String get settingLyingThresholdTitle => 'Lying Warning Threshold (Daytime)';
+
+  @override
+  String settingThresholdMinutesDesc(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String settingThresholdHoursDesc(Object hours) {
+    return '$hours hr';
+  }
+
+  @override
+  String get settingSmartRemindersTitle => 'Enable Smart Reminders';
+
+  @override
+  String get settingSmartRemindersDesc => 'Receive gentle reminders before the main alert';
 }

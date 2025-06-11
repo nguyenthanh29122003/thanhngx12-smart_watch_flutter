@@ -40,12 +40,17 @@ class AppConstants {
       "pref_lying_warning_hours_daytime";
   static const String prefKeySmartRemindersEnabled =
       "pref_smart_reminders_enabled";
+
+  static const String prefKeyMinMovementToResetMinutes =
+      "pref_min_movement_reset_minutes";
+  static const String prefKeyPeriodicAnalysisHours =
+      "pref_periodic_analysis_hours";
   // -------------------------------------------------
 
   // Default Values
   static const int defaultDailyStepGoal = 8000;
   static const double defaultUserWeightKg = 70.0;
-  static const Duration defaultSittingWarningThreshold = Duration(minutes: 1);
+  static const Duration defaultSittingWarningThreshold = Duration(minutes: 60);
   static const Duration defaultLyingWarningDaytimeThreshold =
       Duration(hours: 2);
   static const int minActivityDurationToLogSeconds = 60;

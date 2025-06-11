@@ -1870,6 +1870,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity Details'**
   String get activitySummaryDetailScreenTitle;
+
+  /// No description provided for @sectionActivityRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Alerts'**
+  String get sectionActivityRecognition;
+
+  /// No description provided for @settingUserWeightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Weight'**
+  String get settingUserWeightTitle;
+
+  /// No description provided for @settingUserWeightDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for more accurate calorie calculation'**
+  String get settingUserWeightDesc;
+
+  /// No description provided for @settingUserWeightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get settingUserWeightLabel;
+
+  /// No description provided for @settingSittingThresholdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting Warning Threshold'**
+  String get settingSittingThresholdTitle;
+
+  /// No description provided for @settingLyingThresholdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lying Warning Threshold (Daytime)'**
+  String get settingLyingThresholdTitle;
+
+  /// No description provided for @settingThresholdMinutesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String settingThresholdMinutesDesc(Object minutes);
+
+  /// No description provided for @settingThresholdHoursDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} hr'**
+  String settingThresholdHoursDesc(Object hours);
+
+  /// No description provided for @settingSmartRemindersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Smart Reminders'**
+  String get settingSmartRemindersTitle;
+
+  /// No description provided for @settingSmartRemindersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive gentle reminders before the main alert'**
+  String get settingSmartRemindersDesc;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

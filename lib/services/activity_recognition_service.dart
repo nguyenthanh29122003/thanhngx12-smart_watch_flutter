@@ -94,13 +94,6 @@ class ActivityRecognitionService {
   DateTime? _currentActivityStartTime;
   bool _isDisposed = false;
 
-  // --- Cài đặt (tải từ SharedPreferences) ---
-  Duration _sittingWarningThreshold =
-      AppConstants.defaultSittingWarningThreshold;
-  Duration _lyingDaytimeWarningThreshold =
-      AppConstants.defaultLyingWarningDaytimeThreshold;
-  bool _smartRemindersEnabled = AppConstants.defaultSmartRemindersEnabled;
-
   // --- State cho Cảnh báo Ngưỡng ---
   Timer? _sittingTimer;
   Timer? _lyingTimer;
@@ -122,50 +115,40 @@ class ActivityRecognitionService {
   }
 
   Future<void> _initializeService() async {
-    await _loadSettings();
     await _loadResources();
   }
 
-  Future<void> _loadSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _sittingWarningThreshold = Duration(
-          minutes: prefs.getInt(AppConstants.prefKeySittingWarningMinutes) ??
-              AppConstants.defaultSittingWarningThreshold.inMinutes);
-      _lyingDaytimeWarningThreshold = Duration(
-          hours: prefs.getInt(AppConstants.prefKeyLyingWarningHours) ??
-              AppConstants.defaultLyingWarningDaytimeThreshold.inHours);
-      _smartRemindersEnabled =
-          prefs.getBool(AppConstants.prefKeySmartRemindersEnabled) ??
-              AppConstants.defaultSmartRemindersEnabled;
-      if (kDebugMode)
-        print(
-            "[ARService] Settings loaded. SitThr: ${_sittingWarningThreshold.inMinutes}m, LieThr: ${_lyingDaytimeWarningThreshold.inHours}h, SmartRem: $_smartRemindersEnabled");
-    } catch (e) {
-      if (kDebugMode)
-        print("!!! [ARService] Error loading settings, using defaults: $e");
-    }
-  }
-
   Future<void> _loadResources() async {
+    // Nếu service đã bị dispose, không làm gì cả
     if (_isDisposed) return;
+
+    // Nếu các tài nguyên đã được tải, không cần tải lại
     if (_isHarModelLoaded &&
         _scalerMeans != null &&
         _scalerStdDevs != null &&
         _harInterpreter != null) {
       if (kDebugMode) print("[ARService] Resources already loaded.");
+
+      // Đảm bảo trạng thái ban đầu được khôi phục nếu nó vẫn đang là "Initializing"
       if (_activityPredictionController.valueOrNull == "Initializing..." ||
           _activityPredictionController.valueOrNull == "Model Loading...") {
         await _restoreLastKnownActivity();
       }
       return;
     }
+
     if (kDebugMode)
       print("[ARService] Loading HAR TFLite model and Scaler params...");
+
     try {
+      // Tải mô hình TFLite từ assets
       _harInterpreter = await Interpreter.fromAsset(TFLITE_MODEL_HAR_FILE);
+
+      // Tải và parse file JSON chứa các tham số scaler
       final scalerJsonString = await rootBundle.loadString(SCALER_PARAMS_FILE);
       final scalerData = jsonDecode(scalerJsonString) as Map<String, dynamic>;
+
+      // Chuyển đổi dữ liệu từ JSON thành List<double>
       _scalerMeans = (scalerData['mean'] as List<dynamic>)
           .map((e) => (e as num).toDouble())
           .toList();
@@ -173,34 +156,97 @@ class ActivityRecognitionService {
           .map((e) => (e as num).toDouble())
           .toList();
 
+      // Kiểm tra xem tất cả đã được tải thành công chưa
       if (_harInterpreter != null &&
           _scalerMeans != null &&
           _scalerStdDevs != null) {
+        // Lấy thông tin chi tiết về input/output của model
         _harInputShape = _harInterpreter!.getInputTensor(0).shape;
         _harOutputShape = _harInterpreter!.getOutputTensor(0).shape;
         _harInputType = _harInterpreter!.getInputTensor(0).type;
         _harOutputType = _harInterpreter!.getOutputTensor(0).type;
+
         _isHarModelLoaded = true;
-        if (kDebugMode)
-          print(
-              "[ARService] HAR Model and Scaler loaded successfully. Input: $_harInputShape $_harInputType, Output: $_harOutputShape $_harOutputType");
+
+        if (kDebugMode) {
+          print("[ARService] HAR Model and Scaler loaded successfully.");
+          print("  - Model Input: $_harInputShape $_harInputType");
+          print("  - Model Output: $_harOutputShape $_harOutputType");
+        }
+
+        // Sau khi tải model thành công, khôi phục lại hoạt động cuối cùng đã biết
         await _restoreLastKnownActivity();
       } else {
+        // Ném lỗi nếu một trong các tài nguyên không tải được
         throw Exception(
             "HAR Interpreter or Scaler Params are null after loading.");
       }
     } catch (e) {
       if (kDebugMode)
         print("!!! [ARService] Error loading HAR TFLite model or scaler: $e");
+
+      // Reset lại trạng thái nếu có lỗi
       _isHarModelLoaded = false;
       _harInterpreter?.close();
       _harInterpreter = null;
       _scalerMeans = null;
       _scalerStdDevs = null;
-      if (!_activityPredictionController.isClosed)
+
+      // Thông báo lỗi qua stream để UI có thể biết
+      if (!_activityPredictionController.isClosed) {
         _activityPredictionController.addError("Failed to load ML model");
+      }
     }
   }
+
+  void applySettings({
+    required Duration sittingThreshold,
+    required Duration lyingThreshold,
+    required bool smartRemindersEnabled,
+    required Duration minMovementDuration,
+    required Duration periodicAnalysisInterval,
+  }) {
+    // Chỉ cập nhật và khởi động lại logic nếu có sự thay đổi
+    bool settingsChanged = (_sittingWarningThreshold != sittingThreshold) ||
+        (_lyingDaytimeWarningThreshold != lyingThreshold) ||
+        (_smartRemindersEnabled != smartRemindersEnabled) ||
+        (_minMovementToResetWarning != minMovementDuration) ||
+        (_periodicAnalysisInterval != periodicAnalysisInterval);
+
+    // Cập nhật các biến nội bộ của service
+    _sittingWarningThreshold = sittingThreshold;
+    _lyingDaytimeWarningThreshold = lyingThreshold;
+    _smartRemindersEnabled = smartRemindersEnabled;
+    _minMovementToResetWarning = minMovementDuration;
+    _periodicAnalysisInterval = periodicAnalysisInterval;
+
+    if (settingsChanged && !_isDisposed) {
+      if (kDebugMode) {
+        print(
+            "[ARService applySettings] Settings changed. Re-evaluating current activity logic.");
+        print("  - Sit Threshold: ${_sittingWarningThreshold.inMinutes} min");
+        print("  - Lie Threshold: ${_lyingDaytimeWarningThreshold.inHours} hr");
+        print("  - Smart Reminders: $_smartRemindersEnabled");
+        print("  - Min Movement: ${_minMovementToResetWarning.inMinutes} min");
+        print("  - Analysis Interval: ${_periodicAnalysisInterval.inHours} hr");
+      }
+      // Nếu có hoạt động đang diễn ra, hãy kích hoạt lại `_handleActivityChange`
+      // để áp dụng ngay các ngưỡng mới cho các timer.
+      if (_currentActivityInternal != "Initializing..." &&
+          _currentActivityInternal != "Unknown") {
+        _handleActivityChange(_currentActivityInternal, isInitialRestore: true);
+      }
+    }
+  }
+
+  Duration _sittingWarningThreshold =
+      AppConstants.defaultSittingWarningThreshold;
+  Duration _lyingDaytimeWarningThreshold =
+      AppConstants.defaultLyingWarningDaytimeThreshold;
+  bool _smartRemindersEnabled = AppConstants.defaultSmartRemindersEnabled;
+  Duration _minMovementToResetWarning =
+      AppConstants.minMovementDurationToResetWarning;
+  Duration _periodicAnalysisInterval = AppConstants.periodicAnalysisInterval;
 
   Future<void> _restoreLastKnownActivity() async {
     if (_isDisposed || !_isHarModelLoaded) {
@@ -438,66 +484,22 @@ class ActivityRecognitionService {
 
   void _manageTimersOnActivityChange(String oldActivity, String newActivity,
       {bool isInitialRestore = false}) {
+    // 1. Dọn dẹp các timer cũ
     _sittingTimer?.cancel();
     _lyingTimer?.cancel();
     _sittingTimer = null;
     _lyingTimer = null;
 
-    final bool isMovingNow = (newActivity == 'Standing' ||
-        newActivity == 'Walking' ||
-        newActivity == 'Running');
+    // 2. Xử lý logic reset cờ cảnh báo khi người dùng vận động
+    _handleWarningResetLogic(oldActivity, newActivity);
 
-    if (oldActivity == 'Sitting' && isMovingNow) {
-      if (_hasWarnedForCurrentSitting) {
-        if (kDebugMode)
-          print(
-              "[ARService] User is moving after sitting warning. Starting cooldown timer to reset flag.");
-        _sittingWarningResetTimer?.cancel();
-        _sittingWarningResetTimer =
-            Timer(AppConstants.minMovementDurationToResetWarning, () {
-          if (kDebugMode)
-            print(
-                "[ARService] Cooldown period for sitting warning ended. Resetting flag.");
-          _hasWarnedForCurrentSitting = false;
-          _sittingWarningResetTimer = null;
-        });
-      }
-    } else if (oldActivity != newActivity &&
-        _sittingWarningResetTimer != null) {
-      if (kDebugMode)
-        print(
-            "[ARService] User stopped moving during sitting cooldown. Cancelling warning reset timer.");
-      _sittingWarningResetTimer?.cancel();
-      _sittingWarningResetTimer = null;
-    }
-
-    if (oldActivity == 'Lying' && isMovingNow) {
-      if (_hasWarnedForCurrentLyingDaytime) {
-        if (kDebugMode)
-          print(
-              "[ARService] User is moving after lying warning. Starting cooldown timer to reset flag.");
-        _lyingWarningResetTimer?.cancel();
-        _lyingWarningResetTimer =
-            Timer(AppConstants.minMovementDurationToResetWarning, () {
-          if (kDebugMode)
-            print(
-                "[ARService] Cooldown period for lying warning ended. Resetting flag.");
-          _hasWarnedForCurrentLyingDaytime = false;
-          _lyingWarningResetTimer = null;
-        });
-      }
-    } else if (oldActivity != newActivity && _lyingWarningResetTimer != null) {
-      if (kDebugMode)
-        print(
-            "[ARService] User stopped moving during lying cooldown. Cancelling warning reset timer.");
-      _lyingWarningResetTimer?.cancel();
-      _lyingWarningResetTimer = null;
-    }
-
+    // 3. Reset hoặc khôi phục thời gian tích lũy của hoạt động
     if (!isInitialRestore) {
+      // Nếu là một sự thay đổi hoạt động bình thường, reset thời gian về 0
       _sittingDuration = Duration.zero;
       _lyingDuration = Duration.zero;
     } else if (_currentActivityStartTime != null) {
+      // Nếu là khôi phục trạng thái (ví dụ: app khởi động lại), tính toán thời gian đã trôi qua
       final restoredDuration =
           DateTime.now().toUtc().difference(_currentActivityStartTime!);
       _sittingDuration =
@@ -509,75 +511,151 @@ class ActivityRecognitionService {
             "[ARService] Restored duration for $newActivity: ${restoredDuration.inMinutes}min.");
     }
 
+    // 4. Khởi động timer mới cho hoạt động hiện tại (nếu cần)
     if (newActivity == 'Sitting') {
-      _sittingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-        if (_isDisposed || _currentActivityInternal != 'Sitting') {
-          timer.cancel();
-          _sittingTimer = null;
-          return;
-        }
-        _sittingDuration += const Duration(minutes: 1);
-        if (kDebugMode)
-          print(
-              "[ARService] Sitting duration: ${_sittingDuration.inMinutes} min. Warned: $_hasWarnedForCurrentSitting");
-
-        if (!_hasWarnedForCurrentSitting &&
-            _sittingDuration >= _sittingWarningThreshold) {
-          final warning = ActivityWarning(
-              type: ActivityWarningType.prolongedSitting,
-              message:
-                  "Bạn đã ngồi ${_sittingDuration.inMinutes} phút. Hãy đứng dậy và vận động một chút!",
-              timestamp: DateTime.now(),
-              suggestedAction:
-                  "Đứng dậy, đi lại hoặc thực hiện vài động tác giãn cơ.");
-          if (!_warningController.isClosed) _warningController.add(warning);
-          _lastWarningTypeSent = ActivityWarningType.prolongedSitting;
-          _hasWarnedForCurrentSitting = true;
-        } else if (_smartRemindersEnabled &&
-            !_hasWarnedForCurrentSitting &&
-            _sittingDuration.inMinutes > 0 &&
-            _sittingDuration < _sittingWarningThreshold &&
-            _sittingDuration.inMinutes %
-                    AppConstants.smartReminderIntervalMinutes ==
-                0) {
-          final warning = ActivityWarning(
-              type: ActivityWarningType.smartReminderToMove,
-              message:
-                  "Bạn đã ngồi được ${_sittingDuration.inMinutes} phút rồi. Cân nhắc thay đổi tư thế hoặc vận động nhẹ nhé.",
-              timestamp: DateTime.now());
-          if (!_warningController.isClosed) _warningController.add(warning);
-        }
-      });
+      _startSittingTimer();
     } else if (newActivity == 'Lying') {
-      _lyingTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
-        if (_isDisposed || _currentActivityInternal != 'Lying') {
-          timer.cancel();
-          _lyingTimer = null;
-          return;
-        }
-        _lyingDuration += const Duration(minutes: 10);
+      _startLyingTimer();
+    }
+  }
+
+  /// Helper function để xử lý logic reset cờ cảnh báo
+  void _handleWarningResetLogic(String oldActivity, String newActivity) {
+    final bool isMovingNow = (newActivity == 'Standing' ||
+        newActivity == 'Walking' ||
+        newActivity == 'Running');
+
+    // Logic cho việc reset cảnh báo ngồi lâu
+    if (oldActivity == 'Sitting' && isMovingNow) {
+      if (_hasWarnedForCurrentSitting) {
         if (kDebugMode)
           print(
-              "[ARService] Lying duration: ${_lyingDuration.inHours}h ${_lyingDuration.inMinutes % 60}m. Warned: $_hasWarnedForCurrentLyingDaytime");
-
-        final now = DateTime.now();
-        bool isDaytime = now.hour >= AppConstants.daytimeStartHour &&
-            now.hour < AppConstants.daytimeEndHour;
-
-        if (!_hasWarnedForCurrentLyingDaytime &&
-            isDaytime &&
-            _lyingDuration >= _lyingDaytimeWarningThreshold) {
-          final warning = ActivityWarning(
-              type: ActivityWarningType.prolongedLyingDaytime,
-              message:
-                  "Bạn đã nằm khoảng ${_lyingDuration.inHours} giờ và ${_lyingDuration.inMinutes % 60} phút vào ban ngày. Hãy vận động nếu có thể.",
-              timestamp: DateTime.now());
-          if (!_warningController.isClosed) _warningController.add(warning);
-          _lastWarningTypeSent = ActivityWarningType.prolongedLyingDaytime;
-          _hasWarnedForCurrentLyingDaytime = true;
-        }
-      });
+              "[ARService] User is moving after sitting warning. Starting cooldown timer to reset flag.");
+        _sittingWarningResetTimer?.cancel();
+        _sittingWarningResetTimer = Timer(_minMovementToResetWarning, () {
+          if (kDebugMode)
+            print(
+                "[ARService] Cooldown period for sitting warning ended. Resetting flag.");
+          _hasWarnedForCurrentSitting = false;
+          _sittingWarningResetTimer = null;
+        });
+      }
+    } else if (oldActivity != 'Sitting' || !isMovingNow) {
+      // Nếu người dùng không còn vận động nữa (ví dụ: ngồi lại) trong khi đang trong thời gian cooldown
+      if (_sittingWarningResetTimer != null) {
+        if (kDebugMode)
+          print(
+              "[ARService] User stopped moving during sitting cooldown. Cancelling warning reset timer.");
+        _sittingWarningResetTimer?.cancel();
+        _sittingWarningResetTimer = null;
+      }
     }
+
+    // Logic cho việc reset cảnh báo nằm lâu (tương tự)
+    if (oldActivity == 'Lying' && isMovingNow) {
+      if (_hasWarnedForCurrentLyingDaytime) {
+        if (kDebugMode)
+          print(
+              "[ARService] User is moving after lying warning. Starting cooldown timer to reset flag.");
+        _lyingWarningResetTimer?.cancel();
+        _lyingWarningResetTimer = Timer(_minMovementToResetWarning, () {
+          if (kDebugMode)
+            print(
+                "[ARService] Cooldown period for lying warning ended. Resetting flag.");
+          _hasWarnedForCurrentLyingDaytime = false;
+          _lyingWarningResetTimer = null;
+        });
+      }
+    } else if (oldActivity != 'Lying' || !isMovingNow) {
+      if (_lyingWarningResetTimer != null) {
+        if (kDebugMode)
+          print(
+              "[ARService] User stopped moving during lying cooldown. Cancelling warning reset timer.");
+        _lyingWarningResetTimer?.cancel();
+        _lyingWarningResetTimer = null;
+      }
+    }
+  }
+
+  /// Helper function để khởi động timer theo dõi việc ngồi
+  void _startSittingTimer() {
+    _sittingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (_isDisposed || _currentActivityInternal != 'Sitting') {
+        timer.cancel();
+        _sittingTimer = null;
+        return;
+      }
+      _sittingDuration += const Duration(minutes: 1);
+      if (kDebugMode)
+        print(
+            "[ARService] Sitting duration: ${_sittingDuration.inMinutes} min. Warned: $_hasWarnedForCurrentSitting");
+
+      // Lấy đối tượng l10n để dịch (cần một cách để lấy context, sẽ thảo luận sau)
+      // final l10n = AppLocalizations.of(context)!;
+
+      // A. Kiểm tra cảnh báo chính (ngồi lâu)
+      if (!_hasWarnedForCurrentSitting &&
+          _sittingDuration >= _sittingWarningThreshold) {
+        final warning = ActivityWarning(
+            type: ActivityWarningType.prolongedSitting,
+            // Ví dụ về cách dùng chuỗi đã dịch (cần cơ chế để lấy l10n)
+            message:
+                "Bạn đã ngồi ${_sittingDuration.inMinutes} phút. Hãy đứng dậy và vận động một chút!",
+            timestamp: DateTime.now(),
+            suggestedAction:
+                "Đứng dậy, đi lại hoặc thực hiện vài động tác giãn cơ.");
+        if (!_warningController.isClosed) _warningController.add(warning);
+        _lastWarningTypeSent = ActivityWarningType.prolongedSitting;
+        _hasWarnedForCurrentSitting = true;
+      }
+      // B. Kiểm tra nhắc nhở thông minh
+      else if (_smartRemindersEnabled &&
+          !_hasWarnedForCurrentSitting &&
+          _sittingDuration.inMinutes > 0 &&
+          _sittingDuration.inMinutes < _sittingWarningThreshold.inMinutes &&
+          _sittingDuration.inMinutes %
+                  AppConstants.smartReminderIntervalMinutes ==
+              0) {
+        final warning = ActivityWarning(
+            type: ActivityWarningType.smartReminderToMove,
+            message:
+                "Bạn đã ngồi được ${_sittingDuration.inMinutes} phút rồi. Cân nhắc thay đổi tư thế hoặc vận động nhẹ nhé.",
+            timestamp: DateTime.now());
+        if (!_warningController.isClosed) _warningController.add(warning);
+      }
+    });
+  }
+
+  /// Helper function để khởi động timer theo dõi việc nằm
+  void _startLyingTimer() {
+    _lyingTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
+      if (_isDisposed || _currentActivityInternal != 'Lying') {
+        timer.cancel();
+        _lyingTimer = null;
+        return;
+      }
+      _lyingDuration += const Duration(minutes: 10);
+      if (kDebugMode)
+        print(
+            "[ARService] Lying duration: ${_lyingDuration.inHours}h ${_lyingDuration.inMinutes % 60}m. Warned: $_hasWarnedForCurrentLyingDaytime");
+
+      final now = DateTime.now();
+      bool isDaytime = now.hour >= AppConstants.daytimeStartHour &&
+          now.hour < AppConstants.daytimeEndHour;
+
+      if (!_hasWarnedForCurrentLyingDaytime &&
+          isDaytime &&
+          _lyingDuration >= _lyingDaytimeWarningThreshold) {
+        final warning = ActivityWarning(
+            type: ActivityWarningType.prolongedLyingDaytime,
+            message:
+                "Bạn đã nằm khoảng ${_lyingDuration.inHours} giờ và ${_lyingDuration.inMinutes % 60} phút vào ban ngày. Hãy vận động nếu có thể.",
+            timestamp: DateTime.now());
+        if (!_warningController.isClosed) _warningController.add(warning);
+        _lastWarningTypeSent = ActivityWarningType.prolongedLyingDaytime;
+        _hasWarnedForCurrentLyingDaytime = true;
+      }
+    });
   }
 
   void _checkPositiveReinforcement(String oldActivity, String newActivity) {

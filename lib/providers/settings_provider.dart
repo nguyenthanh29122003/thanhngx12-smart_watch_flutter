@@ -25,6 +25,9 @@ class SettingsProvider with ChangeNotifier {
       AppConstants.defaultLyingWarningDaytimeThreshold;
   bool _smartRemindersEnabled = AppConstants.defaultSmartRemindersEnabled;
   double _userWeightKg = AppConstants.defaultUserWeightKg;
+  Duration _minMovementDurationToResetWarning =
+      AppConstants.minMovementDurationToResetWarning;
+  Duration _periodicAnalysisInterval = AppConstants.periodicAnalysisInterval;
   // ----------------------------------------------------
 
   // --- Getters ---
@@ -38,6 +41,9 @@ class SettingsProvider with ChangeNotifier {
   Duration get lyingDaytimeWarningThreshold => _lyingDaytimeWarningThreshold;
   bool get smartRemindersEnabled => _smartRemindersEnabled;
   double get userWeightKg => _userWeightKg;
+  Duration get minMovementDurationToResetWarning =>
+      _minMovementDurationToResetWarning;
+  Duration get periodicAnalysisInterval => _periodicAnalysisInterval;
   // ------------------------------------
 
   SettingsProvider() {
@@ -94,6 +100,14 @@ class SettingsProvider with ChangeNotifier {
               AppConstants.defaultSmartRemindersEnabled;
       _userWeightKg = prefs.getDouble(AppConstants.prefKeyUserWeightKg) ??
           AppConstants.defaultUserWeightKg;
+
+      _minMovementDurationToResetWarning = Duration(
+          minutes:
+              prefs.getInt(AppConstants.prefKeyMinMovementToResetMinutes) ??
+                  AppConstants.minMovementDurationToResetWarning.inMinutes);
+      _periodicAnalysisInterval = Duration(
+          hours: prefs.getInt(AppConstants.prefKeyPeriodicAnalysisHours) ??
+              AppConstants.periodicAnalysisInterval.inHours);
       // ---------------------------------------------
 
       if (kDebugMode) {
@@ -208,6 +222,15 @@ class SettingsProvider with ChangeNotifier {
       if (kDebugMode)
         print("!!! [SettingsProvider] Error saving sitting threshold: $e");
     }
+  }
+
+  Future<void> updateMinMovementDuration(Duration newDuration) async {
+    if (_minMovementDurationToResetWarning == newDuration) return;
+    _minMovementDurationToResetWarning = newDuration;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+        AppConstants.prefKeyMinMovementToResetMinutes, newDuration.inMinutes);
   }
 
   Future<void> updateLyingDaytimeWarningThreshold(Duration newThreshold) async {

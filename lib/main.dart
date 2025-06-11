@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +22,7 @@ import 'services/connectivity_service.dart';
 import 'services/data_sync_service.dart';
 import 'services/notification_service.dart';
 import 'services/activity_recognition_service.dart';
+import 'services/open_router_service.dart';
 
 // Providers
 import 'providers/auth_provider.dart' as app_auth_provider;
@@ -50,7 +50,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // --- 1. DỊCH VỤ CƠ BẢN (KHÔNG THAY ĐỔI) ---
+        // ==================== NHÓM 1: CÁC DỊCH VỤ CƠ SỞ (INDEPENDENT SERVICES) ====================
+        // Các service này không phụ thuộc vào các provider khác và tồn tại suốt vòng đời app.
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<NotificationService>.value(value: NotificationService()),
         Provider<app_auth_service.AuthService>(
@@ -60,10 +61,14 @@ Future<void> main() async {
           create: (_) => ConnectivityService(),
           dispose: (_, service) => service.dispose(),
         ),
+        // <<< THÊM OpenRouterService VÀO ĐÂY>>>
+        Provider<OpenRouterService>(create: (_) => OpenRouterService()),
 
-        // --- 2. CÁC PROVIDER QUẢN LÝ CÀI ĐẶT & XÁC THỰC ---
+        // ==================== NHÓM 2: CÁC PROVIDER QUẢN LÝ TRẠNG THÁI CHUNG ====================
+        // SettingsProvider và AuthProvider là nguồn gốc của nhiều thay đổi trạng thái.
         ChangeNotifierProvider<SettingsProvider>(
             create: (_) => SettingsProvider()),
+
         ChangeNotifierProvider<app_auth_provider.AuthProvider>(
           create: (context) => app_auth_provider.AuthProvider(
             context.read<app_auth_service.AuthService>(),
@@ -71,43 +76,16 @@ Future<void> main() async {
           ),
         ),
 
-        // --- 3. CÁC PROVIDER PHỤ THUỘC (DEPENDENT PROVIDERS) ---
-        // ProxyProvider là cách tốt nhất để tạo các đối tượng phụ thuộc vào các provider khác
-        // và chúng sẽ được tạo lại/cập nhật khi các dependency thay đổi.
+        // ==================== NHÓM 3: CÁC DỊCH VỤ PHỤ THUỘC VÀO XÁC THỰC ====================
+        // Các service này cần biết người dùng là ai để hoạt động.
+        // Chúng sẽ được tạo lại khi người dùng đăng nhập/đăng xuất.
 
-        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
-                DashboardProvider>(
-            create: (context) => DashboardProvider(
-                  context.read<FirestoreService>(),
-                  context.read<app_auth_service.AuthService>(),
-                ),
-            update: (context, auth, previous) {
-              // Khi đăng xuất, xóa dữ liệu. `previous!` chắc chắn tồn tại sau lần create đầu tiên.
-              if (auth.user == null) previous!.clearDataOnLogout();
-              return previous!;
-            }),
-
-        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
-                RelativesProvider>(
-            create: (context) => RelativesProvider(
-                context.read<FirestoreService>(),
-                context.read<app_auth_service.AuthService>()),
-            // RelativesProvider tự xử lý thay đổi auth bên trong nó,
-            // nên hàm update chỉ cần trả về instance cũ.
-            update: (context, auth, previous) => previous!),
-
-        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
-            GoalsProvider>(
-          create: (context) => GoalsProvider(context.read<FirestoreService>(),
-              context.read<app_auth_service.AuthService>()),
-          update: (context, auth, previous) => previous!,
-        ),
-
-        // ProxyProvider cho các Service không phải là ChangeNotifier
-        // Nó sẽ được tạo lại khi AuthProvider thay đổi. Đây là hành vi mong muốn.
+        // --- BleService: Được tạo lại khi Auth thay đổi ---
         ProxyProvider<app_auth_provider.AuthProvider, BleService>(
           update: (context, auth, previousBleService) {
-            previousBleService?.dispose(); // Quan trọng: hủy service cũ
+            // Khi auth thay đổi, hủy service cũ và tạo service mới.
+            // Điều này đảm bảo dọn dẹp sạch sẽ các kết nối/trạng thái của người dùng cũ.
+            previousBleService?.dispose();
             return BleService(
               context.read<app_auth_service.AuthService>(),
               context.read<FirestoreService>(),
@@ -119,35 +97,99 @@ Future<void> main() async {
           dispose: (_, service) => service.dispose(),
         ),
 
-        // Dùng ProxyProvider2 để ARService có thể truy cập cả Auth và Settings
+        // --- ActivityRecognitionService: Được tạo lại khi Auth thay đổi và cập nhật khi Settings thay đổi ---
         ProxyProvider2<app_auth_provider.AuthProvider, SettingsProvider,
-                ActivityRecognitionService>(
-            update: (context, auth, settings, previous) {
-              final service = previous ??
-                  ActivityRecognitionService(
-                      authService:
-                          context.read<app_auth_service.AuthService>());
-              service.updateWarningSettings(
-                newSittingThreshold: settings.sittingWarningThreshold,
-                newLyingThreshold: settings.lyingDaytimeWarningThreshold,
-                smartReminders: settings.smartRemindersEnabled,
-              );
-              if (auth.status == app_auth_provider.AuthStatus.unauthenticated &&
-                  previous != null) {
-                service.prepareForLogout();
-              }
-              return service;
-            },
-            dispose: (_, service) => service.dispose(),
-            lazy: true),
+            ActivityRecognitionService>(
+          update: (context, auth, settings, previousService) {
+            // Tạo service nếu chưa có
+            final service = previousService ??
+                ActivityRecognitionService(
+                  authService: context.read<app_auth_service.AuthService>(),
+                );
 
-        // ChangeNotifierProxyProvider để BleProvider có thể rebuild khi BleService thay đổi
+            // "Tiêm" các giá trị cài đặt mới nhất vào service.
+            // Hàm này sẽ chạy mỗi khi SettingsProvider thay đổi.
+            service.applySettings(
+              sittingThreshold: settings.sittingWarningThreshold,
+              lyingThreshold: settings.lyingDaytimeWarningThreshold,
+              smartRemindersEnabled: settings.smartRemindersEnabled,
+              minMovementDuration: settings.minMovementDurationToResetWarning,
+              periodicAnalysisInterval: settings.periodicAnalysisInterval,
+            );
+
+            // Chuẩn bị cho việc đăng xuất
+            if (auth.status == app_auth_provider.AuthStatus.unauthenticated &&
+                previousService != null) {
+              service.prepareForLogout();
+            }
+
+            return service;
+          },
+          dispose: (_, service) => service.dispose(),
+        ),
+
+        // --- DataSyncService: Được tạo lại khi Auth thay đổi ---
+        ProxyProvider<app_auth_provider.AuthProvider, DataSyncService>(
+          update: (context, auth, previous) {
+            previous?.dispose(); // Hủy service cũ
+            return DataSyncService(
+              context.read<ConnectivityService>(),
+              context.read<LocalDbService>(),
+              context.read<FirestoreService>(),
+              context.read<app_auth_service.AuthService>(),
+            );
+          },
+          dispose: (_, service) => service.dispose(),
+        ),
+
+        // ==================== NHÓM 4: CÁC PROVIDER QUẢN LÝ TRẠNG THÁI UI (PHỤ THUỘC) ====================
+        // Các provider này phụ thuộc vào các provider/service ở trên.
+
+        // --- BleProvider: Phụ thuộc vào BleService. Sẽ được tạo lại khi BleService được tạo lại. ---
         ChangeNotifierProxyProvider<BleService, BleProvider>(
-          // `create` sẽ tạo BleProvider với instance BleService ban đầu.
           create: (context) => BleProvider(context.read<BleService>()),
-          // `update` sẽ tạo lại một BleProvider MỚI với instance BleService mới.
-          // Đây là hành vi đúng cho trường hợp này.
-          update: (context, bleService, previous) => BleProvider(bleService),
+          update: (context, bleService, previousBleProvider) {
+            // Khi bleService được tạo lại ở trên, chúng ta cũng tạo lại BleProvider
+            // để đảm bảo nó dùng instance BleService mới nhất của người dùng mới.
+            return BleProvider(bleService);
+          },
+        ),
+
+        // --- Các provider khác phụ thuộc vào AuthProvider để biết khi nào cần dọn dẹp state ---
+        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
+            DashboardProvider>(
+          create: (context) => DashboardProvider(
+            context.read<FirestoreService>(),
+            context.read<app_auth_service.AuthService>(),
+          ),
+          update: (context, auth, previous) {
+            // Khi đăng xuất, gọi hàm dọn dẹp dữ liệu của provider
+            if (auth.status == app_auth_provider.AuthStatus.unauthenticated &&
+                previous != null) {
+              previous.clearDataOnLogout();
+            }
+            return previous!;
+          },
+        ),
+
+        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
+            RelativesProvider>(
+          create: (context) => RelativesProvider(
+            context.read<FirestoreService>(),
+            context.read<app_auth_service.AuthService>(),
+          ),
+          update: (context, auth, previous) =>
+              previous!, // RelativesProvider tự xử lý bên trong
+        ),
+
+        ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
+            GoalsProvider>(
+          create: (context) => GoalsProvider(
+            context.read<FirestoreService>(),
+            context.read<app_auth_service.AuthService>(),
+          ),
+          update: (context, auth, previous) =>
+              previous!, // GoalsProvider tự xử lý bên trong
         ),
       ],
       child: const MyApp(),

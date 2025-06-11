@@ -11,9 +11,59 @@ import '../config/wifi_config_screen.dart'; // Import màn hình Wifi Config
 import '../device/device_select_screen.dart'; // Import màn hình chọn thiết bị
 import '../../generated/app_localizations.dart'; // <<< Import lớp Localization
 import '../auth/login_screen.dart';
+import 'package:flutter/cupertino.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _showWeightInputDialog(
+      BuildContext context, SettingsProvider provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller =
+        TextEditingController(text: provider.userWeightKg.toStringAsFixed(1));
+
+    double? newWeight = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.settingUserWeightTitle),
+          content: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: l10n.settingUserWeightLabel,
+              suffixText: 'kg',
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancel)),
+            ElevatedButton(
+              onPressed: () {
+                final weight = double.tryParse(controller.text);
+                if (weight != null && weight > 0) {
+                  Navigator.of(dialogContext).pop(weight);
+                } else {
+                  // Hiển thị lỗi
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                        content: Text(l10n.invalidNumber),
+                        backgroundColor: Colors.red),
+                  );
+                }
+              },
+              child: Text(l10n.saveChangesButton),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newWeight != null) {
+      await provider.updateUserWeight(newWeight);
+    }
+  }
 
   // --- HÀM HIỂN THỊ DIALOG CHỌN NGÔN NGỮ ---
   Future<void> _showLanguageDialog(
@@ -298,6 +348,70 @@ class SettingsScreen extends StatelessWidget {
             ),
             const Divider(height: 1),
 
+            _buildSectionTitle(context, l10n.sectionActivityRecognition),
+
+            // Cài đặt Cân nặng
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              leading: const Icon(Icons.fitness_center_outlined),
+              title: Text(l10n.settingUserWeightTitle),
+              subtitle: Text(l10n.settingUserWeightDesc),
+              trailing: Text(
+                '${settingsProvider.userWeightKg.toStringAsFixed(1)} kg',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              onTap: () => _showWeightInputDialog(context, settingsProvider),
+            ),
+
+            // Cài đặt Ngưỡng ngồi lâu
+            _buildDurationSlider(
+              context: context,
+              title: l10n.settingSittingThresholdTitle,
+              currentValue: settingsProvider.sittingWarningThreshold,
+              min: 15, // 15 phút
+              max: 120, // 2 tiếng
+              divisions: (120 - 15) ~/ 5, // Mỗi nấc là 5 phút
+              onChanged: (minutes) {
+                settingsProvider.updateSittingWarningThreshold(
+                    Duration(minutes: minutes.toInt()));
+              },
+              displayFormatter: (duration) => l10n
+                  .settingThresholdMinutesDesc(duration.inMinutes.toString()),
+            ),
+
+            // Cài đặt Ngưỡng nằm lâu
+            _buildDurationSlider(
+              context: context,
+              title: l10n.settingLyingThresholdTitle,
+              currentValue: settingsProvider.lyingDaytimeWarningThreshold,
+              min: 1, // 1 tiếng
+              max: 4, // 4 tiếng
+              divisions: 3, // 1h, 2h, 3h, 4h
+              onChanged: (hours) {
+                settingsProvider.updateLyingDaytimeWarningThreshold(
+                    Duration(hours: hours.toInt()));
+              },
+              displayFormatter: (duration) =>
+                  l10n.settingThresholdHoursDesc(duration.inHours.toString()),
+            ),
+
+            // Bật/tắt Nhắc nhở thông minh
+            SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+              title: Text(l10n.settingSmartRemindersTitle),
+              subtitle: Text(l10n.settingSmartRemindersDesc),
+              value: settingsProvider.smartRemindersEnabled,
+              onChanged: (newValue) {
+                settingsProvider.updateSmartRemindersEnabled(newValue);
+              },
+              secondary: const Icon(Icons.lightbulb_outline),
+            ),
+
+            const Divider(height: 1),
+
             // --- Logout Button ---
             Padding(
               padding:
@@ -373,6 +487,60 @@ class SettingsScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8, // Giãn cách chữ
             ),
+      ),
+    );
+  }
+
+  Widget _buildDurationSlider({
+    required BuildContext context,
+    required String title,
+    required Duration currentValue,
+    required double min,
+    required double max,
+    required int divisions,
+    required ValueChanged<double> onChanged,
+    required String Function(Duration) displayFormatter,
+  }) {
+    double sliderValue;
+    // Chuyển đổi Duration sang double cho Slider (ví dụ: phút hoặc giờ)
+    if (currentValue.inHours >= 1 && min >= 1) {
+      // Giả định slider này cho giờ
+      sliderValue = currentValue.inHours.toDouble();
+    } else {
+      // Giả định slider cho phút
+      sliderValue = currentValue.inMinutes.toDouble();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: sliderValue.clamp(
+                      min, max), // Đảm bảo giá trị nằm trong khoảng
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  label: sliderValue.round().toString(),
+                  onChanged: onChanged,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                displayFormatter(currentValue),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
