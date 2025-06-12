@@ -23,6 +23,7 @@ import 'services/data_sync_service.dart';
 import 'services/notification_service.dart';
 import 'services/activity_recognition_service.dart';
 import 'services/open_router_service.dart';
+import 'services/navigation_notification_service.dart';
 
 // Providers
 import 'providers/auth_provider.dart' as app_auth_provider;
@@ -50,6 +51,11 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<NavigationNotificationService>(
+          create: (_) => NavigationNotificationService(),
+          lazy: false, // Chạy ngay lập tức
+          dispose: (_, service) => service.dispose(),
+        ),
         // ==================== NHÓM 1: CÁC DỊCH VỤ CƠ SỞ (INDEPENDENT SERVICES) ====================
         // Các service này không phụ thuộc vào các provider khác và tồn tại suốt vòng đời app.
         Provider<LocalDbService>.value(value: LocalDbService.instance),

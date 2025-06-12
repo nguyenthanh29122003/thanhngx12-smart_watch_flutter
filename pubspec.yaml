@@ -152,6 +152,10 @@ dependencies:
 
   share_plus: ^7.2.2
 
+  # notification_listener_service: ^0.3.4
+  flutter_notification_listener: ^1.3.4
+  
+
 
 dev_dependencies:
   flutter_test:

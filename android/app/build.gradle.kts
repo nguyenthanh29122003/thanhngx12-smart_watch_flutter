@@ -20,6 +20,11 @@ android {
         jvmTarget = "11" // Use string "11" for consistency with Java 11
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
     defaultConfig {
         applicationId = "com.example.smart_wearable_app"
         minSdk = 26
