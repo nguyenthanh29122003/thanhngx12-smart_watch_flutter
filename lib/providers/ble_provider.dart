@@ -1,13 +1,11 @@
 // lib/providers/ble_provider.dart
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/ble_service.dart';
 import '../models/health_data.dart';
 import '../app_constants.dart';
-import '../generated/app_localizations.dart';
 import 'package:flutter/widgets.dart';
 
 class BleProvider with ChangeNotifier {
@@ -253,33 +251,18 @@ class BleProvider with ChangeNotifier {
     if (!_mounted || connectionStatus.value != BleConnectionStatus.connected) {
       return false;
     }
-    try {
-      final now = DateTime.now();
-      final timeData = {
-        'time': {
-          'year': now.year,
-          'month': now.month,
-          'day': now.day,
-          'hour': now.hour,
-          'minute': now.minute,
-          'second': now.second,
-        }
-      };
-      final jsonString = jsonEncode(timeData);
-      final dataBytes = utf8.encode(jsonString);
-      print("[BleProvider] Sending time data: $jsonString");
-      bool success = await _bleService.writeDataToDevice(dataBytes);
-      if (success) {
-        print("[BleProvider] Time sync successful.");
-      } else {
-        print("[BleProvider] Time sync failed.");
-      }
-      _notify();
-      return success;
-    } catch (e) {
-      print("!!! [BleProvider] Error sending time sync data: $e");
-      return false;
+
+    // Gọi thẳng đến hàm chuyên dụng của service
+    print("[BleProvider] Requesting time sync from BleService...");
+    bool success = await _bleService.syncTime();
+
+    if (success) {
+      print("[BleProvider] Time sync command sent successfully.");
+    } else {
+      print("[BleProvider] Failed to send time sync command.");
     }
+    // Không cần notifyListeners() ở đây vì không có state nào của provider thay đổi
+    return success;
   }
 
   // --- Dispose ---

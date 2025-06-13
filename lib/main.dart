@@ -39,6 +39,9 @@ import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/device/device_select_screen.dart';
 
+// Models
+import 'models/navigation_data.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -51,30 +54,27 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider<NavigationNotificationService>(
-          create: (_) => NavigationNotificationService(),
-          lazy: false, // Chạy ngay lập tức
-          dispose: (_, service) => service.dispose(),
-        ),
-        // ==================== NHÓM 1: CÁC DỊCH VỤ CƠ SỞ (INDEPENDENT SERVICES) ====================
-        // Các service này không phụ thuộc vào các provider khác và tồn tại suốt vòng đời app.
+        // =======================================================================
+        // NHÓM 1: DỊCH VỤ CƠ SỞ (INDEPENDENT SERVICES)
+        // Các service này không phụ thuộc vào provider khác và tồn tại suốt vòng đời app.
+        // =======================================================================
         Provider<LocalDbService>.value(value: LocalDbService.instance),
         Provider<NotificationService>.value(value: NotificationService()),
         Provider<app_auth_service.AuthService>(
             create: (_) => app_auth_service.AuthService()),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
+        Provider<OpenRouterService>(create: (_) => OpenRouterService()),
         Provider<ConnectivityService>(
           create: (_) => ConnectivityService(),
           dispose: (_, service) => service.dispose(),
         ),
-        // <<< THÊM OpenRouterService VÀO ĐÂY>>>
-        Provider<OpenRouterService>(create: (_) => OpenRouterService()),
 
-        // ==================== NHÓM 2: CÁC PROVIDER QUẢN LÝ TRẠNG THÁI CHUNG ====================
-        // SettingsProvider và AuthProvider là nguồn gốc của nhiều thay đổi trạng thái.
+        // =======================================================================
+        // NHÓM 2: PROVIDER TRẠNG THÁI GỐC (ROOT STATE PROVIDERS)
+        // Các provider này là nguồn gốc của các thay đổi trạng thái quan trọng.
+        // =======================================================================
         ChangeNotifierProvider<SettingsProvider>(
             create: (_) => SettingsProvider()),
-
         ChangeNotifierProvider<app_auth_provider.AuthProvider>(
           create: (context) => app_auth_provider.AuthProvider(
             context.read<app_auth_service.AuthService>(),
@@ -82,15 +82,14 @@ Future<void> main() async {
           ),
         ),
 
-        // ==================== NHÓM 3: CÁC DỊCH VỤ PHỤ THUỘC VÀO XÁC THỰC ====================
-        // Các service này cần biết người dùng là ai để hoạt động.
-        // Chúng sẽ được tạo lại khi người dùng đăng nhập/đăng xuất.
+        // =======================================================================
+        // NHÓM 3: DỊCH VỤ PHỤ THUỘC (DEPENDENT SERVICES)
+        // Các service này phụ thuộc vào các provider ở trên, đặc biệt là AuthProvider.
+        // =======================================================================
 
-        // --- BleService: Được tạo lại khi Auth thay đổi ---
+        // --- BleService: Phụ thuộc AuthProvider ---
         ProxyProvider<app_auth_provider.AuthProvider, BleService>(
           update: (context, auth, previousBleService) {
-            // Khi auth thay đổi, hủy service cũ và tạo service mới.
-            // Điều này đảm bảo dọn dẹp sạch sẽ các kết nối/trạng thái của người dùng cũ.
             previousBleService?.dispose();
             return BleService(
               context.read<app_auth_service.AuthService>(),
@@ -103,18 +102,30 @@ Future<void> main() async {
           dispose: (_, service) => service.dispose(),
         ),
 
-        // --- ActivityRecognitionService: Được tạo lại khi Auth thay đổi và cập nhật khi Settings thay đổi ---
+        // --- NavigationNotificationService: Phụ thuộc BleService ---
+        // 1. Cung cấp instance Singleton cho toàn bộ app
+        Provider<NavigationNotificationService>.value(
+          value: NavigationNotificationService(),
+        ),
+        // 2. Dùng ProxyProvider "giả" để tiêm dependency và khởi tạo an toàn
+        ProxyProvider<BleService, void>(
+          update: (context, bleService, _) {
+            // Lấy instance Singleton đã được tạo
+            final naviService = NavigationNotificationService();
+            // Cập nhật BleService dependency cho nó
+            naviService.setBleService(bleService);
+            // Hàm init() bên trong constructor của Singleton đã tự chạy 1 lần rồi
+          },
+        ),
+
+        // --- ActivityRecognitionService: Phụ thuộc AuthProvider và SettingsProvider ---
         ProxyProvider2<app_auth_provider.AuthProvider, SettingsProvider,
             ActivityRecognitionService>(
           update: (context, auth, settings, previousService) {
-            // Tạo service nếu chưa có
             final service = previousService ??
                 ActivityRecognitionService(
                   authService: context.read<app_auth_service.AuthService>(),
                 );
-
-            // "Tiêm" các giá trị cài đặt mới nhất vào service.
-            // Hàm này sẽ chạy mỗi khi SettingsProvider thay đổi.
             service.applySettings(
               sittingThreshold: settings.sittingWarningThreshold,
               lyingThreshold: settings.lyingDaytimeWarningThreshold,
@@ -122,22 +133,19 @@ Future<void> main() async {
               minMovementDuration: settings.minMovementDurationToResetWarning,
               periodicAnalysisInterval: settings.periodicAnalysisInterval,
             );
-
-            // Chuẩn bị cho việc đăng xuất
             if (auth.status == app_auth_provider.AuthStatus.unauthenticated &&
                 previousService != null) {
               service.prepareForLogout();
             }
-
             return service;
           },
           dispose: (_, service) => service.dispose(),
         ),
 
-        // --- DataSyncService: Được tạo lại khi Auth thay đổi ---
+        // --- DataSyncService: Phụ thuộc AuthProvider ---
         ProxyProvider<app_auth_provider.AuthProvider, DataSyncService>(
           update: (context, auth, previous) {
-            previous?.dispose(); // Hủy service cũ
+            previous?.dispose();
             return DataSyncService(
               context.read<ConnectivityService>(),
               context.read<LocalDbService>(),
@@ -148,20 +156,17 @@ Future<void> main() async {
           dispose: (_, service) => service.dispose(),
         ),
 
-        // ==================== NHÓM 4: CÁC PROVIDER QUẢN LÝ TRẠNG THÁI UI (PHỤ THUỘC) ====================
-        // Các provider này phụ thuộc vào các provider/service ở trên.
+        // =======================================================================
+        // NHÓM 4: PROVIDER GIAO DIỆN (UI-FACING PROVIDERS)
+        // =======================================================================
 
-        // --- BleProvider: Phụ thuộc vào BleService. Sẽ được tạo lại khi BleService được tạo lại. ---
+        // --- BleProvider: Phụ thuộc BleService ---
         ChangeNotifierProxyProvider<BleService, BleProvider>(
           create: (context) => BleProvider(context.read<BleService>()),
-          update: (context, bleService, previousBleProvider) {
-            // Khi bleService được tạo lại ở trên, chúng ta cũng tạo lại BleProvider
-            // để đảm bảo nó dùng instance BleService mới nhất của người dùng mới.
-            return BleProvider(bleService);
-          },
+          update: (context, bleService, previous) => BleProvider(bleService),
         ),
 
-        // --- Các provider khác phụ thuộc vào AuthProvider để biết khi nào cần dọn dẹp state ---
+        // --- Các provider khác: Phụ thuộc AuthProvider để xử lý đăng xuất ---
         ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
             DashboardProvider>(
           create: (context) => DashboardProvider(
@@ -169,7 +174,6 @@ Future<void> main() async {
             context.read<app_auth_service.AuthService>(),
           ),
           update: (context, auth, previous) {
-            // Khi đăng xuất, gọi hàm dọn dẹp dữ liệu của provider
             if (auth.status == app_auth_provider.AuthStatus.unauthenticated &&
                 previous != null) {
               previous.clearDataOnLogout();
@@ -177,25 +181,21 @@ Future<void> main() async {
             return previous!;
           },
         ),
-
         ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
             RelativesProvider>(
           create: (context) => RelativesProvider(
             context.read<FirestoreService>(),
             context.read<app_auth_service.AuthService>(),
           ),
-          update: (context, auth, previous) =>
-              previous!, // RelativesProvider tự xử lý bên trong
+          update: (context, auth, previous) => previous!, // Tự xử lý bên trong
         ),
-
         ChangeNotifierProxyProvider<app_auth_provider.AuthProvider,
             GoalsProvider>(
           create: (context) => GoalsProvider(
             context.read<FirestoreService>(),
             context.read<app_auth_service.AuthService>(),
           ),
-          update: (context, auth, previous) =>
-              previous!, // GoalsProvider tự xử lý bên trong
+          update: (context, auth, previous) => previous!, // Tự xử lý bên trong
         ),
       ],
       child: const MyApp(),

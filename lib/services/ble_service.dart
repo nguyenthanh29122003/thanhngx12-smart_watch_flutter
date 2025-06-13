@@ -14,6 +14,7 @@ import 'firestore_service.dart';
 import 'local_db_service.dart';
 import 'connectivity_service.dart';
 import '../models/health_data.dart';
+import '../models/navigation_data.dart';
 import '../app_constants.dart';
 import 'notification_service.dart';
 
@@ -71,6 +72,7 @@ class BleService {
   BluetoothCharacteristic? _healthCharacteristic;
   BluetoothCharacteristic? _writeCharacteristic;
   BluetoothCharacteristic? _statusCharacteristic;
+  BluetoothCharacteristic? _navigationCharacteristic;
 
   // --- Subscriptions ---
   StreamSubscription? _scanSubscription;
@@ -277,6 +279,40 @@ class BleService {
     } catch (e) {
       print("!!! [BleService] Error during connect: $e");
       _handleDisconnect(isError: true, reason: "Connection failed: $e");
+    }
+  }
+
+  Future<bool> syncTime() async {
+    // Hàm này đóng gói logic tạo JSON và gọi hàm ghi dữ liệu
+    if (_writeCharacteristic == null) {
+      if (kDebugMode)
+        print(
+            "!!! [BleService] Time sync failed: Write Characteristic is null.");
+      return false;
+    }
+
+    try {
+      final now = DateTime.now();
+      final timeData = {
+        'time': {
+          'year': now.year,
+          'month': now.month,
+          'day': now.day,
+          'hour': now.hour,
+          'minute': now.minute,
+          'second': now.second,
+        }
+      };
+      final jsonString = jsonEncode(timeData);
+      final bytesToSend = utf8.encode(jsonString);
+
+      if (kDebugMode)
+        print("[BleService] Sending Time Sync command: $jsonString");
+      return await writeDataToDevice(_writeCharacteristic!, bytesToSend);
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [BleService] Error encoding or sending time sync data: $e");
+      return false;
     }
   }
 
@@ -492,6 +528,7 @@ class BleService {
     _healthCharacteristic = null;
     _writeCharacteristic = null;
     _statusCharacteristic = null;
+    _navigationCharacteristic = null;
     bool foundTargetService = false;
 
     for (var service in services) {
@@ -507,6 +544,8 @@ class BleService {
               AppConstants.wifiConfigCharacteristicUUID.toLowerCase();
           bool isStatus =
               charUUID == AppConstants.statusCharacteristicUUID.toLowerCase();
+          bool isNavigation = charUUID ==
+              AppConstants.navigationCharacteristicUUID.toLowerCase();
 
           if (isHealth && char.properties.notify) {
             _healthCharacteristic = char;
@@ -520,6 +559,10 @@ class BleService {
             _statusCharacteristic = char;
             print("+++ Stored Status Char (Notify OK)");
           }
+          if (isNavigation && char.properties.write) {
+            _navigationCharacteristic = char;
+            print("+++ Stored Navigation Char (Write OK)");
+          }
         }
         break;
       }
@@ -532,7 +575,8 @@ class BleService {
 
     if (_healthCharacteristic != null &&
         _writeCharacteristic != null &&
-        _statusCharacteristic != null) {
+        _statusCharacteristic != null &&
+        _navigationCharacteristic != null) {
       print("[BleService] All characteristics found. Subscribing...");
       List<Future<bool>> subsFutures = [
         _subscribeToHealthData(_healthCharacteristic!),
@@ -563,8 +607,35 @@ class BleService {
       if (_healthCharacteristic == null) missing += "Health(N) ";
       if (_writeCharacteristic == null) missing += "Config(W) ";
       if (_statusCharacteristic == null) missing += "Status(N)";
+      if (_navigationCharacteristic == null) missing += "Navigation(W) ";
       print("!!! [BleService] Missing characteristic(s): $missing");
       _handleDisconnect(isError: true, reason: "Missing characteristics");
+    }
+  }
+
+  Future<bool> sendNavigationData(NavigationData navData) async {
+    // Kiểm tra xem characteristic có tồn tại không
+    if (_navigationCharacteristic == null) {
+      if (kDebugMode)
+        print(
+            "!!! [BleService] Navigation Characteristic is null. Cannot send.");
+      return false;
+    }
+
+    // Chuyển đối tượng NavigationData thành chuỗi JSON, rồi thành mảng byte
+    try {
+      final jsonString = jsonEncode(navData.toJson());
+      final bytesToSend = utf8.encode(jsonString);
+
+      if (kDebugMode)
+        print("[BleService] Sending Navigation Data: $jsonString");
+
+      // Gọi hàm writeDataToDevice để gửi (giả sử bạn đã tái cấu trúc nó, nếu không thì copy logic write)
+      return await writeDataToDevice(_navigationCharacteristic!, bytesToSend);
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [BleService] Error encoding or sending navigation data: $e");
+      return false;
     }
   }
 
@@ -650,37 +721,41 @@ class BleService {
     }
   }
 
-  Future<bool> writeDataToDevice(List<int> dataToWrite) async {
-    if (_writeCharacteristic == null) {
-      print("!!! [BleService] Write Characteristic is null!");
-      _updateStatus(BleConnectionStatus.error, "Write char missing");
-      return false;
-    }
+  Future<bool> writeDataToDevice(
+      BluetoothCharacteristic characteristic, List<int> dataToWrite) async {
     if (connectionStatus.value != BleConnectionStatus.connected) {
-      print("!!! [BleService] Device not connected for write.");
+      if (kDebugMode) print("!!! [BleService] Device not connected for write.");
       return false;
     }
     try {
-      print("[BleService] Writing ${dataToWrite.length} bytes...");
-      await _writeCharacteristic!.write(dataToWrite, withoutResponse: false);
-      print("[BleService] Write successful.");
+      if (kDebugMode)
+        print(
+            "[BleService] Writing ${dataToWrite.length} bytes to ${characteristic.uuid}...");
+      // Ghi dữ liệu, `withoutResponse: false` có nghĩa là đợi xác nhận từ thiết bị
+      await characteristic.write(dataToWrite, withoutResponse: false);
+      if (kDebugMode) print("[BleService] Write successful.");
       return true;
     } catch (e) {
-      print("!!! [BleService] Error writing data: $e");
+      if (kDebugMode) print("!!! [BleService] Error writing data: $e");
       _updateStatus(BleConnectionStatus.error, "Write failed");
       return false;
     }
   }
 
   Future<bool> sendWifiConfig(String ssid, String password) async {
+    if (_writeCharacteristic == null) {
+      if (kDebugMode)
+        print("!!! [BleService] WiFi Write Characteristic is null!");
+      return false;
+    }
     try {
       Map<String, String> configData = {'ssid': ssid, 'password': password};
       String jsonString = jsonEncode(configData);
       List<int> bytesToSend = utf8.encode(jsonString);
-      print("[BleService] Sending WiFi config: $jsonString");
-      return await writeDataToDevice(bytesToSend);
+      if (kDebugMode) print("[BleService] Sending WiFi config: $jsonString");
+      return await writeDataToDevice(_writeCharacteristic!, bytesToSend);
     } catch (e) {
-      print("!!! [BleService] Error encoding WiFi config: $e");
+      if (kDebugMode) print("!!! [BleService] Error encoding WiFi config: $e");
       return false;
     }
   }

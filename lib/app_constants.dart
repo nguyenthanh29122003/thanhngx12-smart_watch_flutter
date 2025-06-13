@@ -9,6 +9,8 @@ class AppConstants {
       "beb5483e-36e1-4688-b7f5-ea07361b26a9";
   static const String statusCharacteristicUUID =
       "abce0001-ef00-1234-5678-90abcdef1234";
+  static const String navigationCharacteristicUUID =
+      "a0a1a2a3-a4a5-a6a7-a8a9-aaabacadaeaf";
   static const int bleScanTimeoutSeconds = 15;
   static const int bleConnectionTimeoutSeconds = 20;
   static const int bleServiceDiscoveryTimeoutSeconds = 10;
