@@ -653,6 +653,7 @@ class BleService {
             final jsonString = utf8.decode(value, allowMalformed: true);
             final jsonData = jsonDecode(jsonString);
             final data = HealthData.fromJson(jsonData);
+            print("--- [RAW DATA FROM ESP32] ---> $jsonString");
             final user = _authService.currentUser;
             if (user != null) {
               if (_connectivityService.isOnline()) {

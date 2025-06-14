@@ -1,6 +1,9 @@
 // lib/screens/core/main_navigator.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+
+// Imports của dự án
 import '../../generated/app_localizations.dart';
 import '../core/dashboard_screen.dart';
 import '../core/relatives_screen.dart';
@@ -10,6 +13,7 @@ import 'chatbot_screen.dart';
 import '../debug/record_activity_screen.dart';
 import 'activity_history_screen.dart';
 
+// Đây là phiên bản đã được nâng cấp và rà soát đầy đủ
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
 
@@ -20,6 +24,7 @@ class MainNavigator extends StatefulWidget {
 class MainNavigatorState extends State<MainNavigator> {
   int _selectedIndex = 0;
 
+  // Giữ nguyên logic cốt lõi
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
     RelativesScreen(),
@@ -28,117 +33,204 @@ class MainNavigatorState extends State<MainNavigator> {
   ];
 
   void _onItemTapped(int index) {
+    if (_selectedIndex == index) return;
     setState(() {
       _selectedIndex = index;
     });
   }
 
   void navigateTo(int index) {
-    print("[MainNavigator] navigateTo called with index: $index");
     if (index >= 0 &&
         index < _widgetOptions.length &&
         index != _selectedIndex) {
       _onItemTapped(index);
-    } else if (index == _selectedIndex) {
-      print("[MainNavigator] Already on tab $index.");
-    } else {
-      print("[MainNavigator] Invalid index $index for navigation.");
     }
   }
 
+  // --- HÀM BUILD ĐƯỢC THIẾT KẾ LẠI ---
   @override
   Widget build(BuildContext context) {
-    print(
-      "MainNavigator build triggered. SelectedIndex: $_selectedIndex",
-    );
-    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-      bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.dashboard_outlined),
-            activeIcon: const Icon(Icons.dashboard),
-            label: l10n.dashboardTitle,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.people_outline),
-            activeIcon: const Icon(Icons.people),
-            label: l10n.relativesTitle,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.flag_outlined),
-            activeIcon: const Icon(Icons.flag),
-            label: l10n.goalsTitle,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.settings_outlined),
-            activeIcon: const Icon(Icons.settings),
-            label: l10n.settingsTitle,
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
+      // IndexedStack giữ lại trạng thái của các trang
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _widgetOptions,
       ),
-      floatingActionButton: SpeedDial(
-        animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        children: [
-          SpeedDialChild(
-            child: const Icon(Icons.chat),
-            label: AppLocalizations.of(context)!.chatbotTitle,
-            backgroundColor: Colors.blue,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ChatbotScreen()),
-              );
-            },
-          ),
-          SpeedDialChild(
-            child:
-                const Icon(Icons.history_edu_outlined), // Chọn một icon phù hợp
-            label:
-                "Activity History", // TODO: Thêm key 'activityHistoryTitle' vào .arb
-            backgroundColor: Colors.indigo, // Chọn một màu mới
-            onTap: () {
-              Navigator.push(
+      // Thanh điều hướng và FAB đã được thiết kế lại
+      bottomNavigationBar: _CustomBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
+      floatingActionButton: _ModernSpeedDial(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+}
+
+// --- WIDGET CON CHO SPEED DIAL ---
+class _ModernSpeedDial extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    return SpeedDial(
+      // Các thuộc tính cơ bản
+      icon: Icons.add_rounded,
+      activeIcon: Icons.close_rounded,
+      spacing: 12,
+      childMargin: const EdgeInsets.all(8.0),
+      // childOffset: 10.0,
+
+      // Style cho nút chính (lấy từ theme)
+      backgroundColor: theme.colorScheme.primary,
+      foregroundColor: theme.colorScheme.onPrimary,
+      elevation: 6.0,
+
+      // Style cho overlay
+      overlayColor: isDarkMode ? Colors.white : Colors.black,
+      overlayOpacity: 0.4,
+
+      // Danh sách các hành động
+      children: [
+        _buildSpeedDialChild(
+          context: context,
+          icon: Icons.chat_bubble_outline_rounded,
+          label: l10n.chatbotTitle,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const ChatbotScreen())),
+        ),
+        _buildSpeedDialChild(
+          context: context,
+          icon: Icons.history_edu_outlined,
+          label: l10n.activityHistoryTitle,
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ActivityHistoryScreen())),
+        ),
+        _buildSpeedDialChild(
+          context: context,
+          icon: Icons.bluetooth_searching_rounded,
+          label: l10n.changeForgetDevice, // Dùng key "Đổi/Quên thiết bị"
+          onTap: () => Navigator.pushNamed(context, '/device_select'),
+        ),
+        // Nút debug chỉ hiển thị trong debug mode
+        if (kDebugMode)
+          _buildSpeedDialChild(
+            context: context,
+            icon: Icons.bug_report_outlined,
+            label: l10n.recordActivityTitle,
+            onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const ActivityHistoryScreen()),
-              );
-            },
+                    builder: (context) => const RecordActivityScreen())),
+            backgroundColor: Colors.deepPurple,
           ),
-          SpeedDialChild(
-            child: const Icon(
-                Icons.bluetooth_searching_outlined), // Thay đổi icon một chút
-            label: AppLocalizations.of(context)!
-                .connectDevice, // Giả sử key này là "Connect / Change Device"
-            backgroundColor: Colors.orange,
-            onTap: () {
-              Navigator.pushNamed(context, '/device_select');
-            },
+      ],
+    );
+  }
+
+  // Hàm helper để tạo SpeedDialChild nhất quán
+  SpeedDialChild _buildSpeedDialChild(
+      {required BuildContext context,
+      required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+      Color? backgroundColor}) {
+    final theme = Theme.of(context);
+    return SpeedDialChild(
+      child: Icon(icon),
+      label: label,
+      labelStyle: theme.textTheme.titleSmall,
+      backgroundColor: backgroundColor ?? theme.colorScheme.secondary,
+      foregroundColor: theme.colorScheme.onSecondary,
+      onTap: onTap,
+      shape: const CircleBorder(),
+    );
+  }
+}
+
+// --- WIDGET TÙY CHỈNH CHO BOTTOM NAVIGATION BAR ---
+class _CustomBottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _CustomBottomNavBar({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BottomAppBar(
+      // Style thanh BottomAppBar
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8.0,
+      color: theme.colorScheme.surface,
+      surfaceTintColor: theme.colorScheme.surface,
+      elevation: 8.0,
+
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          // Nhóm nút trái
+          Row(
+            children: [
+              _buildNavItem(context, icon: Icons.dashboard_rounded, index: 0),
+              _buildNavItem(context, icon: Icons.people_rounded, index: 1),
+            ],
           ),
-          // <<< THÊM SPEEDDIALCHILD CHO MÀN HÌNH RECORD >>>
-          SpeedDialChild(
-            child: const Icon(Icons.fiber_manual_record_outlined,
-                color: Colors.white),
-            label: l10n.recordActivityTitle, // Sử dụng key dịch thuật đã thêm
-            backgroundColor: Colors.purple,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const RecordActivityScreen()),
-              );
-            },
+
+          // Nhóm nút phải
+          Row(
+            children: [
+              _buildNavItem(context, icon: Icons.flag_rounded, index: 2),
+              _buildNavItem(context, icon: Icons.settings_rounded, index: 3),
+            ],
           ),
-          // --------------------------------------------
         ],
+      ),
+    );
+  }
+
+  // Hàm helper xây dựng từng item
+  Widget _buildNavItem(BuildContext context,
+      {required IconData icon, required int index}) {
+    final bool isSelected = currentIndex == index;
+    final Color color = isSelected
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
+
+    return InkWell(
+      onTap: () => onTap(index),
+      borderRadius: BorderRadius.circular(50), // Bo tròn để hiệu ứng đẹp
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width / 5, // Chia đều không gian
+        height: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            // Hiệu ứng dịch chuyển nhẹ khi được chọn
+            AnimatedSlide(
+              duration: const Duration(milliseconds: 200),
+              offset: isSelected ? const Offset(0, -0.2) : Offset.zero,
+              child: Icon(icon, color: color, size: 26),
+            ),
+
+            // Chấm nhỏ chỉ báo item được chọn
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 4,
+              width: isSelected ? 20 : 0,
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

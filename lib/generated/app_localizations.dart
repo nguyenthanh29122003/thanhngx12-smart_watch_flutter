@@ -1565,10 +1565,10 @@ abstract class AppLocalizations {
   /// **'Path copied (simulated): {filePath}'**
   String pathCopiedSnackbar(String filePath);
 
-  /// Text displayed when the app is attempting to reconnect to the Bluetooth device
+  /// Status text shown in the banner when trying to reconnect to a device
   ///
   /// In en, this message translates to:
-  /// **'Reconnecting...'**
+  /// **'Attempting to reconnect...'**
   String get statusReconnecting;
 
   /// Tooltip text for the scan button when reconnecting
@@ -1850,13 +1850,13 @@ abstract class AppLocalizations {
   /// No description provided for @activitySummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Activity Summary'**
+  /// **'Activity Summary'**
   String get activitySummaryTitle;
 
   /// No description provided for @activitySummaryNoData.
   ///
   /// In en, this message translates to:
-  /// **'No activity data available for today.'**
+  /// **'Not enough activity data recorded for today yet.'**
   String get activitySummaryNoData;
 
   /// No description provided for @activitySummaryNoDataToDisplay.
@@ -1868,7 +1868,7 @@ abstract class AppLocalizations {
   /// No description provided for @activitySummaryDetailScreenTitle.
   ///
   /// In en, this message translates to:
-  /// **'Activity Details'**
+  /// **'Activity Timeline'**
   String get activitySummaryDetailScreenTitle;
 
   /// No description provided for @sectionActivityRecognition.
@@ -1883,7 +1883,7 @@ abstract class AppLocalizations {
   /// **'Your Weight'**
   String get settingUserWeightTitle;
 
-  /// No description provided for @settingUserWeightDesc.
+  /// Description for why user weight is needed
   ///
   /// In en, this message translates to:
   /// **'Used for more accurate calorie calculation'**
@@ -1925,11 +1925,257 @@ abstract class AppLocalizations {
   /// **'Enable Smart Reminders'**
   String get settingSmartRemindersTitle;
 
-  /// No description provided for @settingSmartRemindersDesc.
+  /// Description for what smart reminders do
   ///
   /// In en, this message translates to:
   /// **'Receive gentle reminders before the main alert'**
   String get settingSmartRemindersDesc;
+
+  /// Subtitle on the sign up screen
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account to get started'**
+  String get signUpSubtitle;
+
+  /// Title for the history charts section on the dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'History & Trends'**
+  String get historyAndTrendsTitle;
+
+  /// Welcome message for the morning
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get greetingGoodMorning;
+
+  /// Welcome message for the afternoon
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon,'**
+  String get greetingGoodAfternoon;
+
+  /// Welcome message for the evening
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening,'**
+  String get greetingGoodEvening;
+
+  /// Tab title for Heart Rate chart
+  ///
+  /// In en, this message translates to:
+  /// **'Heart Rate'**
+  String get hrTabTitle;
+
+  /// Tab title for SpO2 chart
+  ///
+  /// In en, this message translates to:
+  /// **'SpO2'**
+  String get spo2TabTitle;
+
+  /// Tab title for Steps chart
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get stepsTabTitle;
+
+  /// Title for the main daily goal card
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get mainGoalTitle;
+
+  /// Shows the total goal for steps, e.g. / 10,000 steps
+  ///
+  /// In en, this message translates to:
+  /// **'/ {goal} steps'**
+  String stepsOutOfGoal(Object goal);
+
+  /// Message shown when there are less than 2 valid data points to draw a chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data to draw a chart.'**
+  String get chartNotEnoughData;
+
+  /// A generic title for an informational message in a chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Info:'**
+  String get chartInfo;
+
+  /// Title shown on the relatives screen when there is an error fetching the data from the stream
+  ///
+  /// In en, this message translates to:
+  /// **'Error Loading Relatives'**
+  String get errorLoadingRelatives;
+
+  /// No description provided for @quoteGoalAchieved1.
+  ///
+  /// In en, this message translates to:
+  /// **'Incredible! You smashed it!'**
+  String get quoteGoalAchieved1;
+
+  /// No description provided for @quoteGoalAchieved2.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal complete! You\'re a star ⭐'**
+  String get quoteGoalAchieved2;
+
+  /// No description provided for @quoteAlmostThere1.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re so close, keep it up!'**
+  String get quoteAlmostThere1;
+
+  /// No description provided for @quoteAlmostThere2.
+  ///
+  /// In en, this message translates to:
+  /// **'Just a little more to go!'**
+  String get quoteAlmostThere2;
+
+  /// No description provided for @quoteGoodStart1.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s a great start!'**
+  String get quoteGoodStart1;
+
+  /// No description provided for @quoteGoodStart2.
+  ///
+  /// In en, this message translates to:
+  /// **'Every step counts. Well done!'**
+  String get quoteGoodStart2;
+
+  /// No description provided for @quoteKeepGoing1.
+  ///
+  /// In en, this message translates to:
+  /// **'A journey of a thousand miles begins with a single step.'**
+  String get quoteKeepGoing1;
+
+  /// No description provided for @quoteKeepGoing2.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s get moving!'**
+  String get quoteKeepGoing2;
+
+  /// No description provided for @otherGoalsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Goals'**
+  String get otherGoalsTitle;
+
+  /// No description provided for @sleepGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep Goal'**
+  String get sleepGoalTitle;
+
+  /// No description provided for @caloriesGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories Goal'**
+  String get caloriesGoalTitle;
+
+  /// Title for the section containing theme and language settings
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance & Language'**
+  String get sectionAppearanceAndLang;
+
+  /// No description provided for @totalActiveTimeTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Active Time Today'**
+  String get totalActiveTimeTodayTitle;
+
+  /// No description provided for @durationSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String durationSeconds(int seconds);
+
+  /// No description provided for @durationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m'**
+  String durationMinutes(int minutes);
+
+  /// No description provided for @durationMinutesAndSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m {seconds}s'**
+  String durationMinutesAndSeconds(int minutes, int seconds);
+
+  /// Label to show the duration of an activity segment, e.g., 'Duration: 5m 30s'
+  ///
+  /// In en, this message translates to:
+  /// **'Duration: {duration}'**
+  String durationLabel(String duration);
+
+  /// Label for the speed dial button that navigates to the activity history timeline screen
+  ///
+  /// In en, this message translates to:
+  /// **'Activity History'**
+  String get activityHistoryTitle;
+
+  /// A short text to indicate that a feature is under development.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get comingSoon;
+
+  /// Title for the section containing activity recognition settings
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Alerts'**
+  String get sectionActivitySettings;
+
+  /// Label for the sitting warning threshold setting
+  ///
+  /// In en, this message translates to:
+  /// **'Prolonged Sitting Alert'**
+  String get settingSittingWarning;
+
+  /// Label for the smart reminders setting
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Reminders'**
+  String get settingSmartReminders;
+
+  /// Label to show a duration in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String minutesLabel(int minutes);
+
+  /// Label for the lying warning threshold setting
+  ///
+  /// In en, this message translates to:
+  /// **'Prolonged Lying Alert (Daytime)'**
+  String get settingLyingWarning;
+
+  /// Label to show a duration in hours
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h'**
+  String hoursLabel(int hours);
+
+  /// Label for the user weight setting
+  ///
+  /// In en, this message translates to:
+  /// **'Your Weight'**
+  String get settingUserWeight;
+
+  /// Generic validation error for a required field
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get errorFieldRequired;
+
+  /// Validation error for the user weight input
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid weight (20-200kg)'**
+  String get errorWeightRange;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1,11 +1,14 @@
 // lib/screens/core/relatives_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/relatives_provider.dart'; // Import provider
-import '../../models/relative.dart'; // Import model
-import '../../generated/app_localizations.dart'; // <<< Đã import
 
-// Chuyển thành StatefulWidget để quản lý TextEditingController và Dropdown state
+import '../../providers/relatives_provider.dart';
+import '../../models/relative.dart';
+import '../../generated/app_localizations.dart';
+
+// <<<<<<<<<<<<<<<< BẮT ĐẦU CODE HOÀN CHỈNH >>>>>>>>>>>>>>>>
+
 class RelativesScreen extends StatefulWidget {
   const RelativesScreen({super.key});
 
@@ -14,11 +17,9 @@ class RelativesScreen extends StatefulWidget {
 }
 
 class _RelativesScreenState extends State<RelativesScreen> {
+  // State controllers và các hàm logic được giữ lại hoàn toàn
   final TextEditingController _nameController = TextEditingController();
   String? _selectedRelationshipInDialog;
-
-  // Danh sách các lựa chọn cho mối quan hệ
-  // TODO: Cân nhắc dịch các giá trị này hoặc dùng key-value map
   final List<String> _relationshipOptions = [
     'Father',
     'Mother',
@@ -34,7 +35,7 @@ class _RelativesScreenState extends State<RelativesScreen> {
     'Guardian',
     'Doctor',
     'Caregiver',
-    'Other',
+    'Other'
   ];
 
   @override
@@ -43,7 +44,92 @@ class _RelativesScreenState extends State<RelativesScreen> {
     super.dispose();
   }
 
-  // <<< THÊM HÀM HELPER ĐỂ DỊCH MỐI QUAN HỆ >>>
+  // --- LOGIC HELPER & DIALOGS (sẽ được định nghĩa ở đây) ---
+  // (Các hàm _show...Dialog và _getTranslatedRelationship sẽ ở đây)
+
+  // <<< Dán code từ Phần 2 và 3 vào ĐÂY >>>
+
+  // --- HÀM BUILD CHÍNH ---
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    // Lắng nghe stream từ provider
+    final stream = context.watch<RelativesProvider>().relativesStream;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.relativesScreenTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            // Nút "Thêm" được thiết kế lại
+            child: IconButton(
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 28),
+              tooltip: l10n.addRelativeTooltip,
+              onPressed: () => _showAddOrEditRelativeDialog(), // Gọi hàm chung
+              // Style nút cho nổi bật và hợp theme
+              style: IconButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          )
+        ],
+      ),
+      body: stream == null
+          // Trường hợp người dùng chưa đăng nhập
+          ? _MessageState(
+              icon: Icons.login,
+              message: l10n.pleaseLoginRelatives,
+              color: theme.colorScheme.primary)
+          : StreamBuilder<List<Relative>>(
+              stream: stream,
+              builder: (context, snapshot) {
+                // Xử lý các trạng thái của Stream
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _MessageState(
+                      icon: Icons.error_outline_rounded,
+                      color: theme.colorScheme.error,
+                      message: l10n.errorLoadingRelatives); // Key mới
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  // Hiển thị trạng thái rỗng nếu không có dữ liệu
+                  return _EmptyState(
+                      onAdd: () => _showAddOrEditRelativeDialog());
+                }
+
+                // Hiển thị danh sách người thân nếu có dữ liệu
+                final relatives = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                      16, 16, 16, 80), // Padding cho FAB
+                  itemCount: relatives.length,
+                  itemBuilder: (context, index) {
+                    final relative = relatives[index];
+                    return _RelativeListItemCard(
+                      relative: relative,
+                      onEdit: () => _showAddOrEditRelativeDialog(
+                          relativeToEdit: relative),
+                      onDelete: () => _showDeleteConfirmationDialog(relative),
+                      // Truyền hàm dịch vào widget con
+                      getTranslatedRelationship: (key) =>
+                          _getTranslatedRelationship(key, l10n),
+                    );
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  // --- LOGIC HELPER & DIALOGS ---
+
   String _getTranslatedRelationship(
       String relationshipKey, AppLocalizations l10n) {
     switch (relationshipKey) {
@@ -78,106 +164,123 @@ class _RelativesScreenState extends State<RelativesScreen> {
       case 'Other':
         return l10n.relationOther;
       default:
-        return relationshipKey; // Trả về key gốc nếu không khớp
+        return relationshipKey;
     }
   }
 
-  // --- Hàm hiển thị dialog thêm người thân ---
-  Future<void> _showAddRelativeDialog(BuildContext context) async {
-    final formKey = GlobalKey<FormState>();
-    final relativesProvider =
-        Provider.of<RelativesProvider>(context, listen: false);
-    _nameController.clear();
-    _selectedRelationshipInDialog = null;
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n
+  // --- HÀM DIALOG CHUNG CHO CẢ THÊM VÀ SỬA ---
+  Future<void> _showAddOrEditRelativeDialog({Relative? relativeToEdit}) async {
+    final bool isEditing = relativeToEdit != null;
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
-    bool? success = await showDialog<bool>(
+    // Chuẩn bị form
+    final formKey = GlobalKey<FormState>();
+    _nameController.text = isEditing ? relativeToEdit.name : '';
+    _selectedRelationshipInDialog =
+        isEditing ? relativeToEdit.relationship : null;
+
+    final success = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        // StatefulBuilder để dropdown có thể cập nhật state riêng trong dialog
         return StatefulBuilder(
           builder: (stfContext, stfSetState) {
             return AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.person_add_alt_1_outlined),
-                  const SizedBox(width: 10),
-                  Text(l10n.addRelativeDialogTitle), // Dùng key
-                ],
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
+              // Style dialog cho nhất quán với AppTheme
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              backgroundColor: theme.colorScheme.surface,
+              title: Text(isEditing
+                  ? l10n.editRelativeDialogTitle
+                  : l10n.addRelativeDialogTitle),
+
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // TextFormField với style từ AppTheme
                       TextFormField(
                         controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: l10n.relativeNameLabel, // Dùng key
-                          hintText: l10n.relativeNameHint, // Dùng key
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.person_outline),
-                        ),
                         textCapitalization: TextCapitalization.words,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.relativeNameValidation; // Dùng key
-                          }
-                          return null;
-                        },
+                        decoration: InputDecoration(
+                          labelText: l10n.relativeNameLabel,
+                          hintText: l10n.relativeNameHint,
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? l10n.relativeNameValidation
+                            : null,
                       ),
                       const SizedBox(height: 16),
+                      // DropdownButtonFormField
                       DropdownButtonFormField<String>(
                         value: _selectedRelationshipInDialog,
-                        hint: Text(l10n.relationshipHint), // Dùng key
+                        hint: Text(l10n.relationshipHint),
                         isExpanded: true,
                         decoration: InputDecoration(
-                          labelText: l10n.relationshipLabel, // Dùng key
+                          labelText: l10n.relationshipLabel,
                           border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.people_alt_outlined),
                         ),
-                        items: _relationshipOptions.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value, // Value vẫn là tiếng Anh ('Father')
-                            child: Text(_getTranslatedRelationship(
-                                value, l10n)), // Hiển thị text đã dịch
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          stfSetState(() {
-                            _selectedRelationshipInDialog = newValue;
-                          });
-                        },
-                        validator: (value) => (value == null)
-                            ? l10n.relationshipValidation
-                            : null, // Dùng key
+                        // Tạo các item dropdown với text đã được dịch
+                        items: _relationshipOptions
+                            .map((value) => DropdownMenuItem<String>(
+                                  value: value, // value vẫn là key tiếng Anh
+                                  child: Text(
+                                      _getTranslatedRelationship(value, l10n)),
+                                ))
+                            .toList(),
+                        onChanged: (v) => stfSetState(
+                            () => _selectedRelationshipInDialog = v),
+                        validator: (v) =>
+                            (v == null) ? l10n.relationshipValidation : null,
                       ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ),
+
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(null),
-                  child: Text(l10n.cancel), // Dùng key
+                  child: Text(l10n.cancel,
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurface.withOpacity(0.7))),
                 ),
+                // Nút ElevatedButton sẽ tự lấy style từ AppTheme
                 ElevatedButton(
                   onPressed: () async {
                     if ((formKey.currentState?.validate() ?? false) &&
                         _selectedRelationshipInDialog != null) {
-                      final name = _nameController.text;
+                      // Logic xử lý khi nhấn nút Lưu/Thêm
+                      final name = _nameController.text.trim();
                       final relationship = _selectedRelationshipInDialog!;
-                      final bool added = await relativesProvider.addRelative(
-                          name, relationship);
+
+                      // Lấy provider mà không lắng nghe thay đổi
+                      final relativesProvider =
+                          context.read<RelativesProvider>();
+
+                      bool result = false;
+                      if (isEditing) {
+                        result = await relativesProvider.updateRelative(
+                            relativeToEdit.id, name, relationship);
+                      } else {
+                        result = await relativesProvider.addRelative(
+                            name, relationship);
+                      }
+
+                      // Đóng dialog và trả về kết quả thành công/thất bại
                       if (dialogContext.mounted) {
-                        Navigator.of(dialogContext).pop(added);
+                        Navigator.of(dialogContext).pop(result);
                       }
                     }
                   },
-                  child: Text(l10n.addRelativeButton), // Dùng key
+                  child: Text(isEditing
+                      ? l10n.saveChangesButton
+                      : l10n.addRelativeButton),
                 ),
               ],
             );
@@ -186,333 +289,280 @@ class _RelativesScreenState extends State<RelativesScreen> {
       },
     );
 
-    // Hiển thị SnackBar kết quả
+    // Hiển thị SnackBar thông báo kết quả sau khi dialog đóng
     if (mounted && success != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? l10n.relativeAddedSuccess
-              : l10n.relativeAddedError), // Dùng key
-          backgroundColor: success ? Colors.green : Colors.redAccent,
-        ),
-      );
+      final successMessage =
+          isEditing ? l10n.relativeUpdatedSuccess : l10n.relativeAddedSuccess;
+      final errorMessage =
+          isEditing ? l10n.relativeUpdatedError : l10n.relativeAddedError;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(success ? successMessage : errorMessage),
+        backgroundColor:
+            success ? Colors.green.shade600 : theme.colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 
-  // --- Hàm hiển thị dialog xác nhận xóa ---
-  Future<bool?> _showDeleteConfirmationDialog(
-      BuildContext context, Relative relative) async {
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n
-    return await showDialog<bool>(
+  // --- HÀM DIALOG XÁC NHẬN XÓA ---
+  Future<void> _showDeleteConfirmationDialog(Relative relative) async {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    // `showDialog` sẽ trả về true nếu người dùng nhấn "Xóa", ngược lại là false
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
-            const SizedBox(width: 10),
-            Text(l10n.deleteRelativeConfirmationTitle), // Dùng key
-          ],
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: theme.colorScheme.surface,
+        title: Text(l10n.deleteRelativeConfirmationTitle),
         content: Text(l10n.confirmDeleteRelative(
-            relative.name, relative.relationship)), // Dùng key với placeholder
+          relative.name,
+          _getTranslatedRelationship(relative.relationship, l10n),
+        )),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel), // Dùng key
-          ),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel)),
+          // Nút xóa được thiết kế lại để nguy hiểm hơn
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
+                backgroundColor: theme.colorScheme.error),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.deleteButton), // Dùng key
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
     );
-  }
 
-  // --- Hàm hiển thị dialog sửa người thân ---
-  Future<void> _showEditRelativeDialog(
-      BuildContext context, Relative relativeToEdit) async {
-    final formKey = GlobalKey<FormState>();
-    final relativesProvider =
-        Provider.of<RelativesProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n
-
-    _nameController.text = relativeToEdit.name;
-    if (_relationshipOptions.contains(relativeToEdit.relationship)) {
-      _selectedRelationshipInDialog = relativeToEdit.relationship;
-    } else {
-      _selectedRelationshipInDialog = 'Other';
-      if (!_relationshipOptions.contains('Other')) {
-        _relationshipOptions.add('Other');
+    // Chỉ thực hiện xóa nếu người dùng đã xác nhận
+    if (confirm == true) {
+      final bool deleted =
+          await context.read<RelativesProvider>().deleteRelative(relative.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(deleted
+              ? l10n.relativeDeletedSnackbar(relative.name)
+              : l10n.relativeDeletedError),
+          backgroundColor: deleted ? Colors.grey[700] : theme.colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ));
       }
     }
-
-    bool? success = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (stfContext, stfSetState) {
-            return AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.edit_note_outlined),
-                  const SizedBox(width: 10),
-                  Text(l10n.editRelativeDialogTitle), // <<< DÙNG KEY
-                ],
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: l10n.relativeNameLabel, // Dùng key
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.person_outline),
-                        ),
-                        textCapitalization: TextCapitalization.words,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.relativeNameValidation; // Dùng key
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRelationshipInDialog,
-                        hint: Text(l10n.relationshipHint), // Dùng key
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: l10n.relationshipLabel, // Dùng key
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.people_alt_outlined),
-                        ),
-                        items: _relationshipOptions.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value, // Value vẫn là tiếng Anh ('Father')
-                            child: Text(_getTranslatedRelationship(
-                                value, l10n)), // Hiển thị text đã dịch
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          stfSetState(() {
-                            _selectedRelationshipInDialog = newValue;
-                          });
-                        },
-                        validator: (value) => (value == null)
-                            ? l10n.relationshipValidation
-                            : null, // Dùng key
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(null),
-                  child: Text(l10n.cancel), // Dùng key
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if ((formKey.currentState?.validate() ?? false) &&
-                        _selectedRelationshipInDialog != null) {
-                      final newName = _nameController.text;
-                      final newRelationship = _selectedRelationshipInDialog!;
-                      if (newName == relativeToEdit.name &&
-                          newRelationship == relativeToEdit.relationship) {
-                        Navigator.of(dialogContext).pop(null);
-                        return;
-                      }
-                      final bool updated =
-                          await relativesProvider.updateRelative(
-                              relativeToEdit.id, newName, newRelationship);
-                      if (dialogContext.mounted) {
-                        Navigator.of(dialogContext).pop(updated);
-                      }
-                    }
-                  },
-                  child: Text(l10n.saveChangesButton), // <<< DÙNG KEY
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    // Hiển thị SnackBar kết quả cập nhật
-    if (mounted && success != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? l10n.relativeUpdatedSuccess
-              : l10n.relativeUpdatedError), // <<< DÙNG KEY
-          backgroundColor: success ? Colors.green : Colors.redAccent,
-        ),
-      );
-    }
   }
+}
+
+// lib/screens/core/relatives_screen.dart
+
+// ... code của _RelativesScreenState và các hàm dialog ở trên ...
+
+// <<<<<<<<<<<<<<<< BẮT ĐẦU PHẦN 3 >>>>>>>>>>>>>>>>
+
+// ================================================================
+// CÁC WIDGET CON ĐỂ HIỂN THỊ TRẠNG THÁI VÀ DANH SÁCH
+// ================================================================
+
+// --- Widget hiển thị khi danh sách người thân trống ---
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+  const _EmptyState({required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
-    final relativesProvider = context.watch<RelativesProvider>();
-    final stream = relativesProvider.relativesStream;
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n ở đây
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.relativesScreenTitle), // Dùng key
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.group_add_outlined),
-            tooltip: l10n.addRelativeTooltip, // Dùng key
-            onPressed: () => _showAddRelativeDialog(context),
-          ),
-        ],
-      ),
-      body: stream == null
-          ? Center(child: Text(l10n.pleaseLoginRelatives)) // Dùng key
-          : StreamBuilder<List<Relative>>(
-              stream: stream,
-              builder: (context, snapshot) {
-                // ... (Xử lý waiting, error giữ nguyên, có thể thêm key dịch cho lỗi) ...
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  print("Error in relatives stream builder: ${snapshot.error}");
-                  // TODO: Thêm key dịch cho thông báo lỗi này
-                  return Center(
-                      child:
-                          Text('Error loading relatives: ${snapshot.error}'));
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  // Hiển thị khi danh sách trống
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.people_outline,
-                            size: 70, color: Colors.grey.shade400),
-                        const SizedBox(height: 20),
-                        Text(l10n.noRelativesYet,
-                            style: const TextStyle(fontSize: 18)), // Dùng key
-                        const SizedBox(height: 5),
-                        Text(l10n.addFirstRelativeHint,
-                            style: TextStyle(color: Colors.grey.shade600),
-                            textAlign: TextAlign.center), // Dùng key
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(/*...*/),
-                          icon: const Icon(Icons.add),
-                          label: Text(l10n.addRelativeEmptyButton), // Dùng key
-                          onPressed: () => _showAddRelativeDialog(context),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // Hiển thị danh sách người thân
-                final relatives = snapshot.data!;
-                return ListView.separated(
-                  itemCount: relatives.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 0, indent: 16, endIndent: 16),
-                  itemBuilder: (context, index) {
-                    final relative = relatives[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 10.0),
-                      leading: CircleAvatar(
-                        radius: 24,
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        child: Text(
-                          relative.name.isNotEmpty
-                              ? relative.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                              fontSize: 18),
-                        ),
-                      ),
-                      title: Text(relative.name,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w500)),
-                      subtitle: Text(_getTranslatedRelationship(
-                          relative.relationship,
-                          l10n)), // TODO: Dịch relationship nếu cần
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // --- Nút Sửa ---
-                          IconButton(
-                            icon: Icon(Icons.edit_outlined,
-                                color: Theme.of(context).colorScheme.secondary),
-                            tooltip: l10n.editRelativeTooltip(
-                                relative.name), // <<< DÙNG KEY
-                            onPressed: () {
-                              _showEditRelativeDialog(context, relative);
-                            },
-                          ),
-                          // --- Nút Xóa ---
-                          IconButton(
-                            icon: Icon(Icons.delete_outline,
-                                color: Colors.red.shade300),
-                            tooltip: l10n.deleteRelativeTooltip(
-                                relative.name), // Dùng key
-                            onPressed: () async {
-                              final confirm =
-                                  await _showDeleteConfirmationDialog(
-                                      context, relative);
-                              if (confirm == true) {
-                                final bool deleted = await context
-                                    .read<RelativesProvider>()
-                                    .deleteRelative(relative.id);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(deleted
-                                          ? l10n.relativeDeletedSnackbar(
-                                              relative.name)
-                                          : l10n
-                                              .relativeDeletedError), // Dùng key
-                                      duration: const Duration(seconds: 2),
-                                      backgroundColor: deleted
-                                          ? Colors.grey[700]
-                                          : Colors.redAccent,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      onTap: () {
-                        _showEditRelativeDialog(context,
-                            relative); // Gọi dialog sửa khi nhấn vào item
-                      },
-                    );
-                  },
-                );
-              },
+    // Giao diện được thiết kế lại để thân thiện và khuyến khích hơn
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icon lớn với màu nhẹ
+            Icon(Icons.people_outline_rounded,
+                size: 80, color: theme.colorScheme.primary.withOpacity(0.4)),
+            const SizedBox(height: 24),
+            // Tiêu đề sử dụng font Poppins
+            Text(l10n.noRelativesYet, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            // Phụ đề
+            Text(l10n.addFirstRelativeHint,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            // Nút kêu gọi hành động
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addRelativeEmptyButton),
+              onPressed: onAdd,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Widget hiển thị thông báo lỗi hoặc thông tin chung ---
+class _MessageState extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String message;
+
+  const _MessageState(
+      {required this.icon, required this.color, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(icon, color: color, size: 64),
+      const SizedBox(height: 16),
+      Text(
+        message,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+        textAlign: TextAlign.center,
+      ),
+    ]));
+  }
+}
+
+// --- Widget Card hiển thị thông tin một người thân ---
+class _RelativeListItemCard extends StatelessWidget {
+  final Relative relative;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final String Function(String) getTranslatedRelationship;
+
+  const _RelativeListItemCard(
+      {required this.relative,
+      required this.onEdit,
+      required this.onDelete,
+      required this.getTranslatedRelationship});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      // margin để tạo khoảng cách giữa các card
+      margin: const EdgeInsets.only(bottom: 12.0),
+      // InkWell để có hiệu ứng gợn sóng khi nhấn
+      child: InkWell(
+        onTap: () =>
+            _showOptionsBottomSheet(context), // Mở bottom sheet khi nhấn
+        borderRadius: BorderRadius.circular(16.0), // Bo góc cho hiệu ứng
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                child: Text(
+                  relative.name.isNotEmpty
+                      ? relative.name[0].toUpperCase()
+                      : "?",
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(color: theme.colorScheme.primary),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Cột chứa tên và mối quan hệ
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(relative.name,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(
+                      getTranslatedRelationship(relative.relationship),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color:
+                            theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Chấm tròn chỉ báo trạng thái (placeholder)
+              // Bạn sẽ cần thêm logic để cập nhật màu cho chấm này
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                    color: Colors.green, // Ví dụ: Màu xanh lá cây là online
+                    shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              // Icon "Thêm" để gợi ý có thể nhấn vào
+              Icon(Icons.more_vert_rounded, color: Colors.grey.shade400)
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Hiển thị một BottomSheet với các tùy chọn Sửa/Xóa
+  void _showOptionsBottomSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      // Nền trong suốt để thấy được bo tròn
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          // Bọc trong Container để có thể bo góc và thêm padding
+          margin: const EdgeInsets.all(8.0),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Có thể thêm một "handle" nhỏ ở trên
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              // Tùy chọn Sửa
+              ListTile(
+                leading:
+                    Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
+                title: Text(l10n.editRelativeDialogTitle),
+                onTap: () {
+                  Navigator.pop(context); // Đóng bottom sheet trước
+                  onEdit(); // Sau đó gọi hàm sửa
+                },
+              ),
+              // Tùy chọn Xóa
+              ListTile(
+                leading:
+                    Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                title: Text(l10n.delete),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete();
+                },
+              ),
+              const SizedBox(height: 8), // Padding dưới cùng
+            ],
+          ),
+        );
+      },
     );
   }
 }

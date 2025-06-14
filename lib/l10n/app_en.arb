@@ -534,5 +534,169 @@
     }
   },
   "settingSmartRemindersTitle": "Enable Smart Reminders",
-  "settingSmartRemindersDesc": "Receive gentle reminders before the main alert"
+  "settingSmartRemindersDesc": "Receive gentle reminders before the main alert",
+  "signUpSubtitle": "Create an account to get started",
+  "@signUpSubtitle": {
+    "description": "Subtitle on the sign up screen"
+  },
+    "historyAndTrendsTitle": "History & Trends",
+  "@historyAndTrendsTitle": {
+    "description": "Title for the history charts section on the dashboard"
+  },
+  "greetingGoodMorning": "Good morning,",
+  "@greetingGoodMorning": {
+    "description": "Welcome message for the morning"
+  },
+  "greetingGoodAfternoon": "Good afternoon,",
+  "@greetingGoodAfternoon": {
+    "description": "Welcome message for the afternoon"
+  },
+  "greetingGoodEvening": "Good evening,",
+  "@greetingGoodEvening": {
+    "description": "Welcome message for the evening"
+  },
+  "hrTabTitle": "Heart Rate",
+  "@hrTabTitle": {
+    "description": "Tab title for Heart Rate chart"
+  },
+  "spo2TabTitle": "SpO2",
+  "@spo2TabTitle": {
+    "description": "Tab title for SpO2 chart"
+  },
+  "stepsTabTitle": "Steps",
+  "@stepsTabTitle": {
+    "description": "Tab title for Steps chart"
+  },
+  "mainGoalTitle": "Today",
+  "@mainGoalTitle": {
+    "description": "Title for the main daily goal card"
+  },
+    "stepsOutOfGoal": "/ {goal} steps",
+  "@stepsOutOfGoal": {
+    "description": "Shows the total goal for steps, e.g. / 10,000 steps",
+    "placeholders": {
+      "goal": {
+        "type": "Object"
+      }
+    }
+  },
+    "chartNotEnoughData": "Not enough data to draw a chart.",
+  "@chartNotEnoughData": {
+    "description": "Message shown when there are less than 2 valid data points to draw a chart."
+  },
+  "chartInfo": "Info:",
+  "@chartInfo": {
+    "description": "A generic title for an informational message in a chart."
+  },
+  "errorLoadingRelatives": "Error Loading Relatives",
+  "@errorLoadingRelatives": {
+    "description": "Title shown on the relatives screen when there is an error fetching the data from the stream"
+  },
+    "quoteGoalAchieved1": "Incredible! You smashed it!",
+  "quoteGoalAchieved2": "Goal complete! You're a star ⭐",
+  "quoteAlmostThere1": "You're so close, keep it up!",
+  "quoteAlmostThere2": "Just a little more to go!",
+  "quoteGoodStart1": "That's a great start!",
+  "quoteGoodStart2": "Every step counts. Well done!",
+  "quoteKeepGoing1": "A journey of a thousand miles begins with a single step.",
+  "quoteKeepGoing2": "Let's get moving!",
+  "otherGoalsTitle": "Other Goals",
+  "sleepGoalTitle": "Sleep Goal",
+  "caloriesGoalTitle": "Calories Goal",
+  "sectionAppearanceAndLang": "Appearance & Language",
+  "@sectionAppearanceAndLang": {
+    "description": "Title for the settings section that contains theme and language options"
+  },
+    "activitySummaryDetailScreenTitle": "Activity Timeline",
+  "activitySummaryNoData": "No activity recorded for this period.",
+  "totalActiveTimeTodayTitle": "Total Active Time Today",
+  "durationSeconds": "{seconds}s",
+  "@durationSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "durationMinutes": "{minutes}m",
+  "@durationMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "durationMinutesAndSeconds": "{minutes}m {seconds}s",
+  "@durationMinutesAndSeconds": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+  "durationLabel": "Duration: {duration}",
+  "@durationLabel": {
+    "description": "Label to show the duration of an activity segment, e.g., 'Duration: 5m 30s'",
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "activityHistoryTitle": "Activity History",
+  "@activityHistoryTitle": {
+    "description": "Label for the speed dial button that navigates to the activity history timeline screen"
+  },
+    "statusReconnecting": "Attempting to reconnect...",
+  "@statusReconnecting": {
+    "description": "Status text shown in the banner when trying to reconnect to a device"
+  },
+  "comingSoon": "Coming soon",
+  "@comingSoon": {
+    "description": "A short text to indicate that a feature is under development."
+  },
+  "sectionAppearanceAndLang": "Appearance & Language",
+  "@sectionAppearanceAndLang": {
+    "description": "Title for the section containing theme and language settings"
+  },
+  "sectionActivitySettings": "Activity Alerts",
+  "@sectionActivitySettings": {
+    "description": "Title for the section containing activity recognition settings"
+  },
+  "settingSittingWarning": "Prolonged Sitting Alert",
+  "@settingSittingWarning": {
+    "description": "Label for the sitting warning threshold setting"
+  },
+  "settingSmartReminders": "Smart Reminders",
+  "@settingSmartReminders": {
+    "description": "Label for the smart reminders setting"
+  },
+  "settingSmartRemindersDesc": "Receive gentle reminders before the main alert",
+  "@settingSmartRemindersDesc": {
+    "description": "Description for what smart reminders do"
+  },
+  "minutesLabel": "{minutes} min",
+  "@minutesLabel": {
+    "description": "Label to show a duration in minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionAppearanceAndLang": "Appearance & Language",
+    "settingLyingWarning": "Prolonged Lying Alert (Daytime)",
+  "@settingLyingWarning": {
+    "description": "Label for the lying warning threshold setting"
+  },
+  "hoursLabel": "{hours}h",
+  "@hoursLabel": {
+    "description": "Label to show a duration in hours",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "settingUserWeight": "Your Weight",
+  "@settingUserWeight": {
+    "description": "Label for the user weight setting"
+  },
+  "settingUserWeightDesc": "Used for more accurate calorie calculation",
+  "@settingUserWeightDesc": {
+    "description": "Description for why user weight is needed"
+  },
+  "errorFieldRequired": "Required",
+  "@errorFieldRequired": {
+    "description": "Generic validation error for a required field"
+  },
+  "errorWeightRange": "Please enter a valid weight (20-200kg)",
+  "@errorWeightRange": {
+    "description": "Validation error for the user weight input"
+  },
+    "activitySummaryTitle": "Activity Summary",
+  "activitySummaryNoData": "Not enough activity data recorded for today yet."
 }

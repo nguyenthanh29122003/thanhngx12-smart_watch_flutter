@@ -28,6 +28,7 @@ class ActivitySummaryData {
   final String activityName;
   final Duration totalDuration;
   final Color color;
+  int get totalDurationInSeconds => totalDuration.inSeconds;
 
   ActivitySummaryData({
     required this.activityName,

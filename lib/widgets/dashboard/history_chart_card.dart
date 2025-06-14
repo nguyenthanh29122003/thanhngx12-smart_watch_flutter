@@ -2,295 +2,293 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart'; // Import để định dạng ngày giờ
+import 'package:intl/intl.dart';
 
 import '../../providers/dashboard_provider.dart';
-import '../../models/health_data.dart'; // Cần để truy cập HealthData
+import '../../models/health_data.dart';
 import '../../generated/app_localizations.dart';
 
+// <<< THAY ĐỔI LỚN: WIDGET NÀY BÂY GIỜ KHÔNG CÒN LÀ MỘT 'CARD' NỮA >>>
+// Nó chỉ là một widget nội dung biểu đồ.
 class HistoryChartCard extends StatelessWidget {
   const HistoryChartCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Sử dụng Consumer để lắng nghe thay đổi từ DashboardProvider
+    // Consumer vẫn là cách tốt nhất để lấy dữ liệu
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
-        Widget chartContent;
-
-        // Xử lý các trạng thái tải dữ liệu
+        // --- XỬ LÝ TRẠNG THÁI (LOADING, ERROR, EMPTY) ---
+        // Phần này tương tự như trước, nhưng UI được thiết kế lại một chút
         switch (provider.historyStatus) {
-          case HistoryStatus.initial:
           case HistoryStatus.loading:
-            chartContent = const Center(child: CircularProgressIndicator());
-            break;
-          case HistoryStatus.error:
-            chartContent = Center(
-              child: Text(
-                // <<< DÙNG KEY >>>
-                "${l10n.chartErrorPrefix} ${provider.historyError ?? l10n.chartCouldNotLoad}",
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-                textAlign: TextAlign.center, // Thêm canh giữa
-              ),
-            );
-            break;
-          case HistoryStatus.loaded:
-            if (provider.healthHistory.isEmpty) {
-              chartContent = Center(
-                  child: Text(l10n.chartNoDataPeriod,
-                      textAlign: TextAlign.center)); // <<< DÙNG KEY
-            } else {
-              chartContent = _buildLineChart(context, provider.healthHistory);
-            }
-            break;
-        }
+          case HistoryStatus.initial:
+            return const Center(child: CircularProgressIndicator());
 
-        // Trả về Card chứa nội dung biểu đồ hoặc trạng thái tải
-        return Card(
-          elevation: 2.0,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.hrHistoryTitle, // <<< DÙNG KEY
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(height: 200, child: chartContent),
-              ],
-            ),
-          ),
-        );
+          case HistoryStatus.error:
+            return _buildErrorState(context, l10n.chartErrorPrefix,
+                provider.historyError ?? l10n.chartCouldNotLoad);
+
+          case HistoryStatus.loaded:
+            // Lọc dữ liệu hợp lệ cho nhịp tim
+            final validData =
+                provider.healthHistory.where((d) => d.hr > 0).toList();
+            if (validData.length < 2) {
+              return _buildErrorState(
+                  context, l10n.chartInfo, l10n.chartNotEnoughData); // Key mới
+            } else {
+              // Nếu có đủ dữ liệu, xây dựng biểu đồ
+              return _buildLineChart(context, validData);
+            }
+        }
       },
     );
   }
 
-  // --- Hàm xây dựng LineChart ---
-  Widget _buildLineChart(BuildContext context, List<HealthData> historyData) {
+  // --- WIDGET HELPER MỚI CHO TRẠNG THÁI LỖI / THÔNG TIN ---
+  Widget _buildErrorState(BuildContext context, String title, String message) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline,
+              color: theme.textTheme.bodySmall?.color, size: 32),
+          const SizedBox(height: 8),
+          Text(title, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(message,
+              style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  // --- HÀM XÂY DỰNG BIỂU ĐỒ (ĐƯỢC THIẾT KẾ LẠI) ---
+  Widget _buildLineChart(BuildContext context, List<HealthData> validData) {
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    // --- 1. Chuẩn bị dữ liệu cho biểu đồ ---
-    List<FlSpot> spots = [];
-    List<HealthData> validData = []; // Chỉ lấy dữ liệu hợp lệ (hr > 0)
+    final chartColor = Colors.red.shade400; // Màu đặc trưng cho nhịp tim
 
-    // Lọc dữ liệu không hợp lệ (ví dụ: hr = -1 hoặc 0)
-    validData = historyData.where((data) => data.hr > 0).toList();
+    // --- 1. Chuẩn bị dữ liệu ---
+    final List<FlSpot> spots = validData
+        .map((data) => FlSpot(
+              data.timestamp.millisecondsSinceEpoch.toDouble(),
+              data.hr.toDouble(),
+            ))
+        .toList();
 
-    // Nếu không có dữ liệu hợp lệ nào sau khi lọc
-    if (validData.isEmpty) {
-      return Center(
-          child: Text(l10n.chartNoValidHr, textAlign: TextAlign.center));
-    }
+    final double minX = spots.first.x;
+    final double maxX = spots.last.x;
 
-    // Tìm min/max cho trục Y (HR) từ dữ liệu hợp lệ
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
-
-    for (var data in validData) {
-      // Tạo FlSpot: X là thời gian (milliseconds), Y là nhịp tim
-      spots.add(FlSpot(
-        data.timestamp.millisecondsSinceEpoch.toDouble(), // Trục X: Thời gian
-        data.hr.toDouble(), // Trục Y: Nhịp tim
-      ));
-      // Cập nhật min/max Y
-      if (data.hr < minY) minY = data.hr.toDouble();
-      if (data.hr > maxY) maxY = data.hr.toDouble();
+    for (var spot in spots) {
+      if (spot.y < minY) minY = spot.y;
+      if (spot.y > maxY) maxY = spot.y;
     }
 
     // Thêm khoảng đệm cho trục Y để đẹp hơn
-    minY = (minY - 5).clamp(0, double.infinity); // Đảm bảo không âm
-    maxY = maxY + 5;
-
-    // Tìm min/max cho trục X (Timestamp) - lấy từ record đầu và cuối đã sắp xếp
-    // (Giả sử historyData đã được sắp xếp theo thời gian tăng dần từ Firestore)
-    double minX = validData.first.timestamp.millisecondsSinceEpoch.toDouble();
-    double maxX = validData.last.timestamp.millisecondsSinceEpoch.toDouble();
+    minY = (minY / 10).floor() * 10 - 10; // Làm tròn xuống và trừ đi 10
+    maxY = (maxY / 10).ceil() * 10 + 10; // Làm tròn lên và cộng thêm 10
+    minY = minY.clamp(30, double.infinity); // Đảm bảo minY không quá thấp
 
     // --- 2. Cấu hình LineChartData ---
     return LineChart(
       LineChartData(
-        // --- Dữ liệu đường kẻ ---
+        // --- CẤU HÌNH ĐƯỜNG KẺ & VÙNG NỀN ---
         lineBarsData: [
           LineChartBarData(
-            spots: spots, // Danh sách các điểm dữ liệu
-            isCurved: true, // Vẽ đường cong
-            color: Colors.redAccent, // Màu đường kẻ
-            barWidth: 3, // Độ dày đường kẻ
+            spots: spots,
+            isCurved: true,
+            gradient: LinearGradient(
+              // Dùng Gradient cho đẹp
+              colors: [chartColor.withOpacity(0.8), chartColor],
+            ),
+            barWidth: 3,
             isStrokeCapRound: true,
-            dotData: const FlDotData(
-                show: false), // Không hiển thị chấm trên điểm dữ liệu
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
-              // Tô màu khu vực dưới đường kẻ
               show: true,
-              color: Colors.redAccent.withOpacity(0.2),
+              gradient: LinearGradient(
+                colors: [
+                  chartColor.withOpacity(0.3),
+                  chartColor.withOpacity(0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ],
 
-        // --- Tiêu đề trục (Titles) ---
-        titlesData: FlTitlesData(
-          // --- Trục Trái (Y - Heart Rate) ---
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true, // Hiển thị tiêu đề trục Y
-              reservedSize: 40, // Khoảng trống cho tiêu đề
-              getTitlesWidget: (value, meta) {
-                // Chỉ hiển thị một vài giá trị chính
-                if (value == meta.min ||
-                    value == meta.max ||
-                    (value >= minY + 5 && (value.toInt() % 10 == 0))) {
-                  return SideTitleWidget(
-                    axisSide: meta.axisSide,
-                    space: 8.0, // Khoảng cách từ trục
-                    child: Text(
-                      value
-                          .toInt()
-                          .toString(), // Hiển thị giá trị HR (số nguyên)
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                  );
-                }
-                return Container(); // Không hiển thị các giá trị khác
-              },
-              // interval: 10, // Có thể dùng interval nếu muốn cách đều
-            ),
-          ),
-          // Ẩn trục phải, trên
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        // --- CẤU HÌNH TOOLTIP KHI CHẠM ---
+        lineTouchData: _buildLineTouchData(context, l10n, "bpm"),
 
-          // --- Trục Dưới (X - Thời gian) ---
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true, // Hiển thị tiêu đề trục X
-              reservedSize: 30, // Khoảng trống
-              interval: _calculateBottomTitleInterval(
-                  minX, maxX), // Tính khoảng cách tự động
-              getTitlesWidget: (value, meta) {
-                // Chuyển đổi milliseconds về DateTime
-                final dt = DateTime.fromMillisecondsSinceEpoch(value.toInt(),
-                        isUtc: true)
-                    .toLocal();
-                // Định dạng giờ:phút
-                final format = DateFormat('HH:mm');
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 8.0,
-                  child: Text(
-                    format.format(dt),
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
+        // --- CẤU HÌNH CÁC TRỤC ---
+        titlesData: _buildTitlesData(context, minY, maxY, minX, maxX),
 
-        // --- Đường lưới (Grid) ---
+        // --- CẤU HÌNH LƯỚI ---
         gridData: FlGridData(
           show: true,
-          drawVerticalLine: true,
-          drawHorizontalLine: true,
-          horizontalInterval: 10, // Khoảng cách lưới ngang (theo giá trị HR)
-          verticalInterval: _calculateBottomTitleInterval(
-              minX, maxX), // Khoảng cách lưới dọc (theo thời gian)
-          getDrawingHorizontalLine: (value) {
-            return FlLine(
-                color: Colors.grey.withOpacity(0.3), strokeWidth: 0.5);
-          },
-          getDrawingVerticalLine: (value) {
-            return FlLine(
-                color: Colors.grey.withOpacity(0.3), strokeWidth: 0.5);
-          },
-          checkToShowHorizontalLine: (value) {
-            // Chỉ vẽ lưới ngang tại các mốc chẵn 10
-            return value.toInt() % 10 == 0;
-          },
-        ),
-
-        // --- Đường viền (Border) ---
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: Colors.grey.withOpacity(0.5), width: 1),
-        ),
-
-        // --- Giới hạn trục (Min/Max) ---
-        minX: minX, // Thời gian bắt đầu
-        maxX: maxX, // Thời gian kết thúc
-        minY: minY, // HR thấp nhất (có padding)
-        maxY: maxY, // HR cao nhất (có padding)
-
-        // --- Dữ liệu chạm (Touch Tooltip) ---
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
-              return touchedBarSpots.map((barSpot) {
-                // barSpot bây giờ là một LineBarSpot
-
-                // final flSpot = barSpot.spot; // <<< XÓA DÒNG NÀY ĐI
-
-                // Sử dụng trực tiếp barSpot.x và barSpot.y
-                // Chuyển X (milliseconds) về DateTime
-                final dt = DateTime.fromMillisecondsSinceEpoch(
-                        barSpot.x.toInt(),
-                        isUtc: true)
-                    .toLocal();
-                // Định dạng tooltip
-                final timeStr = DateFormat('HH:mm:ss').format(dt);
-                // Lấy giá trị Y (HR) trực tiếp từ barSpot.y
-                final hrStr = barSpot.y.toInt().toString();
-
-                return LineTooltipItem(
-                  '$timeStr\n', // Dòng 1: Thời gian
-                  const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                  children: [
-                    TextSpan(
-                      text: 'HR: $hrStr bpm', // Dòng 2: Giá trị HR
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                  textAlign: TextAlign.left,
-                );
-              }).toList();
-            },
+          drawVerticalLine: false, // Bỏ lưới dọc cho gọn gàng
+          horizontalInterval: 20, // Khoảng cách lưới ngang
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: theme.dividerColor.withOpacity(0.1),
+            strokeWidth: 1,
           ),
-          handleBuiltInTouches: true, // Bật xử lý chạm mặc định
         ),
+
+        // --- CẤU HÌNH VIỀN ---
+        // Bỏ viền để tích hợp mượt mà vào Card chứa nó
+        borderData: FlBorderData(show: false),
+
+        // --- GIỚI HẠN TRỤC ---
+        minX: minX,
+        maxX: maxX,
+        minY: minY.floorToDouble(), // Làm tròn cho đẹp
+        maxY: maxY.ceilToDouble(),
       ),
-      // duration: Duration(milliseconds: 150), // Optional animation
-      // curve: Curves.linear, // Optional animation curve
     );
   }
 
-  // Hàm tính khoảng cách (interval) phù hợp cho trục thời gian (X)
+  // --- TÁCH CÁC HÀM HELPER CẤU HÌNH BIỂU ĐỒ ---
+
+  FlTitlesData _buildTitlesData(BuildContext context, double minY, double maxY,
+      double minX, double maxX) {
+    final textStyle =
+        Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10);
+
+    return FlTitlesData(
+      // --- TRỤC TRÁI (Y) ---
+      leftTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 35, // Khoảng trống cho nhãn
+          interval: 20, // Hiển thị mỗi 20 bpm
+          getTitlesWidget: (value, meta) {
+            // Chỉ hiển thị nhãn nếu nó không phải giá trị min/max để tránh chồng chéo
+            if (value == meta.max || value == meta.min) {
+              return Container();
+            }
+            return SideTitleWidget(
+              axisSide: meta.axisSide,
+              space: 4,
+              child: Text(value.toInt().toString(), style: textStyle),
+            );
+          },
+        ),
+      ),
+
+      // --- TRỤC DƯỚI (X) ---
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 22, // Giảm khoảng trống
+          interval: _calculateBottomTitleInterval(
+              minX, maxX), // Tái sử dụng hàm tính interval
+          getTitlesWidget: (value, meta) {
+            final dt =
+                DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true)
+                    .toLocal();
+            // Chỉ hiển thị tại các điểm đầu, giữa, và cuối
+            if (value == meta.min || value == meta.max) {
+              return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child:
+                      Text(DateFormat('HH:mm').format(dt), style: textStyle));
+            }
+            // Logic để hiển thị điểm ở giữa nếu có
+            if ((maxX - minX) > 1000 * 60 * 60 * 2) {
+              // Nếu khoảng thời gian đủ lớn
+              if ((value - meta.min) / (meta.max - meta.min) > 0.45 &&
+                  (value - meta.min) / (meta.max - meta.min) < 0.55) {
+                return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child:
+                        Text(DateFormat('HH:mm').format(dt), style: textStyle));
+              }
+            }
+            return Container();
+          },
+        ),
+      ),
+
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    );
+  }
+
+  // --- HELPER CHO TOOLTIP ---
+  LineTouchData _buildLineTouchData(
+      BuildContext context, AppLocalizations l10n, String unit) {
+    return LineTouchData(
+      handleBuiltInTouches: true,
+      touchTooltipData: LineTouchTooltipData(
+        // KHÔNG TÙY CHỈNH MÀU NỀN Ở ĐÂY NỮA
+        tooltipRoundedRadius: 8,
+        getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+          // Logic bên trong này không thay đổi
+          return touchedBarSpots.map((barSpot) {
+            final dt = DateTime.fromMillisecondsSinceEpoch(barSpot.x.toInt(),
+                    isUtc: true)
+                .toLocal();
+            final timeStr = DateFormat('HH:mm').format(dt);
+            final valueStr = barSpot.y.toInt().toString();
+
+            return LineTooltipItem(
+              '$valueStr $unit\n', // Dòng 1
+              TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface, // <<< Dùng màu chữ của theme
+                fontWeight: FontWeight.bold,
+              ),
+              children: [
+                TextSpan(
+                  text: timeStr,
+                  style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.8),
+                      fontWeight: FontWeight.normal),
+                ),
+              ],
+            );
+          }).toList();
+        },
+      ),
+      getTouchedSpotIndicator: (barData, spotIndexes) {
+        return spotIndexes.map((spotIndex) {
+          return TouchedSpotIndicatorData(
+            FlLine(color: Theme.of(context).primaryColor, strokeWidth: 1.5),
+            FlDotData(
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 6,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: Theme.of(context).primaryColor,
+                );
+              },
+            ),
+          );
+        }).toList();
+      },
+    );
+  }
+
+  // --- HÀM HELPER TÍNH INTERVAL TRỤC X (Giữ nguyên) ---
   double _calculateBottomTitleInterval(double minX, double maxX) {
     final double durationMillis = maxX - minX;
-    // Quy đổi sang giờ
+    if (durationMillis <= 0) return 1000 * 60 * 60; // 1 hour
     final double durationHours = durationMillis / (1000 * 60 * 60);
 
-    if (durationHours <= 2) {
-      // Dưới 2 giờ: hiển thị mỗi 15 phút
-      return 1000 * 60 * 15;
-    } else if (durationHours <= 6) {
-      // 2-6 giờ: hiển thị mỗi 30 phút
-      return 1000 * 60 * 30;
-    } else if (durationHours <= 12) {
-      // 6-12 giờ: hiển thị mỗi giờ
-      return 1000 * 60 * 60;
-    } else if (durationHours <= 24) {
-      // 12-24 giờ: hiển thị mỗi 2 giờ
-      return 1000 * 60 * 60 * 2;
-    } else {
-      // Hơn 24 giờ: hiển thị mỗi 6 giờ
-      return 1000 * 60 * 60 * 6;
-    }
+    if (durationHours <= 6) return 1000 * 60 * 60; // Mỗi giờ
+    if (durationHours <= 12) return 1000 * 60 * 60 * 2; // Mỗi 2 giờ
+    if (durationHours <= 24) return 1000 * 60 * 60 * 4; // Mỗi 4 giờ
+    return 1000 * 60 * 60 * 6; // Mỗi 6 giờ
   }
 }

@@ -129,6 +129,9 @@ class HealthData {
   // --- Factory constructor để tạo từ Map của SQLite ---
   factory HealthData.fromDbMap(Map<String, dynamic> map) {
     // Hàm helper parse số nullable từ DB (thường là num? hoặc double?)
+    if (kDebugMode) {
+      print("--- [RAW DATA FROM BLE] --- \n$map\n--------------------------");
+    }
     double? _parseNullableDoubleFromDb(dynamic value) {
       if (value is num) return value.toDouble();
       return null;

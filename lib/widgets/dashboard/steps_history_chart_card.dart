@@ -4,198 +4,202 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
-// Import HourlyStepsData và DashboardProvider
 import '../../providers/dashboard_provider.dart';
 import '../../generated/app_localizations.dart';
 
 class StepsHistoryChartCard extends StatelessWidget {
-  // Bỏ const vì widget này phụ thuộc vào dữ liệu runtime
   StepsHistoryChartCard({super.key});
 
-  // Định dạng giờ cho tooltip và trục X
-  final DateFormat _hourFormat = DateFormat('Ha'); // Ví dụ: 9AM, 10PM
+  final DateFormat _hourFormat = DateFormat('H'); // Chỉ hiển thị giờ (0-23)
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Lắng nghe DashboardProvider
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
-        Widget chartContent;
-
-        // Xử lý trạng thái tải (tương tự các chart khác)
         switch (provider.historyStatus) {
-          case HistoryStatus.initial:
           case HistoryStatus.loading:
-            chartContent = (provider.historyStatus == HistoryStatus.loading)
-                ? const Center(child: CircularProgressIndicator())
-                : const SizedBox(height: 200); // Placeholder giữ chiều cao
-            break;
-          case HistoryStatus.error:
-            chartContent = Center(
-              child: Text(
-                "${l10n.chartErrorPrefix} ${provider.historyError ?? l10n.chartCouldNotLoad}", // <<< DÙNG KEY
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-                textAlign: TextAlign.center,
-              ),
-            );
-            break;
-          case HistoryStatus.loaded:
-            final List<HourlyStepsData> hourlySteps = provider.hourlyStepsData;
-            if (hourlySteps.isEmpty) {
-              chartContent = Center(
-                  child: Text(l10n.chartNoStepsCalculated,
-                      textAlign: TextAlign.center)); // <<< DÙNG KEY
-            } else {
-              chartContent = _buildStepsBarChart(context, hourlySteps);
-            }
-            break;
-        }
+          case HistoryStatus.initial:
+            return const Center(child: CircularProgressIndicator());
 
-        // Trả về Card chứa biểu đồ
-        return Card(
-          elevation: 2.0,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-                16.0, 16.0, 16.0, 8.0), // Giảm padding bottom
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.stepsHistoryTitle, // <<< DÙNG KEY
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(height: 200, child: chartContent),
-              ],
-            ),
-          ),
-        );
+          case HistoryStatus.error:
+            return _buildErrorState(context, l10n.chartErrorPrefix,
+                provider.historyError ?? l10n.chartCouldNotLoad);
+
+          case HistoryStatus.loaded:
+            final hourlySteps = provider.hourlyStepsData;
+            if (hourlySteps.isEmpty) {
+              return _buildErrorState(
+                  context, l10n.chartInfo, l10n.chartNoStepsCalculated);
+            } else {
+              return _buildStepsBarChart(context, hourlySteps);
+            }
+        }
       },
     );
   }
 
-  // --- Hàm xây dựng BarChart cho Steps ---
+  // --- WIDGET HELPER CHO TRẠNG THÁI LỖI / THÔNG TIN ---
+  Widget _buildErrorState(BuildContext context, String title, String message) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline,
+              color: theme.textTheme.bodySmall?.color, size: 32),
+          const SizedBox(height: 8),
+          Text(title, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(message,
+              style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  // --- HÀM XÂY DỰNG BIỂU ĐỒ (ĐƯỢC THIẾT KẾ LẠI) ---
   Widget _buildStepsBarChart(
       BuildContext context, List<HourlyStepsData> hourlySteps) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final chartColor = Colors.orange.shade600;
+
+    // --- 1. Chuẩn bị dữ liệu ---
+    // Tìm số bước cao nhất để xác định trục Y
     int maxHourlySteps = 0;
-    for (var data in hourlySteps) {
-      if (data.steps > maxHourlySteps) maxHourlySteps = data.steps;
+    if (hourlySteps.isNotEmpty) {
+      maxHourlySteps =
+          hourlySteps.map((d) => d.steps).reduce((a, b) => a > b ? a : b);
     }
-    double maxY = (maxHourlySteps / 50).ceil() * 50.0;
-    if (maxHourlySteps > 0 && maxY == 0) maxY = 50;
-    if (maxHourlySteps == 0) maxY = 50;
-    if (maxY < 100 && maxHourlySteps > 20) {
-      maxY = (maxHourlySteps / 20).ceil() * 20.0;
-    }
+    // Làm tròn trục Y lên một giá trị "đẹp"
+    double maxY =
+        (maxHourlySteps == 0) ? 100 : (maxHourlySteps * 1.2 / 50).ceil() * 50.0;
 
-    // --- TÍNH TOÁN INTERVAL CHO TRỤC Y TRƯỚC ---
-    final double yInterval = (maxY / 4) >= 10 ? (maxY / 4).floorToDouble() : 10;
-    // Đảm bảo interval không bao giờ là 0 nếu maxY > 0
-    final double safeYInterval = (yInterval == 0 && maxY > 0) ? 10 : yInterval;
-    // -------------------------------------------
-
-    List<BarChartGroupData> barGroups = [];
-    for (int i = 0; i < hourlySteps.length; i++) {
-      final data = hourlySteps[i];
-      barGroups.add(BarChartGroupData(
-        x: data.hourStart.hour,
-        barRods: [
-          BarChartRodData(
-            toY: data.steps.toDouble().clamp(0, maxY),
-            color: Colors.orange,
-            width: 14,
-            borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-          ),
-        ],
-      ));
-    }
-
-    // Cấu hình BarChart
+    // --- 2. Cấu hình BarChart ---
     return BarChart(
       BarChartData(
         maxY: maxY,
         minY: 0,
-        barGroups: barGroups,
-        alignment: BarChartAlignment.spaceBetween,
+        alignment: BarChartAlignment.spaceAround, // Căn đều các cột
 
-        titlesData: FlTitlesData(
-          // --- Trục Trái (Y - Số bước) ---
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 35,
-              // --- SỬ DỤNG BIẾN INTERVAL ĐÃ TÍNH ---
-              interval: safeYInterval,
-              // ------------------------------------
-              getTitlesWidget: (value, meta) {
-                // Chỉ hiển thị giá trị nguyên, là bội số của interval (hoặc là max) và khác 0
-                // So sánh giá trị với interval đã tính toán (safeYInterval)
-                if (value == meta.max ||
-                    (value % safeYInterval == 0 &&
-                        value != 0 &&
-                        value != meta.min)) {
-                  return SideTitleWidget(
-                    axisSide: meta.axisSide,
-                    space: 4,
-                    child: Text(value.toInt().toString(),
-                        style: const TextStyle(fontSize: 9)),
-                  );
-                }
-                return Container();
-              },
-            ),
-          ),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        // --- CẤU HÌNH TOOLTIP KHI CHẠM ---
+        barTouchData: _buildBarTouchData(context, l10n),
 
-          // --- Trục Dưới (X - Giờ) ---
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              // --- INTERVAL CỐ ĐỊNH CHO TRỤC X ---
-              interval: 3,
-              // ----------------------------------
-              getTitlesWidget: (value, meta) {
-                final hour = value.toInt();
-                String text = '';
-                // --- KIỂM TRA TRỰC TIẾP VỚI INTERVAL CỐ ĐỊNH LÀ 3 ---
-                if (hour % 3 == 0) {
-                  // Không cần dùng meta.interval
-                  final dtLocal = DateTime.now().copyWith(hour: hour).toLocal();
-                  text = _hourFormat.format(dtLocal);
-                }
-                // --------------------------------------------------
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 4,
-                  child: Text(text, style: const TextStyle(fontSize: 9)),
-                );
-              },
-            ),
-          ),
-        ),
+        // --- CẤU HÌNH CÁC TRỤC ---
+        titlesData: _buildTitlesData(context),
 
-        // Cấu hình GridData, sử dụng lại safeYInterval
+        // --- CẤU HÌNH LƯỚI ---
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          drawHorizontalLine: true,
-          horizontalInterval: safeYInterval, // Sử dụng interval đã tính
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1),
-          checkToShowHorizontalLine: (value) =>
-              value % safeYInterval == 0 &&
-              value != 0, // Kiểm tra với interval đã tính
+          horizontalInterval:
+              (maxY / 4).floorToDouble(), // Lưới ngang chia làm 4 khoảng
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: theme.dividerColor.withOpacity(0.1),
+            strokeWidth: 1,
+          ),
         ),
 
-        // ... Phần còn lại của BarChartData (borderData, barTouchData) giữ nguyên ...
-        borderData: FlBorderData(/* ... */),
-        barTouchData: BarTouchData(/* ... */),
+        // --- CẤU HÌNH VIỀN ---
+        borderData: FlBorderData(show: false),
+
+        // --- DỮ LIỆU CÁC CỘT ---
+        barGroups: hourlySteps.map((data) {
+          return BarChartGroupData(
+            x: data.hourStart.hour,
+            barRods: [
+              BarChartRodData(
+                toY: data.steps.toDouble(),
+                // Dùng gradient cho các cột
+                gradient: LinearGradient(
+                  colors: [
+                    chartColor.withOpacity(0.8),
+                    chartColor,
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+                width: 12, // Độ rộng cột nhỏ hơn một chút
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // --- TÁCH CÁC HÀM HELPER CẤU HÌNH BIỂU ĐỒ ---
+
+  FlTitlesData _buildTitlesData(BuildContext context) {
+    final textStyle =
+        Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10);
+
+    return FlTitlesData(
+      leftTitles: AxisTitles(
+        sideTitles: SideTitles(showTitles: false), // Ẩn trục Y cho gọn
+      ),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 22,
+          interval: 6, // Hiển thị nhãn mỗi 6 giờ
+          getTitlesWidget: (value, meta) {
+            final hour = value.toInt();
+            String text = '';
+            // Chỉ hiển thị tại các mốc chính
+            if (hour == 0 || hour == 6 || hour == 12 || hour == 18) {
+              text = _hourFormat.format(DateTime.now().copyWith(hour: hour));
+            }
+            return SideTitleWidget(
+              axisSide: meta.axisSide,
+              space: 4,
+              child: Text(text, style: textStyle),
+            );
+          },
+        ),
+      ),
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    );
+  }
+
+  // --- HELPER CHO TOOLTIP ---
+  BarTouchData _buildBarTouchData(BuildContext context, AppLocalizations l10n) {
+    return BarTouchData(
+      // Cho phép tooltip hiển thị ngay cả khi chạm vào khoảng trống gần cột
+      touchExtraThreshold: const EdgeInsets.symmetric(horizontal: 8),
+      touchTooltipData: BarTouchTooltipData(
+        // tooltipBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.9),
+        tooltipRoundedRadius: 8,
+        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+          // Lấy giờ và số bước từ dữ liệu
+          final hour = group.x.toInt();
+          final steps = rod.toY.toInt();
+          // Định dạng giờ: 00:00 - 00:59
+          final timeRange = '$hour:00 - $hour:59';
+
+          return BarTooltipItem(
+            '$steps ${l10n.stepsUnit}\n',
+            const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+            children: <TextSpan>[
+              TextSpan(
+                text: timeRange,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

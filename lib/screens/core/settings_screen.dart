@@ -1,546 +1,936 @@
 // lib/screens/core/settings_screen.dart
+
+// ================================================================
+// CÁC IMPORT CẦN THIẾT
+// ================================================================
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../providers/ble_provider.dart';
-import '../../providers/settings_provider.dart'; // Import SettingsProvider
-import '../../services/ble_service.dart'; // Import BleService (cho enum)
-import '../../app_constants.dart'; // Import AppConstants (cho key SharedPreferences)
-import '../config/wifi_config_screen.dart'; // Import màn hình Wifi Config
-import '../device/device_select_screen.dart'; // Import màn hình chọn thiết bị
-import '../../generated/app_localizations.dart'; // <<< Import lớp Localization
+import '../../providers/settings_provider.dart';
+import '../../services/ble_service.dart';
+import '../../app_constants.dart';
+import '../config/wifi_config_screen.dart';
+import '../device/device_select_screen.dart';
+import '../../generated/app_localizations.dart';
 import '../auth/login_screen.dart';
-import 'package:flutter/cupertino.dart';
 
+// ================================================================
+// Widget chính của màn hình Cài đặt
+// ================================================================
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _showWeightInputDialog(
-      BuildContext context, SettingsProvider provider) async {
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final controller =
-        TextEditingController(text: provider.userWeightKg.toStringAsFixed(1));
 
-    double? newWeight = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(l10n.settingUserWeightTitle),
-          content: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: l10n.settingUserWeightLabel,
-              suffixText: 'kg',
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(l10n.cancel)),
-            ElevatedButton(
-              onPressed: () {
-                final weight = double.tryParse(controller.text);
-                if (weight != null && weight > 0) {
-                  Navigator.of(dialogContext).pop(weight);
-                } else {
-                  // Hiển thị lỗi
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(
-                        content: Text(l10n.invalidNumber),
-                        backgroundColor: Colors.red),
-                  );
-                }
-              },
-              child: Text(l10n.saveChangesButton),
-            ),
-          ],
-        );
-      },
+    // Scaffold sẽ tự động lấy style từ AppTheme của chúng ta
+    return Scaffold(
+      // AppBar cũng tự động lấy style, bao gồm cả nền trong suốt
+      appBar: AppBar(
+        title: Text(l10n.settingsTitle),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
+      body: ListView(
+        // Padding chung cho toàn bộ danh sách để tạo không gian thoáng
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        children: const [
+          // Mỗi section là một widget con, được ngăn cách bằng SizedBox
+          _ProfileSection(),
+          SizedBox(height: 24),
+          _DeviceManagementSection(),
+          SizedBox(height: 24),
+          _AppearanceSection(),
+          SizedBox(height: 24),
+          _NotificationSection(),
+          SizedBox(height: 24),
+          _ActivitySettingsSection(),
+          SizedBox(height: 32),
+          _LogoutButton(),
+          SizedBox(height: 16), // Padding dưới cùng
+        ],
+      ),
     );
-
-    if (newWeight != null) {
-      await provider.updateUserWeight(newWeight);
-    }
   }
+}
 
-  // --- HÀM HIỂN THỊ DIALOG CHỌN NGÔN NGỮ ---
-  Future<void> _showLanguageDialog(
-      BuildContext context, SettingsProvider provider) async {
-    Locale? currentLocale = provider.appLocale; // Locale hiện tại từ provider
-    final l10n = AppLocalizations.of(context)!; // Lấy đối tượng dịch
+// ================================================================
+// CÁC WIDGET HELPER ĐỂ TÁI SỬ DỤNG
+// ================================================================
 
-    Locale? selectedLocale = await showDialog<Locale>(
-        context: context,
-        builder: (dialogContext) {
-          // Dùng StatefulBuilder để RadioListTile cập nhật state trong dialog
-          String? groupValueLangCode = currentLocale?.languageCode;
-
-          return StatefulBuilder(builder: (stfContext, stfSetState) {
-            return AlertDialog(
-              title: Text(l10n.language), // Dùng key đã dịch
-              contentPadding:
-                  const EdgeInsets.only(top: 12.0), // Giảm padding top
-              content: SizedBox(
-                width: double.minPositive, // Co lại theo chiều rộng tối thiểu
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    // Lựa chọn System Default
-                    RadioListTile<String?>(
-                      title: Text(l10n.systemDefault),
-                      value: null, // null đại diện cho system
-                      groupValue: groupValueLangCode,
-                      onChanged: (String? value) {
-                        // Không cần stfSetState ở đây vì pop sẽ đóng dialog
-                        Navigator.of(dialogContext)
-                            .pop(null); // Trả về null cho system
-                      },
-                    ),
-                    // Lặp qua các ngôn ngữ được hỗ trợ từ AppLocalizations
-                    ...AppLocalizations.supportedLocales.map((locale) {
-                      // Lấy tên ngôn ngữ (có thể cần map chi tiết hơn)
-                      String languageName = locale.languageCode == 'en'
-                          ? 'English'
-                          : locale.languageCode == 'vi'
-                              ? 'Tiếng Việt'
-                              : locale.languageCode;
-                      return RadioListTile<String?>(
-                        title: Text(languageName),
-                        value: locale.languageCode, // Value là language code
-                        groupValue: groupValueLangCode,
-                        onChanged: (String? value) {
-                          // Không cần stfSetState ở đây
-                          Navigator.of(dialogContext)
-                              .pop(locale); // Trả về Locale đã chọn
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext)
-                      .pop(), // Đóng dialog không chọn gì
-                  child: Text(l10n.cancel), // Dùng key đã dịch
-                ),
-              ],
-            );
-          });
-        });
-
-    // Nếu người dùng đã chọn một locale mới (hoặc system default - null)
-    // Chỉ gọi update nếu lựa chọn thực sự khác
-    if (selectedLocale != currentLocale) {
-      print(
-          "[SettingsScreen] Updating locale to: ${selectedLocale?.languageCode ?? 'system'}");
-      // Gọi hàm cập nhật từ provider (dùng read vì chỉ gọi hàm)
-      await context.read<SettingsProvider>().updateLocale(selectedLocale);
-    }
-  }
-  // ---------------------------------------------
+/// Widget để hiển thị tiêu đề cho một nhóm cài đặt.
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
 
   @override
   Widget build(BuildContext context) {
-    // Lấy các providers
-    final authUser = context.watch<AuthProvider>().user;
-    final bleProvider = context.watch<BleProvider>();
-    final settingsProvider = context.watch<SettingsProvider>();
-
-    // Lấy các giá trị state
-    final currentThemeMode = settingsProvider.themeMode;
-    final currentLocale = settingsProvider.appLocale;
-    final connectedDevice = bleProvider.connectedDevice;
-    final connectionStatus = bleProvider.connectionStatus.value;
-    final isConnected = connectionStatus == BleConnectionStatus.connected;
-    final bool notificationsAreEnabled =
-        settingsProvider.notificationsEnabled; // Lấy state
-
-    // Lấy đối tượng AppLocalizations để truy cập chuỗi dịch
-    final l10n = AppLocalizations.of(context)!;
-
-    // Xác định tên ngôn ngữ hiện tại để hiển thị
-    String currentLanguageName = l10n.systemDefault; // Mặc định
-    if (currentLocale?.languageCode == 'en') {
-      currentLanguageName = 'English';
-    } else if (currentLocale?.languageCode == 'vi')
-      currentLanguageName = 'Tiếng Việt';
-
-    return Scaffold(
-        appBar: AppBar(title: Text(l10n.settingsTitle)), // Dùng chuỗi dịch
-        body: ListView(
-          padding: const EdgeInsets.symmetric(
-              vertical: 8.0, horizontal: 0), // Giảm padding ngang ListView
-          children: [
-            // --- User Info ---
-            if (authUser != null) ...[
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 10.0),
-                leading: CircleAvatar(
-                  radius: 24,
-                  backgroundImage: authUser.photoURL != null
-                      ? NetworkImage(authUser.photoURL!)
-                      : null,
-                  child: authUser.photoURL == null
-                      ? const Icon(Icons.person, size: 28)
-                      : null,
-                ),
-                title: Text(authUser.displayName ?? l10n.name,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500)), // Dịch 'Name' nếu null
-                subtitle: Text(authUser.email ?? l10n.noEmail),
-              ),
-              const Divider(height: 1),
-            ],
-
-            // --- Device Management Section ---
-            _buildSectionTitle(context,
-                l10n.sectionDeviceManagement), // Hàm helper tạo tiêu đề
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              leading: Icon(
-                  isConnected
-                      ? Icons.bluetooth_connected
-                      : Icons.bluetooth_disabled,
-                  color: isConnected ? Colors.green : Colors.grey),
-              title: Text(connectedDevice != null
-                  ? (connectedDevice.platformName.isNotEmpty
-                      ? connectedDevice.platformName
-                      : 'ESP32 Wearable')
-                  : l10n.noDeviceConnected),
-              subtitle: Text(
-                  connectedDevice?.remoteId.toString() ?? l10n.connectPrompt),
-              trailing: isConnected
-                  ? TextButton(
-                      child: const Text('Disconnect',
-                          style: TextStyle(color: Colors.orange)),
-                      onPressed: () async {
-                        await context
-                            .read<BleProvider>()
-                            .disconnectFromDevice(); /* ... SnackBar ... */
-                      })
-                  : null,
-            ),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              leading: const Icon(Icons.devices_other_outlined),
-              title: Text(l10n.changeForgetDevice), // TODO: Dịch
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                // Ngắt kết nối nếu đang kết nối
-                if (isConnected) {
-                  print("[SettingsScreen] Disconnecting from device...");
-                  await context.read<BleProvider>().disconnectFromDevice();
-                  // Có thể đợi một chút để đảm bảo trạng thái cập nhật
-                  await Future.delayed(const Duration(milliseconds: 300));
-                }
-
-                // Xóa ID thiết bị đã lưu
-                print("[SettingsScreen] Forgetting saved device ID...");
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.remove(AppConstants.prefKeyConnectedDeviceId);
-
-                // Kiểm tra context còn tồn tại không trước khi điều hướng
-                if (context.mounted) {
-                  print(
-                      "[SettingsScreen] Navigating to DeviceSelectScreen using push...");
-                  // <<< SỬ DỤNG Navigator.push THAY VÌ pushReplacement >>>
-                  Navigator.push(
-                    // <<< THAY ĐỔI Ở ĐÂY
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DeviceSelectScreen(),
-                    ),
-                  );
-                  // --------------------------------------------------
-                }
-              },
-            ),
-            const Divider(height: 1),
-
-            // --- Network Configuration Section ---
-            _buildSectionTitle(context, l10n.sectionNetwork),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              leading: const Icon(Icons.wifi_password_outlined),
-              title: Text(l10n.configureWifiTitle), // Dịch title
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                /* ... Logic mở WifiConfigScreen (kiểm tra isConnected) ... */
-                if (isConnected) {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const WifiConfigScreen()));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Connect to device first.'),
-                      backgroundColor: Colors.orangeAccent));
-                }
-              },
-            ),
-            const Divider(height: 1),
-
-            // --- Appearance Section ---
-            _buildSectionTitle(context, l10n.appearance), // Dịch tiêu đề
-            RadioListTile<ThemeMode>(
-                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
-                title: Text(l10n.systemDefault),
-                value: ThemeMode.system,
-                groupValue: currentThemeMode,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().updateThemeMode(v)),
-            RadioListTile<ThemeMode>(
-                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
-                title: Text(l10n.lightMode),
-                value: ThemeMode.light,
-                groupValue: currentThemeMode,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().updateThemeMode(v)),
-            RadioListTile<ThemeMode>(
-                contentPadding: const EdgeInsets.only(left: 20.0, right: 12.0),
-                title: Text(l10n.darkMode),
-                value: ThemeMode.dark,
-                groupValue: currentThemeMode,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().updateThemeMode(v)),
-            const Divider(height: 1),
-
-            // --- Language Section ---
-            _buildSectionTitle(context, l10n.language), // Dịch tiêu đề
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              leading: const Icon(Icons.language_outlined),
-              title: Text(l10n.language), // Dịch title
-              subtitle:
-                  Text(currentLanguageName), // Hiển thị tên ngôn ngữ hiện tại
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                _showLanguageDialog(context, context.read<SettingsProvider>());
-              }, // Gọi dialog
-            ),
-            const Divider(height: 1),
-
-            // --- Notifications Placeholder ---
-            // --- Notifications Section --- // <<< CẬP NHẬT PHẦN NÀY
-            _buildSectionTitle(context, l10n.sectionNotifications), // Dịch ''
-            SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              title:
-                  Text(l10n.enableHealthAlerts), // Dịch 'Enable Health Alerts'
-              subtitle: Text(l10n
-                  .receiveAbnormalNotifications), // Dịch 'Receive notifications...'
-              // --- Lấy value từ provider ---
-              value: notificationsAreEnabled,
-              // --- Gọi hàm update từ provider khi thay đổi ---
-              onChanged: (bool newValue) {
-                context
-                    .read<SettingsProvider>()
-                    .updateNotificationsEnabled(newValue);
-              },
-              secondary: const Icon(Icons.notifications_active_outlined),
-              activeColor:
-                  Theme.of(context).colorScheme.primary, // Thêm màu cho đẹp
-            ),
-            const Divider(height: 1),
-
-            _buildSectionTitle(context, l10n.sectionActivityRecognition),
-
-            // Cài đặt Cân nặng
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              leading: const Icon(Icons.fitness_center_outlined),
-              title: Text(l10n.settingUserWeightTitle),
-              subtitle: Text(l10n.settingUserWeightDesc),
-              trailing: Text(
-                '${settingsProvider.userWeightKg.toStringAsFixed(1)} kg',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              onTap: () => _showWeightInputDialog(context, settingsProvider),
-            ),
-
-            // Cài đặt Ngưỡng ngồi lâu
-            _buildDurationSlider(
-              context: context,
-              title: l10n.settingSittingThresholdTitle,
-              currentValue: settingsProvider.sittingWarningThreshold,
-              min: 15, // 15 phút
-              max: 120, // 2 tiếng
-              divisions: (120 - 15) ~/ 5, // Mỗi nấc là 5 phút
-              onChanged: (minutes) {
-                settingsProvider.updateSittingWarningThreshold(
-                    Duration(minutes: minutes.toInt()));
-              },
-              displayFormatter: (duration) => l10n
-                  .settingThresholdMinutesDesc(duration.inMinutes.toString()),
-            ),
-
-            // Cài đặt Ngưỡng nằm lâu
-            _buildDurationSlider(
-              context: context,
-              title: l10n.settingLyingThresholdTitle,
-              currentValue: settingsProvider.lyingDaytimeWarningThreshold,
-              min: 1, // 1 tiếng
-              max: 4, // 4 tiếng
-              divisions: 3, // 1h, 2h, 3h, 4h
-              onChanged: (hours) {
-                settingsProvider.updateLyingDaytimeWarningThreshold(
-                    Duration(hours: hours.toInt()));
-              },
-              displayFormatter: (duration) =>
-                  l10n.settingThresholdHoursDesc(duration.inHours.toString()),
-            ),
-
-            // Bật/tắt Nhắc nhở thông minh
-            SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
-              title: Text(l10n.settingSmartRemindersTitle),
-              subtitle: Text(l10n.settingSmartRemindersDesc),
-              value: settingsProvider.smartRemindersEnabled,
-              onChanged: (newValue) {
-                settingsProvider.updateSmartRemindersEnabled(newValue);
-              },
-              secondary: const Icon(Icons.lightbulb_outline),
-            ),
-
-            const Divider(height: 1),
-
-            // --- Logout Button ---
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 30.0, horizontal: 20.0),
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.logout),
-                label: Text(l10n.logout), // Dịch label
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text(l10n
-                          .confirmLogoutTitle), // Ví dụ: "Xác nhận đăng xuất"
-                      content: Text(l10n
-                          .confirmLogoutMessage), // Ví dụ: "Bạn có chắc chắn muốn đăng xuất không?"
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: Text(l10n.cancel), // Ví dụ: "Hủy"
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: Text(l10n.confirm), // Ví dụ: "Đồng ý"
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true && context.mounted) {
-                    // <<< THÊM KIỂM TRA CONTEXT.MOUNTED
-                    // Gọi signOut từ AuthProvider
-                    await context.read<AuthProvider>().signOut();
-
-                    // <<< ĐIỀU HƯỚNG VỀ LOGIN VÀ XÓA STACK >>>
-                    // Sử dụng rootNavigator: true để đảm bảo pop từ Navigator gốc của MaterialApp
-                    // và xóa hết các màn hình cũ (bao gồm cả MainNavigator).
-                    Navigator.of(context, rootNavigator: true)
-                        .pushAndRemoveUntil(
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreen()),
-                      (Route<dynamic> route) =>
-                          false, // Điều kiện này xóa tất cả các route trước đó
-                    );
-                    // Hoặc nếu bạn đã định nghĩa route '/login' trong MaterialApp:
-                    // Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-                    //   '/login',
-                    //   (Route<dynamic> route) => false,
-                    // );
-                    // ------------------------------------
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onErrorContainer,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ));
-  }
-
-  // --- Hàm Helper tạo Tiêu đề Section ---
-  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(
-          left: 20.0, right: 20.0, top: 16.0, bottom: 8.0),
+      padding: const EdgeInsets.only(left: 8.0, bottom: 12.0, top: 8.0),
       child: Text(
-        title.toUpperCase(), // In hoa tiêu đề
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              // Dùng labelSmall
-              color: Theme.of(context).colorScheme.primary, // Màu primary
+        title.toUpperCase(),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.bold,
-              letterSpacing: 0.8, // Giãn cách chữ
+              // Lấy màu từ colorScheme để tương thích cả light/dark mode
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.9),
+              letterSpacing: 1.2, // Tăng giãn cách chữ một chút
             ),
       ),
     );
   }
+}
 
-  Widget _buildDurationSlider({
-    required BuildContext context,
-    required String title,
-    required Duration currentValue,
-    required double min,
-    required double max,
-    required int divisions,
-    required ValueChanged<double> onChanged,
-    required String Function(Duration) displayFormatter,
-  }) {
-    double sliderValue;
-    // Chuyển đổi Duration sang double cho Slider (ví dụ: phút hoặc giờ)
-    if (currentValue.inHours >= 1 && min >= 1) {
-      // Giả định slider này cho giờ
-      sliderValue = currentValue.inHours.toDouble();
-    } else {
-      // Giả định slider cho phút
-      sliderValue = currentValue.inMinutes.toDouble();
-    }
+/// Widget để hiển thị một hàng cài đặt chuẩn, có thể nhấn vào.
+class _SettingsListItem extends StatelessWidget {
+  final IconData icon;
+  final Color? iconColor;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: sliderValue.clamp(
-                      min, max), // Đảm bảo giá trị nằm trong khoảng
-                  min: min,
-                  max: max,
-                  divisions: divisions,
-                  label: sliderValue.round().toString(),
-                  onChanged: onChanged,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                displayFormatter(currentValue),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+  const _SettingsListItem({
+    required this.icon,
+    this.iconColor,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Sử dụng InkWell bọc ngoài để có hiệu ứng gợn sóng đẹp mắt khi nhấn
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12), // Bo góc cho hiệu ứng
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14), // Tăng padding dọc
+        child: Row(
+          children: [
+            // Icon bên trái
+            Icon(icon, color: iconColor ?? theme.colorScheme.primary),
+            const SizedBox(width: 16),
+
+            // Cột chứa Title và Subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment:
+                    MainAxisAlignment.center, // Căn giữa nếu chỉ có 1 dòng
+                children: [
+                  Text(title, style: theme.textTheme.titleMedium),
+                  if (subtitle != null && subtitle!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.textTheme.bodySmall!.color!
+                              .withOpacity(0.8)),
                     ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Widget ở cuối hàng (trailing), thường là giá trị hiện tại hoặc icon mũi tên
+            if (trailing != null) trailing!,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// SECTION: THÔNG TIN NGƯỜI DÙNG
+// ================================================================
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection();
+
+  @override
+  Widget build(BuildContext context) {
+    // Lắng nghe AuthProvider để lấy thông tin người dùng
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.user;
+
+    // Các giá trị theme và i18n
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    // Nếu chưa đăng nhập hoặc không có thông tin user, không hiển thị gì cả
+    if (user == null) return const SizedBox.shrink();
+
+    // Ưu tiên lấy tên từ profile Firestore, nếu không có thì lấy từ Auth object
+    final displayName = authProvider.preferredDisplayName ?? l10n.defaultUser;
+
+    return Column(
+      children: [
+        // Sử dụng một Card lớn, nổi bật cho khu vực hồ sơ
+        Card(
+          // Style của Card sẽ tự lấy từ AppTheme
+          // Thêm một chút đổ bóng để nổi bật hơn
+          elevation: 4,
+          shadowColor: theme.colorScheme.primary.withOpacity(0.1),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                // Avatar người dùng lớn, rõ ràng
+                CircleAvatar(
+                  radius: 36, // Kích thước lớn hơn
+                  // Nền avatar có màu nhẹ của theme
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  // Hiển thị ảnh từ Google nếu có
+                  backgroundImage: user.photoURL != null
+                      ? NetworkImage(user.photoURL!)
+                      : null,
+                  // Nếu không có ảnh, hiển thị chữ cái đầu của tên
+                  child: user.photoURL == null
+                      ? Text(
+                          displayName.isNotEmpty
+                              ? displayName[0].toUpperCase()
+                              : "?",
+                          style: theme.textTheme.headlineMedium
+                              ?.copyWith(color: theme.colorScheme.primary),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+
+                // Cột chứa tên và email
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tên người dùng
+                      Text(
+                        displayName,
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // Email người dùng
+                      if (user.email != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // (Tùy chọn) Có thể thêm một nút "Sửa" ở đây trong tương lai
+                // const Icon(Icons.edit_outlined, color: Colors.grey)
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ================================================================
+// SECTION: QUẢN LÝ THIẾT BỊ
+// ================================================================
+class _DeviceManagementSection extends StatelessWidget {
+  const _DeviceManagementSection();
+
+  // Hàm hiển thị một SnackBar cảnh báo
+  void _showDisabledSnackbar(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.connectDeviceFirstSnackbar),
+        backgroundColor: Colors.orangeAccent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final bleProvider = context.watch<BleProvider>();
+    // Lấy trạng thái kết nối và thông tin thiết bị
+    final connectionStatus = bleProvider.connectionStatus.value;
+    final isConnected = connectionStatus == BleConnectionStatus.connected;
+    final deviceName = bleProvider.connectedDevice?.platformName;
+    final deviceId = bleProvider.connectedDevice?.remoteId.toString();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tiêu đề của Section
+        _SectionTitle(l10n.sectionDeviceManagement),
+        // Các mục cài đặt được bọc trong một Card duy nhất
+        Card(
+          child: Column(
+            children: [
+              // --- Hàng hiển thị thiết bị đang kết nối ---
+              _SettingsListItem(
+                // Icon thay đổi theo trạng thái kết nối
+                icon: isConnected
+                    ? Icons.bluetooth_connected_rounded
+                    : Icons.bluetooth_disabled_rounded,
+                // Màu icon cũng thay đổi
+                iconColor: isConnected
+                    ? theme.colorScheme.primary
+                    : theme.disabledColor,
+                title: deviceName?.isNotEmpty == true
+                    ? deviceName!
+                    : l10n.noDeviceConnected,
+                subtitle: deviceId ?? l10n.connectPrompt,
+                // Hiển thị nút "Ngắt kết nối" nếu đang kết nối
+                trailing: isConnected
+                    ? TextButton(
+                        child: Text(l10n.disconnectButton,
+                            style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.bold)),
+                        onPressed: () async => await context
+                            .read<BleProvider>()
+                            .disconnectFromDevice(),
+                      )
+                    : null,
+              ),
+
+              // Đường kẻ ngăn cách
+              const Divider(height: 1, indent: 56, endIndent: 16),
+
+              // --- Hàng Cấu hình WiFi ---
+              _SettingsListItem(
+                icon: Icons.wifi_password_outlined,
+                iconColor: isConnected
+                    ? theme.colorScheme.primary
+                    : theme.disabledColor,
+                title: l10n.configureWifiTitle,
+                // Hiển thị một icon khóa nhỏ nếu chưa kết nối để báo hiệu không thể nhấn
+                trailing: isConnected
+                    ? Icon(Icons.chevron_right,
+                        size: 20, color: theme.unselectedWidgetColor)
+                    : Icon(Icons.lock_outline,
+                        size: 18, color: theme.disabledColor),
+                onTap: isConnected
+                    ? () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const WifiConfigScreen()));
+                      }
+                    : () => _showDisabledSnackbar(
+                        context), // Hiển thị snackbar nếu không thể nhấn
+              ),
+
+              // Đường kẻ ngăn cách
+              const Divider(height: 1, indent: 56, endIndent: 16),
+
+              // --- Hàng Đổi / Quên Thiết bị ---
+              _SettingsListItem(
+                icon: Icons.swap_horizontal_circle_outlined,
+                iconColor:
+                    theme.colorScheme.primary, // Nút này luôn có thể nhấn
+                title: l10n.changeForgetDevice,
+                trailing: Icon(Icons.chevron_right,
+                    size: 20, color: theme.unselectedWidgetColor),
+                onTap: () async {
+                  if (isConnected) {
+                    await context.read<BleProvider>().disconnectFromDevice();
+                  }
+                  // Xóa ID thiết bị đã lưu trong bộ nhớ
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove(AppConstants.prefKeyConnectedDeviceId);
+
+                  // Điều hướng đến màn hình chọn thiết bị và thay thế màn hình hiện tại
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (context) => const DeviceSelectScreen()),
+                    );
+                  }
+                },
               ),
             ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+// ================================================================
+// SECTION: GIAO DIỆN & NGÔN NGỮ
+// ================================================================
+class _AppearanceSection extends StatelessWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settingsProvider = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l10n.sectionAppearanceAndLang),
+        Card(
+            child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Phần Cài đặt Giao diện (Theme) ---
+              Text(l10n.appearance,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+
+              // <<< THAY ĐỔI LỚN: XÂY DỰNG TOGGLE BUTTONS TÙY CHỈNH >>>
+              _CustomThemeToggle(),
+              // --------------------------------------------------------
+
+              const Divider(height: 24),
+
+              // --- Phần Cài đặt Ngôn ngữ ---
+              _SettingsListItem(
+                icon: Icons.language_outlined,
+                title: l10n.language,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _localeToString(context, settingsProvider.appLocale),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right,
+                        size: 20, color: theme.unselectedWidgetColor),
+                  ],
+                ),
+                onTap: () => _showLanguageDialog(
+                    context, context.read<SettingsProvider>()),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
+  }
+
+  // --- Các hàm helper ---
+  String _localeToString(BuildContext context, Locale? locale) {
+    final l10n = AppLocalizations.of(context)!;
+    if (locale == null) return l10n.systemDefault;
+    // Có thể thêm nhiều ngôn ngữ khác ở đây trong tương lai
+    if (locale.languageCode == 'vi') return "Tiếng Việt";
+    if (locale.languageCode == 'en') return "English";
+    return locale.languageCode.toUpperCase();
+  }
+
+  Future<void> _showLanguageDialog(
+      BuildContext context, SettingsProvider provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    Locale? currentLocale = provider.appLocale;
+
+    // `showDialog` trả về giá trị mà `Navigator.pop(value)` trả về
+    final Locale? selectedLocale = await showDialog<Locale>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(l10n.language),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Lựa chọn "Mặc định hệ thống"
+                RadioListTile<Locale?>(
+                  title: Text(l10n.systemDefault),
+                  value: null,
+                  groupValue: currentLocale,
+                  onChanged: (value) => Navigator.of(dialogContext).pop(value),
+                  activeColor: theme.colorScheme.secondary,
+                ),
+                // Lựa chọn các ngôn ngữ được hỗ trợ
+                ...AppLocalizations.supportedLocales.map((locale) {
+                  final languageName =
+                      locale.languageCode == 'en' ? 'English' : 'Tiếng Việt';
+                  return RadioListTile<Locale?>(
+                    title: Text(languageName),
+                    value: locale,
+                    groupValue: currentLocale,
+                    onChanged: (value) =>
+                        Navigator.of(dialogContext).pop(value),
+                    activeColor: theme.colorScheme.secondary,
+                  );
+                }),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () =>
+                      Navigator.of(dialogContext).pop(currentLocale),
+                  child: Text(l10n.cancel)),
+            ],
+          );
+        });
+
+    // Chỉ gọi hàm update của provider nếu người dùng thực sự chọn một giá trị khác
+    if (selectedLocale != currentLocale) {
+      // Dùng context.read vì đang ở trong một hàm async không thuộc cây widget build
+      await context.read<SettingsProvider>().updateLocale(selectedLocale);
+    }
+  }
+}
+
+// ================================================================
+// SECTION: THÔNG BÁO
+// ================================================================
+class _NotificationSection extends StatelessWidget {
+  const _NotificationSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settingsProvider = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l10n.sectionNotifications),
+        Card(
+          child: Column(
+            children: [
+              // Sử dụng SwitchListTile để có một hàng cài đặt có nút gạt
+              SwitchListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                title: Text(l10n.enableHealthAlerts,
+                    style: theme.textTheme.titleMedium),
+                subtitle: Text(l10n.receiveAbnormalNotifications,
+                    style: theme.textTheme.bodySmall),
+                value: settingsProvider.notificationsEnabled,
+                // Gọi hàm update từ provider khi người dùng thay đổi
+                onChanged: (newValue) => context
+                    .read<SettingsProvider>()
+                    .updateNotificationsEnabled(newValue),
+                secondary: Icon(
+                    settingsProvider.notificationsEnabled
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_off_outlined,
+                    color: theme.colorScheme.primary),
+                activeColor: theme.colorScheme.secondary,
+              ),
+              // (Trong tương lai có thể thêm các cài đặt chi tiết hơn về thông báo ở đây)
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ================================================================
+// SECTION: CÀI ĐẶT HOẠT ĐỘNG
+// ================================================================
+class _ActivitySettingsSection extends StatefulWidget {
+  const _ActivitySettingsSection();
+
+  @override
+  State<_ActivitySettingsSection> createState() =>
+      _ActivitySettingsSectionState();
+}
+
+class _ActivitySettingsSectionState extends State<_ActivitySettingsSection> {
+  // State cục bộ để cập nhật giá trị slider một cách mượt mà
+  double? _tempSittingMinutes;
+  double? _tempLyingHours;
+
+  // Controller cho ô nhập cân nặng
+  late final TextEditingController _weightController;
+  final _weightFormKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Khởi tạo controller với giá trị từ provider
+    final settingsProvider = context.read<SettingsProvider>();
+    _weightController = TextEditingController(
+        text: settingsProvider.userWeightKg.toStringAsFixed(1));
+  }
+
+  @override
+  void dispose() {
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // Dùng watch để widget rebuild khi cài đặt được lưu
+    final settingsProvider = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+
+    // Đồng bộ giá trị sliders cục bộ với provider mỗi lần build
+    final actualSittingMinutes =
+        settingsProvider.sittingWarningThreshold.inMinutes.toDouble();
+    _tempSittingMinutes ??= actualSittingMinutes;
+
+    final actualLyingHours =
+        settingsProvider.lyingDaytimeWarningThreshold.inHours.toDouble();
+    _tempLyingHours ??= actualLyingHours;
+
+    // Cập nhật text field nếu giá trị provider thay đổi (ví dụ: do load lại)
+    final weightFromProvider = settingsProvider.userWeightKg.toStringAsFixed(1);
+    if (_weightController.text != weightFromProvider) {
+      _weightController.text = weightFromProvider;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(l10n.sectionActivitySettings), // Key mới
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- 1. Cài đặt Cân nặng ---
+                _SettingsListItem(
+                    icon: Icons.monitor_weight_outlined,
+                    title: l10n.settingUserWeight, // Key mới
+                    subtitle: l10n.settingUserWeightDesc, // Key mới
+                    trailing: SizedBox(
+                      width: 80,
+                      child: Form(
+                        // Bọc trong Form để validate
+                        key: _weightFormKey,
+                        child: TextFormField(
+                          controller: _weightController,
+                          textAlign: TextAlign.end,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            suffixText: ' kg',
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 4, horizontal: 8),
+                            isDense: true,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onFieldSubmitted: (value) {
+                            // Tự động lưu khi nhấn "done" trên bàn phím
+                            if (_weightFormKey.currentState?.validate() ??
+                                false) {
+                              final newWeight = double.tryParse(value);
+                              if (newWeight != null) {
+                                context
+                                    .read<SettingsProvider>()
+                                    .updateUserWeight(newWeight);
+                              }
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty)
+                              return l10n.errorFieldRequired; // Key mới
+                            final n = double.tryParse(value);
+                            if (n == null) return l10n.invalidNumber;
+                            if (n < 20 || n > 200)
+                              return l10n.errorWeightRange; // Key mới
+                            return null;
+                          },
+                        ),
+                      ),
+                    )),
+
+                const Divider(height: 24),
+
+                // --- 2. Cài đặt Cảnh báo Ngồi Lâu ---
+                Text(l10n.settingSittingWarning,
+                    style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    Icon(Icons.chair_alt_outlined,
+                        size: 20, color: theme.disabledColor),
+                    Expanded(
+                      child: Slider(
+                        value: _tempSittingMinutes ?? actualSittingMinutes,
+                        min: 15, max: 120,
+                        divisions: 7, // 15, 30, 45, 60, 75, 90, 105, 120
+                        label: l10n.minutesLabel(
+                            (_tempSittingMinutes ?? actualSittingMinutes)
+                                .toInt()),
+                        onChanged: (newValue) =>
+                            setState(() => _tempSittingMinutes = newValue),
+                        onChangeEnd: (finalValue) => context
+                            .read<SettingsProvider>()
+                            .updateSittingWarningThreshold(
+                                Duration(minutes: finalValue.toInt())),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                          l10n.minutesLabel(
+                              (_tempSittingMinutes ?? actualSittingMinutes)
+                                  .toInt()),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+
+                const Divider(height: 24),
+
+                // --- 3. Cài đặt Cảnh báo Nằm Lâu (Ban Ngày) ---
+                Text(l10n.settingLyingWarning,
+                    style: theme.textTheme.titleMedium), // Key mới
+                Row(
+                  children: [
+                    Icon(Icons.hotel_outlined,
+                        size: 20, color: theme.disabledColor),
+                    Expanded(
+                      child: Slider(
+                        value: _tempLyingHours ?? actualLyingHours,
+                        min: 1, max: 4, divisions: 3, // 1h, 2h, 3h, 4h
+                        label: l10n.hoursLabel(
+                            (_tempLyingHours ?? actualLyingHours)
+                                .toInt()), // Key mới
+                        onChanged: (newValue) =>
+                            setState(() => _tempLyingHours = newValue),
+                        onChangeEnd: (finalValue) => context
+                            .read<SettingsProvider>()
+                            .updateLyingDaytimeWarningThreshold(
+                                Duration(hours: finalValue.toInt())),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                          l10n.hoursLabel(
+                              (_tempLyingHours ?? actualLyingHours).toInt()),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+
+                const Divider(height: 24),
+
+                // --- 4. Cài đặt Nhắc nhở Thông minh ---
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.settingSmartReminders,
+                      style: theme.textTheme.titleMedium),
+                  subtitle: Text(l10n.settingSmartRemindersDesc,
+                      style: theme.textTheme.bodySmall),
+                  value: settingsProvider.smartRemindersEnabled,
+                  onChanged: (newValue) => context
+                      .read<SettingsProvider>()
+                      .updateSmartRemindersEnabled(newValue),
+                  secondary: Icon(Icons.psychology_outlined,
+                      color: theme.colorScheme.primary),
+                  activeColor: theme.colorScheme.secondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// <<< WIDGET TÙY CHỈNH MỚI CHO CÁC NÚT CHỌN THEME >>>
+class _CustomThemeToggle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settingsProvider = context.watch<SettingsProvider>();
+
+    // Dữ liệu cho các nút
+    final List<({ThemeMode mode, IconData icon, String label})> themeOptions = [
+      (
+        mode: ThemeMode.light,
+        icon: Icons.light_mode_outlined,
+        label: l10n.lightMode
+      ),
+      (
+        mode: ThemeMode.dark,
+        icon: Icons.dark_mode_outlined,
+        label: l10n.darkMode
+      ),
+      (
+        mode: ThemeMode.system,
+        icon: Icons.settings_brightness_outlined,
+        label: l10n.systemDefault
+      ),
+    ];
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12.0),
+      child: Row(
+        children: themeOptions.map((option) {
+          // Kiểm tra xem nút hiện tại có phải là nút đang được chọn không
+          final bool isSelected = settingsProvider.themeMode == option.mode;
+
+          return Expanded(
+            // <<< SỬ DỤNG EXPANDED >>>
+            // Expanded đảm bảo mỗi nút sẽ chiếm một không gian bằng nhau
+            child: Material(
+              // Dùng Material để có hiệu ứng InkWell
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surface,
+              child: InkWell(
+                onTap: () => context
+                    .read<SettingsProvider>()
+                    .updateThemeMode(option.mode),
+                child: Container(
+                  // Thêm viền để ngăn cách các nút
+                  decoration: BoxDecoration(
+                      border: Border(
+                          right: BorderSide(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    width: option.mode == ThemeMode.system
+                        ? 0
+                        : 1, // Không có viền cho nút cuối
+                  ))),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        option.icon,
+                        size: 20,
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          option.label,
+                          style: TextStyle(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// WIDGET NÚT ĐĂNG XUẤT
+// ================================================================
+class _LogoutButton extends StatelessWidget {
+  const _LogoutButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Center(
+      // Đặt nút ra giữa cho đẹp
+      child: TextButton.icon(
+        icon: Icon(Icons.logout, color: theme.colorScheme.error),
+        label: Text(l10n.logout,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.error,
+              fontWeight: FontWeight.bold,
+            )),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+          // Tạo một viền nhẹ xung quanh nút để nó không quá "chìm"
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side:
+                  BorderSide(color: theme.colorScheme.error.withOpacity(0.3))),
+        ),
+        onPressed: () async {
+          // --- Logic xác nhận đăng xuất ---
+          // Logic này đã rất tốt và được giữ lại, chỉ style lại dialog
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              // Style AlertDialog để nhất quán với theme
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Text(l10n.confirmLogoutTitle),
+              content: Text(l10n.confirmLogoutMessage),
+              actions: [
+                // Nút "Hủy"
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+                // Nút "Đăng xuất" (Hành động chính)
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(
+                    l10n.logout, // Dùng chữ "Đăng xuất"
+                    style: TextStyle(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          // Nếu người dùng xác nhận, thực hiện đăng xuất
+          if (confirm == true && context.mounted) {
+            await context.read<AuthProvider>().signOut();
+
+            // Điều hướng về màn hình Login và xóa toàn bộ các màn hình cũ.
+            // Logic này rất quan trọng và đã được viết đúng.
+            Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (Route<dynamic> route) => false,
+            );
+          }
+        },
       ),
     );
   }

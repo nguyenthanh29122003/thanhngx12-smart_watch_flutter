@@ -1,5 +1,359 @@
-// lib/screens/core/activity_history_screen.dart
+// // lib/screens/core/activity_history_screen.dart
+// import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
+// import 'package:intl/intl.dart';
 
+// import '../../providers/dashboard_provider.dart';
+// import '../../models/activity_segment.dart';
+// import '../../generated/app_localizations.dart';
+
+// // Đây là phiên bản đã được nâng cấp và rà soát
+// class ActivityHistoryScreen extends StatefulWidget {
+//   const ActivityHistoryScreen({super.key});
+
+//   @override
+//   State<ActivityHistoryScreen> createState() => _ActivityHistoryScreenState();
+// }
+
+// class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
+//   // Logic state giữ nguyên, rất tốt để quản lý scroll
+//   final ScrollController _scrollController = ScrollController();
+
+//   @override
+//   void dispose() {
+//     _scrollController.dispose();
+//     super.dispose();
+//   }
+
+//   // --- HÀM BUILD CHÍNH ---
+//   @override
+//   Widget build(BuildContext context) {
+//     final l10n = AppLocalizations.of(context)!;
+//     // Dùng watch ở đây để có thể kích hoạt RefreshIndicator một cách chính xác
+//     final dashboardProvider = context.watch<DashboardProvider>();
+
+//     return Scaffold(
+//       appBar: AppBar(
+//         // AppBar sẽ tự động nhận style từ AppTheme
+//         title: Text(l10n.activitySummaryDetailScreenTitle),
+//       ),
+//       body: RefreshIndicator(
+//         // Sửa lỗi `force`: Gọi hàm mà không cần tham số không tồn tại
+//         onRefresh: () => context.read<DashboardProvider>().fetchHealthHistory(),
+//         // Dùng Builder để đảm bảo context được truyền vào _buildContent là context mới nhất
+//         child: Builder(
+//           builder: (context) => _buildContent(context, dashboardProvider),
+//         ),
+//       ),
+//     );
+//   }
+
+//   // --- WIDGET XÂY DỰNG NỘI DUNG CHÍNH ---
+//   Widget _buildContent(BuildContext context, DashboardProvider provider) {
+//     final l10n = AppLocalizations.of(context)!;
+//     final theme = Theme.of(context);
+
+//     // Xử lý các trạng thái khác nhau của provider
+//     switch (provider.historyStatus) {
+//       case HistoryStatus.loading:
+//       case HistoryStatus.initial:
+//         return const Center(child: CircularProgressIndicator());
+
+//       case HistoryStatus.error:
+//         // Giao diện khi có lỗi, sử dụng theme
+//         return Center(
+//             child: Padding(
+//           padding: const EdgeInsets.all(24.0),
+//           child: Text(
+//             provider.historyError ?? l10n.chartCouldNotLoad,
+//             textAlign: TextAlign.center,
+//             style: theme.textTheme.bodyLarge
+//                 ?.copyWith(color: theme.colorScheme.error),
+//           ),
+//         ));
+
+//       case HistoryStatus.loaded:
+//         // Giao diện khi không có dữ liệu, sử dụng theme
+//         if (provider.activityHistory.isEmpty) {
+//           return Center(
+//             child: Column(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: [
+//                 Icon(Icons.hourglass_empty_rounded,
+//                     size: 80,
+//                     color: theme.colorScheme.primary.withOpacity(0.3)),
+//                 const SizedBox(height: 24),
+//                 Text(l10n.activitySummaryNoData,
+//                     style: theme.textTheme.titleLarge),
+//               ],
+//             ),
+//           );
+//         }
+
+//         final sortedHistory =
+//             List<ActivitySegment>.from(provider.activityHistory)
+//               ..sort((a, b) => b.startTime.compareTo(a.startTime));
+
+//         // Sử dụng CustomScrollView để có header
+//         return CustomScrollView(
+//           controller: _scrollController,
+//           physics:
+//               const AlwaysScrollableScrollPhysics(), // Luôn cho phép cuộn để kích hoạt refresh
+//           slivers: [
+//             SliverToBoxAdapter(
+//                 child: _buildSummaryHeader(
+//                     context, provider.todayTotalActivityDuration, l10n)),
+//             const SliverToBoxAdapter(child: Divider(height: 1)),
+//             SliverPadding(
+//               padding: const EdgeInsets.symmetric(horizontal: 16),
+//               sliver: SliverList(
+//                 delegate: SliverChildBuilderDelegate(
+//                   (context, index) {
+//                     return _ActivityTimelineItem(
+//                       segment: sortedHistory[index],
+//                       isLast: index == sortedHistory.length - 1,
+//                     );
+//                   },
+//                   childCount: sortedHistory.length,
+//                 ),
+//               ),
+//             ),
+//             const SliverToBoxAdapter(
+//                 child: SizedBox(height: 32)), // Padding dưới cùng
+//           ],
+//         );
+//     }
+//   }
+
+//   // --- WIDGET HEADER TÓM TẮT ---
+//   Widget _buildSummaryHeader(
+//       BuildContext context, Duration totalDuration, AppLocalizations l10n) {
+//     final theme = Theme.of(context);
+//     final hours = totalDuration.inHours;
+//     final minutes = totalDuration.inMinutes.remainder(60);
+
+//     return Padding(
+//         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+//         child: Column(
+//           children: [
+//             Text(
+//               l10n.totalActiveTimeTodayTitle,
+//               style: theme.textTheme.titleMedium,
+//             ),
+//             const SizedBox(height: 8),
+//             Text.rich(
+//               TextSpan(
+//                 style: theme.textTheme.displaySmall?.copyWith(
+//                   fontWeight: FontWeight.bold,
+//                   color: theme.colorScheme.primary,
+//                 ),
+//                 children: [
+//                   TextSpan(text: '$hours'),
+//                   TextSpan(
+//                     text: 'h ',
+//                     style: theme.textTheme.headlineMedium?.copyWith(
+//                         fontWeight: FontWeight.w400,
+//                         color: theme.colorScheme.primary.withOpacity(0.8)),
+//                   ),
+//                   TextSpan(text: '$minutes'),
+//                   TextSpan(
+//                     text: 'm',
+//                     style: theme.textTheme.headlineMedium?.copyWith(
+//                         fontWeight: FontWeight.w400,
+//                         color: theme.colorScheme.primary.withOpacity(0.8)),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         ));
+//   }
+// }
+
+// // --- WIDGET HIỂN THỊ MỘT ITEM TRONG DÒNG THỜI GIAN ---
+// class _ActivityTimelineItem extends StatelessWidget {
+//   final ActivitySegment segment;
+//   final bool isLast;
+
+//   const _ActivityTimelineItem({required this.segment, required this.isLast});
+
+//   // Hàm helper để lấy thông tin hình ảnh
+//   Map<String, dynamic> _getActivityVisuals(
+//       BuildContext context, String activityName) {
+//     final theme = Theme.of(context);
+//     final iconMap = {
+//       'Sitting': Icons.chair_outlined,
+//       'Standing': Icons.man_2_outlined,
+//       'Walking': Icons.directions_walk_rounded,
+//       'Running': Icons.directions_run_rounded,
+//       'Lying': Icons.king_bed_outlined,
+//       'Unknown': Icons.question_mark_rounded,
+//     };
+//     final Color color;
+//     switch (activityName) {
+//       case 'Walking':
+//       case 'Running':
+//         color = Colors.green.shade500;
+//         break;
+//       case 'Standing':
+//         color = theme.colorScheme.secondary;
+//         break;
+//       case 'Sitting':
+//       case 'Lying':
+//         color = Colors.orange.shade600;
+//         break;
+//       default:
+//         color = theme.colorScheme.primary;
+//     }
+//     return {
+//       'icon': iconMap[activityName] ?? Icons.device_unknown_rounded,
+//       'color': color,
+//     };
+//   }
+
+//   // Hàm helper dịch tên
+//   String _getLocalizedActivityName(String activityKey, AppLocalizations l10n) {
+//     switch (activityKey) {
+//       case 'Standing':
+//         return l10n.activityStanding;
+//       case 'Lying':
+//         return l10n.activityLying;
+//       case 'Sitting':
+//         return l10n.activitySitting;
+//       case 'Walking':
+//         return l10n.activityWalking;
+//       case 'Running':
+//         return l10n.activityRunning;
+//       default:
+//         return l10n.activityUnknown;
+//     }
+//   }
+
+//   // Hàm helper định dạng thời lượng
+//   String _formatDuration(int totalSeconds, AppLocalizations l10n) {
+//     if (totalSeconds < 60) {
+//       return l10n.durationSeconds(totalSeconds);
+//     }
+//     final minutes = totalSeconds ~/ 60;
+//     final seconds = totalSeconds % 60;
+//     if (seconds == 0) {
+//       return l10n.durationMinutes(minutes);
+//     }
+//     return l10n.durationMinutesAndSeconds(minutes, seconds);
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     final l10n = AppLocalizations.of(context)!;
+
+//     final visuals = _getActivityVisuals(context, segment.activityName);
+//     final color = visuals['color'] as Color;
+//     final icon = visuals['icon'] as IconData;
+//     final startTimeStr =
+//         DateFormat('HH:mm').format(segment.startTime.toLocal());
+
+//     return IntrinsicHeight(
+//       child: Row(
+//         crossAxisAlignment: CrossAxisAlignment.stretch,
+//         children: [
+//           // Phần Timeline (Thời gian, đường kẻ, chấm tròn)
+//           SizedBox(
+//             width: 72,
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.end,
+//               mainAxisAlignment: MainAxisAlignment.start,
+//               children: [
+//                 Padding(
+//                   padding: const EdgeInsets.only(
+//                       right: 12.0, top: 12.0), // Padding cho thời gian
+//                   child: Text(
+//                     startTimeStr,
+//                     style: theme.textTheme.bodyMedium?.copyWith(
+//                         color: theme.textTheme.bodyMedium?.color
+//                             ?.withOpacity(0.7)),
+//                   ),
+//                 ),
+//                 const Spacer(), // Đẩy đường kẻ xuống dưới nếu item chỉ có 1 dòng
+//               ],
+//             ),
+//           ),
+
+//           // Đường kẻ và chấm tròn
+//           SizedBox(
+//             width: 24,
+//             child: Center(
+//               child: Container(
+//                 width: 2,
+//                 color: isLast
+//                     ? Colors.transparent
+//                     : theme.dividerColor.withOpacity(0.5),
+//                 alignment: Alignment.topCenter,
+//                 child: Container(
+//                   margin: const EdgeInsets.only(top: 16),
+//                   width: 12,
+//                   height: 12,
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     color: theme.scaffoldBackgroundColor,
+//                     border: Border.all(color: color, width: 2.5),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ),
+
+//           // Phần nội dung
+//           Expanded(
+//             child: Container(
+//               margin: const EdgeInsets.only(right: 16.0, bottom: 16.0),
+//               padding: const EdgeInsets.all(16.0),
+//               decoration: BoxDecoration(
+//                 // Sử dụng màu nền Card từ theme chung
+//                 color: theme.cardTheme.color,
+//                 borderRadius: BorderRadius.circular(16.0),
+//                 boxShadow: theme.cardTheme.shadowColor != null
+//                     ? [
+//                         BoxShadow(
+//                             color: theme.cardTheme.shadowColor!,
+//                             blurRadius: 4,
+//                             offset: const Offset(0, 2))
+//                       ]
+//                     : null,
+//               ),
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   Row(
+//                     children: [
+//                       Icon(icon, color: color, size: 20),
+//                       const SizedBox(width: 8),
+//                       Expanded(
+//                         child: Text(
+//                           _getLocalizedActivityName(segment.activityName, l10n),
+//                           style: theme.textTheme.titleMedium?.copyWith(
+//                               fontWeight: FontWeight.bold, color: color),
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                   const Divider(height: 20),
+//                   Text(
+//                     l10n.durationLabel(
+//                         _formatDuration(segment.durationInSeconds, l10n)),
+//                     style: theme.textTheme.bodyMedium,
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+// lib/screens/core/activity_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -8,159 +362,224 @@ import '../../providers/dashboard_provider.dart';
 import '../../models/activity_segment.dart';
 import '../../generated/app_localizations.dart';
 
-class ActivityHistoryScreen extends StatelessWidget {
+// <<<<<<<<<<<<<<< BẮT ĐẦU CODE HOÀN CHỈNH >>>>>>>>>>>>>>>
+
+class ActivityHistoryScreen extends StatefulWidget {
   const ActivityHistoryScreen({super.key});
 
   @override
+  State<ActivityHistoryScreen> createState() => _ActivityHistoryScreenState();
+}
+
+class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
+  // ScrollController để có thể thêm các tính năng như "tải thêm" trong tương lai
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // --- HÀM BUILD CHÍNH ---
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Sử dụng 'read' ở đây vì màn hình này thường không cần build lại
-    // toàn bộ khi dữ liệu thay đổi (ListView.builder sẽ xử lý)
-    // Nhưng nếu bạn muốn cả màn hình build lại khi onRefresh, 'watch' cũng ổn.
-    final provider = context.watch<DashboardProvider>();
+    // Dùng 'watch' ở đây để toàn bộ màn hình có thể rebuild khi provider thay đổi
+    // và kích hoạt RefreshIndicator
+    final dashboardProvider = context.watch<DashboardProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.activitySummaryDetailScreenTitle),
+        title: Text(l10n.activitySummaryDetailScreenTitle), // Key mới
       ),
       body: RefreshIndicator(
-        onRefresh: () => provider.fetchHealthHistory(),
-        child: _buildContent(context, provider, l10n),
+        // Gọi lại hàm fetchHealthHistory, hàm này sẽ tự động tính toán lại activitySummary
+        onRefresh: () => context.read<DashboardProvider>().fetchHealthHistory(),
+        // Dùng Builder để đảm bảo _buildContent luôn nhận được context mới nhất
+        child: Builder(
+          builder: (context) => _buildContent(context, dashboardProvider),
+        ),
       ),
     );
   }
 
-  Widget _buildContent(
-      BuildContext context, DashboardProvider provider, AppLocalizations l10n) {
+  // ... tiếp theo bên trong _ActivityHistoryScreenState
+
+  // --- WIDGET XÂY DỰNG NỘI DUNG CHÍNH DỰA TRÊN TRẠNG THÁI ---
+  Widget _buildContent(BuildContext context, DashboardProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    // Xử lý các trạng thái khác nhau của provider
     switch (provider.historyStatus) {
       case HistoryStatus.loading:
+      case HistoryStatus.initial:
         return const Center(child: CircularProgressIndicator());
+
       case HistoryStatus.error:
+        // Giao diện khi có lỗi
         return Center(
-            child: Text(provider.historyError ?? l10n.chartCouldNotLoad));
+            child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Text(
+            provider.historyError ?? l10n.chartCouldNotLoad,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge
+                ?.copyWith(color: theme.colorScheme.error),
+          ),
+        ));
+
       case HistoryStatus.loaded:
-        if (provider.activityHistory.isEmpty) {
+        final activitySegments = provider.activityHistory;
+
+        // Giao diện khi không có dữ liệu
+        if (activitySegments.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history_toggle_off,
-                    size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
+                Icon(Icons.hourglass_empty_rounded,
+                    size: 80,
+                    color: theme.colorScheme.primary.withOpacity(0.3)),
+                const SizedBox(height: 24),
                 Text(l10n.activitySummaryNoData,
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: theme.textTheme.titleLarge),
               ],
             ),
           );
         }
 
-        // Sắp xếp lịch sử hoạt động, mới nhất lên trên
-        final sortedHistory =
-            List<ActivitySegment>.from(provider.activityHistory)
-              ..sort((a, b) => b.startTime.compareTo(a.startTime));
+        // Sắp xếp các phân đoạn hoạt động theo thời gian mới nhất lên đầu
+        final sortedHistory = List<ActivitySegment>.from(activitySegments)
+          ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
-        final totalDuration = provider.todayTotalActivityDuration;
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: sortedHistory.length + 1, // +1 cho header tóm tắt
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              // Header tóm tắt
-              return _buildSummaryHeader(context, totalDuration, l10n);
-            }
-            // Các item trong dòng thời gian
-            final segment = sortedHistory[index - 1];
-            return _ActivitySegmentListItem(segment: segment);
-          },
+        // Sử dụng CustomScrollView để có thể kết hợp nhiều loại Sliver
+        return CustomScrollView(
+          controller: _scrollController,
+          // Luôn cho phép cuộn để RefreshIndicator hoạt động
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // Header tóm tắt tổng thời gian
+            SliverToBoxAdapter(
+                child: _buildSummaryHeader(
+                    context, provider.todayTotalActivityDuration, l10n)),
+            const SliverToBoxAdapter(child: Divider(height: 1)),
+            // Danh sách các item trên dòng thời gian
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return _ActivityTimelineItem(
+                      segment: sortedHistory[index],
+                      isLast: index == sortedHistory.length - 1,
+                    );
+                  },
+                  childCount: sortedHistory.length,
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+                child: SizedBox(height: 32)), // Padding dưới cùng
+          ],
         );
-      default:
-        return const SizedBox.shrink();
     }
   }
 
-  // Widget header tóm tắt
+  // --- WIDGET HEADER TÓM TẮT TỔNG THỜI GIAN HOẠT ĐỘNG ---
   Widget _buildSummaryHeader(
       BuildContext context, Duration totalDuration, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     final hours = totalDuration.inHours;
     final minutes = totalDuration.inMinutes.remainder(60);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.timer_outlined, color: Colors.blueGrey, size: 28),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Total Active Time Today", // TODO: i18n
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.blueGrey),
-              ),
-              RichText(
-                text: TextSpan(
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                  children: [
-                    TextSpan(text: '$hours'),
-                    TextSpan(
-                        text: 'h ',
-                        style: Theme.of(context).textTheme.bodyLarge),
-                    TextSpan(text: '$minutes'),
-                    TextSpan(
-                        text: 'm',
-                        style: Theme.of(context).textTheme.bodyLarge),
-                  ],
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+        child: Column(
+          children: [
+            Text(
+              l10n.totalActiveTimeTodayTitle, // Key mới
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            // Sử dụng Text.rich để style giờ và phút khác nhau
+            Text.rich(
+              TextSpan(
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
                 ),
+                children: [
+                  TextSpan(text: '$hours'),
+                  TextSpan(
+                    text: 'h ',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: theme.colorScheme.primary.withOpacity(0.8)),
+                  ),
+                  TextSpan(text: '$minutes'),
+                  TextSpan(
+                    text: 'm',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: theme.colorScheme.primary.withOpacity(0.8)),
+                  ),
+                ],
               ),
-            ],
-          )
-        ],
-      ),
-    );
+            ),
+          ],
+        ));
   }
 }
 
-// Widget con để hiển thị một item trong timeline
-class _ActivitySegmentListItem extends StatelessWidget {
+// --- WIDGET HIỂN THỊ MỘT ITEM TRONG DÒNG THỜI GIAN ---
+class _ActivityTimelineItem extends StatelessWidget {
   final ActivitySegment segment;
+  final bool isLast; // Để biết có phải là item cuối cùng không
 
-  const _ActivitySegmentListItem({required this.segment});
+  const _ActivityTimelineItem({required this.segment, required this.isLast});
 
-  // Hàm helper để lấy Icon và Color
+  // --- Các hàm helper được đóng gói bên trong widget này ---
+
+  // Lấy icon và màu sắc tương ứng với hoạt động
   Map<String, dynamic> _getActivityVisuals(
       BuildContext context, String activityName) {
-    final colorMap = {
-      'Sitting': Colors.orange.shade400,
-      'Standing': Colors.blue.shade400,
-      'Walking': Colors.green.shade400,
-      'Running': Colors.red.shade400,
-      'Lying': Colors.purple.shade400,
-      'Unknown': Colors.grey.shade400,
-    };
+    final theme = Theme.of(context);
     final iconMap = {
       'Sitting': Icons.chair_outlined,
-      'Standing': Icons.accessibility_new_outlined,
-      'Walking': Icons.directions_walk,
-      'Running': Icons.directions_run,
-      'Lying': Icons.hotel_outlined,
-      'Unknown': Icons.question_mark,
+      'Standing': Icons.man_2_outlined, // Dùng icon khác cho đứng
+      'Walking': Icons.directions_walk_rounded,
+      'Running': Icons.directions_run_rounded,
+      'Lying': Icons.king_bed_outlined,
+      'Unknown': Icons.question_mark_rounded,
     };
+
+    final Color color;
+    switch (activityName) {
+      case 'Walking':
+      case 'Running':
+        color = Colors.green.shade500; // Hoạt động tích cực
+        break;
+      case 'Standing':
+        color = theme.colorScheme.secondary; // Hoạt động trung bình
+        break;
+      case 'Sitting':
+      case 'Lying':
+        color = Colors.orange.shade600; // Hoạt động không tích cực
+        break;
+      default:
+        color = theme.colorScheme.primary;
+    }
     return {
-      'icon': iconMap[activityName] ?? Icons.device_unknown,
-      'color': colorMap[activityName] ?? Colors.grey
+      'icon': iconMap[activityName] ?? Icons.device_unknown_rounded,
+      'color': color
     };
   }
 
-  // Hàm helper dịch tên
+  // Dịch tên hoạt động
   String _getLocalizedActivityName(String activityKey, AppLocalizations l10n) {
+    // Logic dịch tên giữ nguyên
     switch (activityKey) {
       case 'Standing':
         return l10n.activityStanding;
@@ -177,81 +596,117 @@ class _ActivitySegmentListItem extends StatelessWidget {
     }
   }
 
+  // Định dạng thời lượng cho dễ đọc
+  String _formatDuration(int totalSeconds, AppLocalizations l10n) {
+    if (totalSeconds < 60) {
+      return l10n.durationSeconds(totalSeconds); // Key mới
+    }
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    if (seconds == 0) {
+      return l10n.durationMinutes(minutes); // Key mới
+    }
+    return l10n.durationMinutesAndSeconds(minutes, seconds); // Key mới
+  }
+
   @override
   Widget build(BuildContext context) {
-    final visuals = _getActivityVisuals(context, segment.activityName);
-    final IconData icon = visuals['icon'];
-    final Color color = visuals['color'];
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    // Định dạng thời gian
-    final timeFormat = DateFormat('HH:mm');
-    final startTimeStr = timeFormat.format(segment.startTime.toLocal());
-    final endTimeStr = timeFormat.format(segment.endTime.toLocal());
+    final visuals = _getActivityVisuals(context, segment.activityName);
+    final color = visuals['color'] as Color;
+    final icon = visuals['icon'] as IconData;
+    final startTimeStr =
+        DateFormat('HH:mm').format(segment.startTime.toLocal());
 
-    // Định dạng thời lượng
-    final duration = Duration(seconds: segment.durationInSeconds);
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds.remainder(60);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+    // Sử dụng IntrinsicHeight để đảm bảo đường kẻ và nội dung luôn thẳng hàng
+    return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Cột Icon và đường kẻ dọc timeline
-          Column(
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withOpacity(0.2),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              // Đường kẻ dọc cho timeline
-              Container(
-                height: 50,
-                width: 2,
-                color: Colors.grey.shade300,
-              )
-            ],
-          ),
-          const SizedBox(width: 16),
-          // Cột nội dung chính
-          Expanded(
+          // Phần Timeline bên trái (Thời gian và đường kẻ)
+          SizedBox(
+            width: 72,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  _getLocalizedActivityName(segment.activityName, l10n),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$startTimeStr - $endTimeStr',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 8),
-                Chip(
-                  avatar:
-                      Icon(Icons.timer, size: 16, color: Colors.grey.shade700),
-                  label: Text(
-                    (minutes > 0)
-                        ? "$minutes min $seconds sec"
-                        : "$seconds sec", // TODO: i18n
-                    style: const TextStyle(fontSize: 12),
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0, top: 12.0),
+                  child: Text(
+                    startTimeStr,
+                    style: theme.textTheme.bodyMedium,
                   ),
-                  backgroundColor: Colors.grey.shade200,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  visualDensity: VisualDensity.compact,
+                ),
+                // Đường kẻ dọc
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    // Không vẽ đường kẻ cho item cuối cùng
+                    color: isLast
+                        ? Colors.transparent
+                        : theme.dividerColor.withOpacity(0.5),
+                  ),
                 ),
               ],
             ),
-          )
+          ),
+
+          // Chấm tròn trên dòng thời gian
+          Container(
+            margin: const EdgeInsets.only(top: 16),
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.scaffoldBackgroundColor, // Màu nền để che đường kẻ
+              border: Border.all(color: color, width: 2.5),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Phần nội dung bên phải (trong một Container riêng)
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(
+                  bottom: 16.0), // Khoảng cách giữa các item
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                // Nền hơi khác để nổi bật
+                color: theme.scaffoldBackgroundColor,
+                // Viền màu tinh tế
+                border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, color: color, size: 20),
+                      const SizedBox(width: 8),
+                      // Tên hoạt động
+                      Expanded(
+                        child: Text(
+                          _getLocalizedActivityName(segment.activityName, l10n),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold, color: color),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  // Thời lượng
+                  Text(
+                    l10n.durationLabel(_formatDuration(
+                        segment.durationInSeconds, l10n)), // Key mới
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

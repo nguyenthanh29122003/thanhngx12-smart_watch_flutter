@@ -39,8 +39,8 @@ import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/device/device_select_screen.dart';
 
-// Models
-import 'models/navigation_data.dart';
+// Theme
+import 'theme/app_theme.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -209,24 +209,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Vẫn lắng nghe SettingsProvider để lấy themeMode và locale
     final settingsProvider = context.watch<SettingsProvider>();
+
     return MaterialApp(
-      title: 'Smart Wearable App',
+      title: 'Smart Wearable App', // Bạn có thể dùng l10n ở đây nếu muốn
       locale: settingsProvider.appLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.teal, brightness: Brightness.dark),
-        useMaterial3: true,
-      ),
-      themeMode: settingsProvider.themeMode,
+
+      // <<< BƯỚC 2: THAY THẾ THEME MẶC ĐỊNH BẰNG THEME TÙY CHỈNH >>>
+      theme: AppTheme.lightTheme, // Sử dụng light theme đã định nghĩa
+      darkTheme: AppTheme.darkTheme, // Sử dụng dark theme đã định nghĩa
+      // -----------------------------------------------------------
+
+      themeMode: settingsProvider
+          .themeMode, // Trạng thái vẫn được quản lý bởi SettingsProvider
+
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       home: const AuthWrapper(),

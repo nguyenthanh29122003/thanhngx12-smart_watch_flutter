@@ -776,7 +776,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get statusReconnecting => 'Reconnecting...';
+  String get statusReconnecting => 'Attempting to reconnect...';
 
   @override
   String get reconnectingTooltip => 'Attempting to reconnect...';
@@ -933,16 +933,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityError => 'Activity Error';
 
   @override
-  String get activitySummaryTitle => 'Today\'s Activity Summary';
+  String get activitySummaryTitle => 'Activity Summary';
 
   @override
-  String get activitySummaryNoData => 'No activity data available for today.';
+  String get activitySummaryNoData => 'Not enough activity data recorded for today yet.';
 
   @override
   String get activitySummaryNoDataToDisplay => 'No significant activity to display.';
 
   @override
-  String get activitySummaryDetailScreenTitle => 'Activity Details';
+  String get activitySummaryDetailScreenTitle => 'Activity Timeline';
 
   @override
   String get sectionActivityRecognition => 'Activity Alerts';
@@ -977,4 +977,141 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingSmartRemindersDesc => 'Receive gentle reminders before the main alert';
+
+  @override
+  String get signUpSubtitle => 'Create an account to get started';
+
+  @override
+  String get historyAndTrendsTitle => 'History & Trends';
+
+  @override
+  String get greetingGoodMorning => 'Good morning,';
+
+  @override
+  String get greetingGoodAfternoon => 'Good afternoon,';
+
+  @override
+  String get greetingGoodEvening => 'Good evening,';
+
+  @override
+  String get hrTabTitle => 'Heart Rate';
+
+  @override
+  String get spo2TabTitle => 'SpO2';
+
+  @override
+  String get stepsTabTitle => 'Steps';
+
+  @override
+  String get mainGoalTitle => 'Today';
+
+  @override
+  String stepsOutOfGoal(Object goal) {
+    return '/ $goal steps';
+  }
+
+  @override
+  String get chartNotEnoughData => 'Not enough data to draw a chart.';
+
+  @override
+  String get chartInfo => 'Info:';
+
+  @override
+  String get errorLoadingRelatives => 'Error Loading Relatives';
+
+  @override
+  String get quoteGoalAchieved1 => 'Incredible! You smashed it!';
+
+  @override
+  String get quoteGoalAchieved2 => 'Goal complete! You\'re a star ⭐';
+
+  @override
+  String get quoteAlmostThere1 => 'You\'re so close, keep it up!';
+
+  @override
+  String get quoteAlmostThere2 => 'Just a little more to go!';
+
+  @override
+  String get quoteGoodStart1 => 'That\'s a great start!';
+
+  @override
+  String get quoteGoodStart2 => 'Every step counts. Well done!';
+
+  @override
+  String get quoteKeepGoing1 => 'A journey of a thousand miles begins with a single step.';
+
+  @override
+  String get quoteKeepGoing2 => 'Let\'s get moving!';
+
+  @override
+  String get otherGoalsTitle => 'Other Goals';
+
+  @override
+  String get sleepGoalTitle => 'Sleep Goal';
+
+  @override
+  String get caloriesGoalTitle => 'Calories Goal';
+
+  @override
+  String get sectionAppearanceAndLang => 'Appearance & Language';
+
+  @override
+  String get totalActiveTimeTodayTitle => 'Total Active Time Today';
+
+  @override
+  String durationSeconds(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String durationMinutes(int minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String durationMinutesAndSeconds(int minutes, int seconds) {
+    return '${minutes}m ${seconds}s';
+  }
+
+  @override
+  String durationLabel(String duration) {
+    return 'Duration: $duration';
+  }
+
+  @override
+  String get activityHistoryTitle => 'Activity History';
+
+  @override
+  String get comingSoon => 'Coming soon';
+
+  @override
+  String get sectionActivitySettings => 'Activity Alerts';
+
+  @override
+  String get settingSittingWarning => 'Prolonged Sitting Alert';
+
+  @override
+  String get settingSmartReminders => 'Smart Reminders';
+
+  @override
+  String minutesLabel(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get settingLyingWarning => 'Prolonged Lying Alert (Daytime)';
+
+  @override
+  String hoursLabel(int hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String get settingUserWeight => 'Your Weight';
+
+  @override
+  String get errorFieldRequired => 'Required';
+
+  @override
+  String get errorWeightRange => 'Please enter a valid weight (20-200kg)';
 }

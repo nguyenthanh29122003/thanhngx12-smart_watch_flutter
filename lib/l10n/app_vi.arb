@@ -444,5 +444,169 @@
   "settingThresholdMinutesDesc": "{minutes} phút",
   "settingThresholdHoursDesc": "{hours} giờ",
   "settingSmartRemindersTitle": "Bật Nhắc nhở Thông minh",
-  "settingSmartRemindersDesc": "Nhận các nhắc nhở nhẹ trước khi có cảnh báo chính"
+  "settingSmartRemindersDesc": "Nhận các nhắc nhở nhẹ trước khi có cảnh báo chính",
+  "signUpSubtitle": "Tạo tài khoản để bắt đầu theo dõi sức khỏe",
+  "@signUpSubtitle": {
+    "description": "Phụ đề trên màn hình đăng ký"
+  },
+  "historyAndTrendsTitle": "Lịch sử & Xu hướng",
+  "@historyAndTrendsTitle": {
+    "description": "Tiêu đề cho khu vực biểu đồ lịch sử trên bảng điều khiển"
+  },
+  "greetingGoodMorning": "Chào buổi sáng,",
+  "@greetingGoodMorning": {
+    "description": "Lời chào buổi sáng"
+  },
+  "greetingGoodAfternoon": "Chào buổi chiều,",
+  "@greetingGoodAfternoon": {
+    "description": "Lời chào buổi chiều"
+  },
+  "greetingGoodEvening": "Chào buổi tối,",
+  "@greetingGoodEvening": {
+    "description": "Lời chào buổi tối"
+  },
+  "hrTabTitle": "Nhịp tim",
+  "@hrTabTitle": {
+    "description": "Tên tab cho biểu đồ nhịp tim"
+  },
+  "spo2TabTitle": "SpO2",
+  "@spo2TabTitle": {
+    "description": "Tên tab cho biểu đồ SpO2"
+  },
+  "stepsTabTitle": "Bước chân",
+  "@stepsTabTitle": {
+    "description": "Tên tab cho biểu đồ bước chân"
+  },
+  "mainGoalTitle": "Hôm nay",
+  "@mainGoalTitle": {
+    "description": "Tiêu đề cho card mục tiêu chính trong ngày"
+  },
+  "stepsOutOfGoal": "/ {goal} bước",
+  "@stepsOutOfGoal": {
+    "description": "Hiển thị tổng mục tiêu bước, ví dụ: / 10.000 bước",
+    "placeholders": {
+      "goal": {
+        "type": "Object"
+      }
+    }
+  },
+    "chartNotEnoughData": "Không có đủ dữ liệu để vẽ biểu đồ.",
+  "@chartNotEnoughData": {
+    "description": "Thông báo hiển thị khi có ít hơn 2 điểm dữ liệu hợp lệ để vẽ biểu đồ."
+  },
+  "chartInfo": "Thông tin:",
+  "@chartInfo": {
+    "description": "Tiêu đề chung cho một thông báo trong biểu đồ."
+  },
+    "errorLoadingRelatives": "Lỗi Tải Người thân",
+  "@errorLoadingRelatives": {
+    "description": "Tiêu đề hiển thị trên màn hình người thân khi có lỗi lấy dữ liệu từ stream"
+  },
+    "quoteGoalAchieved1": "Thật không thể tin được! Bạn đã làm được!",
+  "quoteGoalAchieved2": "Đã hoàn thành mục tiêu! Bạn là một ngôi sao ⭐",
+  "quoteAlmostThere1": "Bạn gần đạt được rồi, cố lên!",
+  "quoteAlmostThere2": "Chỉ một chút nữa thôi!",
+  "quoteGoodStart1": "Một khởi đầu tuyệt vời!",
+  "quoteGoodStart2": "Mỗi bước đi đều có giá trị. Làm tốt lắm!",
+  "quoteKeepGoing1": "Hành trình vạn dặm bắt đầu từ một bước chân.",
+  "quoteKeepGoing2": "Hãy cùng vận động nào!",
+  "otherGoalsTitle": "Các Mục tiêu khác",
+  "sleepGoalTitle": "Mục tiêu Giấc ngủ",
+  "caloriesGoalTitle": "Mục tiêu Calo",
+    "sectionAppearanceAndLang": "Giao diện & Ngôn ngữ",
+  "@sectionAppearanceAndLang": {
+    "description": "Tiêu đề cho khu vực cài đặt chứa các tùy chọn về giao diện và ngôn ngữ"
+  },
+    "activitySummaryDetailScreenTitle": "Dòng thời gian Hoạt động",
+  "activitySummaryNoData": "Không có hoạt động nào được ghi lại trong khoảng này.",
+  "totalActiveTimeTodayTitle": "Tổng Thời gian Hoạt động Hôm nay",
+  "durationSeconds": "{seconds} giây",
+  "@durationSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "durationMinutes": "{minutes} phút",
+  "@durationMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "durationMinutesAndSeconds": "{minutes} phút {seconds} giây",
+  "@durationMinutesAndSeconds": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+  "durationLabel": "Thời lượng: {duration}",
+  "@durationLabel": {
+    "description": "Nhãn hiển thị thời lượng của một phân đoạn hoạt động, ví dụ: 'Thời lượng: 5 phút 30 giây'",
+    "placeholders": { "duration": { "type": "String" } }
+  },
+    "activityHistoryTitle": "Lịch sử Hoạt động",
+  "@activityHistoryTitle": {
+    "description": "Nhãn cho nút trong speed dial dẫn đến màn hình dòng thời gian lịch sử hoạt động"
+  },
+    "statusReconnecting": "Đang thử kết nối lại...",
+  "@statusReconnecting": {
+    "description": "Chữ trạng thái hiển thị trên banner khi đang cố gắng kết nối lại với thiết bị"
+  },
+    "comingSoon": "Sắp ra mắt",
+  "@comingSoon": {
+    "description": "Một dòng chữ ngắn để chỉ ra một tính năng đang được phát triển."
+  },
+    "sectionAppearanceAndLang": "Giao diện & Ngôn ngữ",
+  "@sectionAppearanceAndLang": {
+    "description": "Tiêu đề cho mục chứa cài đặt giao diện và ngôn ngữ"
+  },
+  "sectionActivitySettings": "Cảnh báo Hoạt động",
+  "@sectionActivitySettings": {
+    "description": "Tiêu đề cho mục chứa cài đặt nhận dạng hoạt động"
+  },
+  "settingSittingWarning": "Cảnh báo Ngồi Lâu",
+  "@settingSittingWarning": {
+    "description": "Nhãn cho cài đặt ngưỡng cảnh báo ngồi lâu"
+  },
+  "settingSmartReminders": "Nhắc nhở Thông minh",
+  "@settingSmartReminders": {
+    "description": "Nhãn cho cài đặt nhắc nhở thông minh"
+  },
+  "settingSmartRemindersDesc": "Nhận nhắc nhở nhẹ trước khi có cảnh báo chính",
+  "@settingSmartRemindersDesc": {
+    "description": "Mô tả chức năng của nhắc nhở thông minh"
+  },
+  "minutesLabel": "{minutes} phút",
+  "@minutesLabel": {
+    "description": "Nhãn hiển thị thời gian bằng phút",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+    "sectionAppearanceAndLang": "Giao diện & Ngôn ngữ",
+      "settingLyingWarning": "Cảnh báo Nằm Lâu (Ban ngày)",
+  "@settingLyingWarning": {
+    "description": "Nhãn cho cài đặt ngưỡng cảnh báo nằm lâu"
+  },
+  "hoursLabel": "{hours} giờ",
+  "@hoursLabel": {
+    "description": "Nhãn hiển thị thời gian bằng giờ",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "settingUserWeight": "Cân nặng của bạn",
+  "@settingUserWeight": {
+    "description": "Nhãn cho cài đặt cân nặng người dùng"
+  },
+  "settingUserWeightDesc": "Dùng để tính toán calo tiêu thụ chính xác hơn",
+  "@settingUserWeightDesc": {
+    "description": "Mô tả lý do cần cân nặng của người dùng"
+  },
+  "errorFieldRequired": "Bắt buộc",
+  "@errorFieldRequired": {
+    "description": "Lỗi xác thực chung cho một trường bắt buộc"
+  },
+  "errorWeightRange": "Vui lòng nhập cân nặng hợp lệ (20-200kg)",
+  "@errorWeightRange": {
+    "description": "Lỗi xác thực cho ô nhập cân nặng"
+  },
+    "activitySummaryTitle": "Tổng quan Hoạt động",
+  "activitySummaryNoData": "Chưa có đủ dữ liệu hoạt động được ghi nhận hôm nay."
 }

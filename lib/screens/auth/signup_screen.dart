@@ -2,8 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../generated/app_localizations.dart'; // Import l10n
+import '../../generated/app_localizations.dart';
 
+// Đây là phiên bản đã được nâng cấp giao diện hoàn chỉnh
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -12,6 +13,7 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  // --- STATE VÀ LOGIC GIỮ NGUYÊN ---
   final _formKey = GlobalKey<FormState>();
   final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -30,197 +32,223 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _signUp() async {
+    // Logic của bạn đã rất tốt, giữ nguyên
     if (_formKey.currentState?.validate() ?? false) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final l10n = AppLocalizations.of(context)!; // Lấy l10n
-
-      // Gọi hàm signUp từ AuthProvider
       final success = await authProvider.createUserWithEmailAndPassword(
-        // <<< SỬA TÊN HÀM
         _emailController.text.trim(),
-        _passwordController.text, // Truyền password
-        displayName: _displayNameController.text.trim(), // Truyền displayName
+        _passwordController.text,
+        displayName: _displayNameController.text.trim(),
       );
 
-      if (mounted) {
-        // Luôn kiểm tra mounted
-        if (!success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              // Sử dụng một key dịch lỗi chung hoặc lỗi cụ thể từ provider
-              content:
-                  Text(authProvider.lastErrorMessage), // Lấy lỗi từ provider
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
-        // Nếu thành công, AuthWrapper sẽ tự điều hướng
+      if (mounted && !success) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(authProvider.lastErrorMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ));
       }
+      // Nếu thành công, AuthWrapper sẽ tự điều hướng, không cần pop
     }
   }
 
+  // --- HÀM BUILD ĐƯỢC THIẾT KẾ LẠI ---
   @override
   Widget build(BuildContext context) {
+    // Lấy các giá trị cần thiết từ theme và provider
     final authProvider = context.watch<AuthProvider>();
     final isLoading = authProvider.status == AuthStatus.authenticating;
-    final l10n = AppLocalizations.of(context)!; // Lấy l10n
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        // <<< SỬA TITLE >>>
-        title: Text(l10n.signUpTitle), // TODO: Thêm key 'signUpTitle' vào .arb
+        // AppBar trong suốt và không có đổ bóng (style từ AppTheme)
+        // Flutter sẽ tự động thêm nút "Back"
+        // Tùy chỉnh màu nút Back để hợp với nền
+        leading: BackButton(color: colorScheme.onBackground),
       ),
-      body: Center(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                // --- Display Name Field ---
+                // PHẦN HEADER
+                Text(
+                  l10n.signUpTitle,
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8.0),
+                Text(
+                  l10n.signUpSubtitle, // Sử dụng key mới đã thêm
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onBackground.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 32.0),
+
+                // TRƯỜNG NHẬP TÊN HIỂN THỊ
                 TextFormField(
                   controller: _displayNameController,
-                  decoration: InputDecoration(
-                    // <<< SỬA LABEL >>>
-                    labelText: l10n
-                        .displayNameLabel, // TODO: Thêm key 'displayNameLabel'
-                    prefixIcon: const Icon(Icons.person),
-                    border: const OutlineInputBorder(),
-                  ),
+                  enabled: !isLoading,
                   textCapitalization: TextCapitalization.words,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      // <<< SỬA VALIDATION MESSAGE >>>
-                      return l10n
-                          .displayNameValidation; // TODO: Thêm key 'displayNameValidation'
-                    }
-                    return null;
-                  },
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: l10n.displayNameLabel,
+                    prefixIcon: Icon(Icons.person_outline,
+                        color: colorScheme.primary.withOpacity(0.8)),
+                    filled: true,
+                    fillColor: colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: colorScheme.primary, width: 2.0)),
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? l10n.displayNameValidation
+                      : null,
                 ),
                 const SizedBox(height: 16.0),
 
-                // --- Email Field ---
+                // TRƯỜNG NHẬP EMAIL
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: l10n.emailLabel, // Dùng key đã có
-                    prefixIcon: const Icon(Icons.email),
-                    border: const OutlineInputBorder(),
-                  ),
+                  enabled: !isLoading,
                   keyboardType: TextInputType.emailAddress,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    if (value == null ||
-                        value.trim().isEmpty ||
-                        !value.contains('@')) {
-                      return l10n.emailValidation; // Dùng key đã có
-                    }
-                    return null;
-                  },
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: l10n.emailLabel,
+                    prefixIcon: Icon(Icons.email_outlined,
+                        color: colorScheme.primary.withOpacity(0.8)),
+                    filled: true,
+                    fillColor: colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: colorScheme.primary, width: 2.0)),
+                  ),
+                  validator: (value) => (value == null ||
+                          value.trim().isEmpty ||
+                          !value.contains('@'))
+                      ? l10n.emailValidation
+                      : null,
                 ),
                 const SizedBox(height: 16.0),
 
-                // --- Password Field ---
+                // TRƯỜNG NHẬP MẬT KHẨU
                 TextFormField(
                   controller: _passwordController,
+                  enabled: !isLoading,
+                  obscureText: !_obscurePassword,
+                  textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
-                    labelText: l10n.passwordLabel, // Dùng key đã có
-                    prefixIcon: const Icon(Icons.lock),
-                    border: const OutlineInputBorder(),
-                    // <<< THÊM ICON HIỆN/ẨN MẬT KHẨU >>>
+                    labelText: l10n.passwordLabel,
+                    prefixIcon: Icon(Icons.lock_outline,
+                        color: colorScheme.primary.withOpacity(0.8)),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
+                      icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: colorScheme.onSurface.withOpacity(0.6)),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
+                    filled: true,
+                    fillColor: colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: colorScheme.primary, width: 2.0)),
                   ),
-                  obscureText: _obscurePassword, // <<< DÙNG BIẾN STATE
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    if (value == null || value.isEmpty || value.length < 6) {
-                      return l10n.passwordValidation; // Dùng key đã có
-                    }
-                    return null;
-                  },
+                  validator: (value) => (value == null || value.length < 6)
+                      ? l10n.passwordValidation
+                      : null,
                 ),
                 const SizedBox(height: 16.0),
 
-                // --- Confirm Password Field ---
+                // TRƯỜNG XÁC NHẬN MẬT KHẨU
                 TextFormField(
                   controller: _confirmPasswordController,
+                  enabled: !isLoading,
+                  obscureText: !_obscureConfirmPassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: isLoading ? null : (_) => _signUp(),
                   decoration: InputDecoration(
-                    // <<< SỬA LABEL >>>
-                    labelText: l10n
-                        .confirmPasswordLabel, // TODO: Thêm key 'confirmPasswordLabel'
-                    prefixIcon:
-                        const Icon(Icons.lock_outline), // Icon khác chút
-                    border: const OutlineInputBorder(),
-                    // <<< THÊM ICON HIỆN/ẨN MẬT KHẨU >>>
+                    labelText: l10n.confirmPasswordLabel,
+                    prefixIcon: Icon(Icons.lock_person_outlined,
+                        color: colorScheme.primary.withOpacity(0.8)),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () {
-                        setState(() =>
-                            _obscureConfirmPassword = !_obscureConfirmPassword);
-                      },
+                      icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: colorScheme.onSurface.withOpacity(0.6)),
+                      onPressed: () => setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword),
                     ),
+                    filled: true,
+                    fillColor: colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: colorScheme.primary, width: 2.0)),
                   ),
-                  obscureText: _obscureConfirmPassword, // <<< DÙNG BIẾN STATE
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      // <<< SỬA VALIDATION MESSAGE >>>
-                      return l10n
-                          .confirmPasswordValidationEmpty; // TODO: Thêm key 'confirmPasswordValidationEmpty'
-                    }
-                    if (value != _passwordController.text) {
-                      // <<< SỬA VALIDATION MESSAGE >>>
-                      return l10n
-                          .confirmPasswordValidationMatch; // TODO: Thêm key 'confirmPasswordValidationMatch'
-                    }
-                    return null;
-                  },
+                  validator: (value) => (value != _passwordController.text)
+                      ? l10n.confirmPasswordValidationMatch
+                      : null,
+                ),
+                const SizedBox(height: 32.0),
+
+                // NÚT ĐĂNG KÝ
+                ElevatedButton(
+                  onPressed: isLoading ? null : _signUp,
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 3, color: Colors.white),
+                        )
+                      : Text(l10n.signUpButton.toUpperCase()),
                 ),
                 const SizedBox(height: 24.0),
 
-                // --- Sign Up Button ---
-                ElevatedButton(
-                  onPressed: isLoading ? null : _signUp,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15.0),
-                    textStyle: const TextStyle(fontSize: 16),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(/* ... Indicator ... */)
-                      // <<< SỬA TEXT NÚT >>>
-                      : Text(
-                          l10n.signUpButton), // TODO: Thêm key 'signUpButton'
-                ),
-                const SizedBox(height: 20.0),
-
-                // --- Link to Login ---
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () {
-                          // Quay lại màn hình Login
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          } else {
-                            // Dự phòng nếu không thể pop (ví dụ: vào thẳng màn Sign Up)
-                            Navigator.pushReplacementNamed(
-                                context, '/login'); // Giả sử có route '/login'
-                          }
-                        },
-                  // <<< SỬA TEXT LINK >>>
-                  child: Text(l10n
-                      .loginPrompt), // TODO: Thêm key 'loginPrompt' ("Already have an account? Login")
+                // LINK QUAY LẠI ĐĂNG NHẬP
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(l10n.loginPrompt, style: textTheme.bodyMedium),
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.of(context).pop(),
+                      child: Text(
+                        l10n.signInButton,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

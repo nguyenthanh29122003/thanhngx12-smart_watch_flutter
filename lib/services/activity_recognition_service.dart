@@ -20,7 +20,7 @@ import '../app_constants.dart';
 
 // --- Hằng số Model ---
 const String TFLITE_MODEL_HAR_FILE =
-    'assets/ml_models/HAR_CNN_1D_Custom_best_val_accuracy_float32.tflite';
+    'assets/ml_models/HAR_CNN_1D_Custom_best_val_accuracy_int8.tflite';
 const String SCALER_PARAMS_FILE = 'assets/ml_models/scaler_params.json';
 const int HAR_WINDOW_SIZE = 20;
 const int HAR_NUM_FEATURES = 6;

@@ -776,7 +776,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get statusReconnecting => 'Đang kết nối lại...';
+  String get statusReconnecting => 'Đang thử kết nối lại...';
 
   @override
   String get reconnectingTooltip => 'Đang thử kết nối lại...';
@@ -933,16 +933,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get activityError => 'Lỗi Hoạt động';
 
   @override
-  String get activitySummaryTitle => 'Tổng kết Hoạt động Hôm nay';
+  String get activitySummaryTitle => 'Tổng quan Hoạt động';
 
   @override
-  String get activitySummaryNoData => 'Không có dữ liệu hoạt động cho hôm nay.';
+  String get activitySummaryNoData => 'Chưa có đủ dữ liệu hoạt động được ghi nhận hôm nay.';
 
   @override
   String get activitySummaryNoDataToDisplay => 'Không có hoạt động nào đáng kể để hiển thị.';
 
   @override
-  String get activitySummaryDetailScreenTitle => 'Chi tiết Hoạt động';
+  String get activitySummaryDetailScreenTitle => 'Dòng thời gian Hoạt động';
 
   @override
   String get sectionActivityRecognition => 'Cảnh báo Hoạt động';
@@ -951,7 +951,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingUserWeightTitle => 'Cân nặng của bạn';
 
   @override
-  String get settingUserWeightDesc => 'Dùng để tính toán calo chính xác hơn';
+  String get settingUserWeightDesc => 'Dùng để tính toán calo tiêu thụ chính xác hơn';
 
   @override
   String get settingUserWeightLabel => 'Cân nặng';
@@ -976,5 +976,142 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingSmartRemindersTitle => 'Bật Nhắc nhở Thông minh';
 
   @override
-  String get settingSmartRemindersDesc => 'Nhận các nhắc nhở nhẹ trước khi có cảnh báo chính';
+  String get settingSmartRemindersDesc => 'Nhận nhắc nhở nhẹ trước khi có cảnh báo chính';
+
+  @override
+  String get signUpSubtitle => 'Tạo tài khoản để bắt đầu theo dõi sức khỏe';
+
+  @override
+  String get historyAndTrendsTitle => 'Lịch sử & Xu hướng';
+
+  @override
+  String get greetingGoodMorning => 'Chào buổi sáng,';
+
+  @override
+  String get greetingGoodAfternoon => 'Chào buổi chiều,';
+
+  @override
+  String get greetingGoodEvening => 'Chào buổi tối,';
+
+  @override
+  String get hrTabTitle => 'Nhịp tim';
+
+  @override
+  String get spo2TabTitle => 'SpO2';
+
+  @override
+  String get stepsTabTitle => 'Bước chân';
+
+  @override
+  String get mainGoalTitle => 'Hôm nay';
+
+  @override
+  String stepsOutOfGoal(Object goal) {
+    return '/ $goal bước';
+  }
+
+  @override
+  String get chartNotEnoughData => 'Không có đủ dữ liệu để vẽ biểu đồ.';
+
+  @override
+  String get chartInfo => 'Thông tin:';
+
+  @override
+  String get errorLoadingRelatives => 'Lỗi Tải Người thân';
+
+  @override
+  String get quoteGoalAchieved1 => 'Thật không thể tin được! Bạn đã làm được!';
+
+  @override
+  String get quoteGoalAchieved2 => 'Đã hoàn thành mục tiêu! Bạn là một ngôi sao ⭐';
+
+  @override
+  String get quoteAlmostThere1 => 'Bạn gần đạt được rồi, cố lên!';
+
+  @override
+  String get quoteAlmostThere2 => 'Chỉ một chút nữa thôi!';
+
+  @override
+  String get quoteGoodStart1 => 'Một khởi đầu tuyệt vời!';
+
+  @override
+  String get quoteGoodStart2 => 'Mỗi bước đi đều có giá trị. Làm tốt lắm!';
+
+  @override
+  String get quoteKeepGoing1 => 'Hành trình vạn dặm bắt đầu từ một bước chân.';
+
+  @override
+  String get quoteKeepGoing2 => 'Hãy cùng vận động nào!';
+
+  @override
+  String get otherGoalsTitle => 'Các Mục tiêu khác';
+
+  @override
+  String get sleepGoalTitle => 'Mục tiêu Giấc ngủ';
+
+  @override
+  String get caloriesGoalTitle => 'Mục tiêu Calo';
+
+  @override
+  String get sectionAppearanceAndLang => 'Giao diện & Ngôn ngữ';
+
+  @override
+  String get totalActiveTimeTodayTitle => 'Tổng Thời gian Hoạt động Hôm nay';
+
+  @override
+  String durationSeconds(int seconds) {
+    return '$seconds giây';
+  }
+
+  @override
+  String durationMinutes(int minutes) {
+    return '$minutes phút';
+  }
+
+  @override
+  String durationMinutesAndSeconds(int minutes, int seconds) {
+    return '$minutes phút $seconds giây';
+  }
+
+  @override
+  String durationLabel(String duration) {
+    return 'Thời lượng: $duration';
+  }
+
+  @override
+  String get activityHistoryTitle => 'Lịch sử Hoạt động';
+
+  @override
+  String get comingSoon => 'Sắp ra mắt';
+
+  @override
+  String get sectionActivitySettings => 'Cảnh báo Hoạt động';
+
+  @override
+  String get settingSittingWarning => 'Cảnh báo Ngồi Lâu';
+
+  @override
+  String get settingSmartReminders => 'Nhắc nhở Thông minh';
+
+  @override
+  String minutesLabel(int minutes) {
+    return '$minutes phút';
+  }
+
+  @override
+  String get settingLyingWarning => 'Cảnh báo Nằm Lâu (Ban ngày)';
+
+  @override
+  String hoursLabel(int hours) {
+    return '$hours giờ';
+  }
+
+  @override
+  String get settingUserWeight => 'Cân nặng của bạn';
+
+  @override
+  String get errorFieldRequired => 'Bắt buộc';
+
+  @override
+  String get errorWeightRange => 'Vui lòng nhập cân nặng hợp lệ (20-200kg)';
 }

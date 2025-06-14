@@ -1,6 +1,7 @@
 // lib/screens/config/wifi_config_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/ble_provider.dart';
 import '../../services/ble_service.dart';
 import '../../generated/app_localizations.dart';
@@ -13,12 +14,13 @@ class WifiConfigScreen extends StatefulWidget {
 }
 
 class _WifiConfigScreenState extends State<WifiConfigScreen> {
+  // --- STATE VÀ LOGIC CỦA BẠN (ĐÃ TỐT, GIỮ NGUYÊN) ---
   final _formKey = GlobalKey<FormState>();
   final _ssidController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSending = false;
-  bool _isPasswordVisible = false; // Để ẩn/hiện mật khẩu
-  final bool _isOpenNetwork = false; // Trạng thái checkbox mạng mở
+  bool _isPasswordVisible = false;
+  bool _isOpenNetwork = false;
 
   @override
   void dispose() {
@@ -36,149 +38,184 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
       final password = _isOpenNetwork ? "" : _passwordController.text;
       final l10n = AppLocalizations.of(context)!;
 
-      // Kiểm tra lại trạng thái kết nối trước khi gửi
       if (bleProvider.connectionStatus.value != BleConnectionStatus.connected) {
         if (mounted) {
-          // >>> SỬA DÒNG NÀY <<<
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              // <<< Thêm SnackBar(...)
-              content: Text(l10n.wifiConfigDeviceNotConnectedError),
-              backgroundColor: Colors.orangeAccent,
-            ),
-          );
-          // >>> KẾT THÚC SỬA <<<
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.wifiConfigDeviceNotConnectedError),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ));
         }
         setState(() => _isSending = false);
-        return; // Không gửi nếu không kết nối
+        return;
       }
-
-      print(
-        "Sending WiFi Config - SSID: $ssid, Password: ${_isOpenNetwork ? '<Open Network>' : '********'}",
-      );
 
       final success = await bleProvider.sendWifiConfig(ssid, password);
 
       if (mounted) {
         setState(() => _isSending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success
-                ? l10n.wifiConfigSentSuccess
-                : l10n.wifiConfigSentError),
-            backgroundColor: success ? Colors.green : Colors.redAccent,
-          ),
-        );
-        // if (success) { /* ... Tùy chọn pop màn hình ... */ }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              success ? l10n.wifiConfigSentSuccess : l10n.wifiConfigSentError),
+          backgroundColor:
+              success ? Colors.green : Theme.of(context).colorScheme.error,
+        ));
+        if (success) {
+          Future.delayed(
+              const Duration(seconds: 1), () => Navigator.of(context).pop());
+        }
       }
     }
   }
 
+  // --- HÀM BUILD ĐƯỢC THIẾT KẾ LẠI HOÀN TOÀN ---
   @override
   Widget build(BuildContext context) {
-    final connectionStatus =
-        context.watch<BleProvider>().connectionStatus.value;
-    final isConnected = connectionStatus == BleConnectionStatus.connected;
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final isConnected = context.watch<BleProvider>().connectionStatus.value ==
+        BleConnectionStatus.connected;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.configureWifiTitle)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.wifiConfigInstruction, // <<< DÙNG KEY
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24.0),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.router_outlined,
+                    size: 64, color: theme.colorScheme.secondary),
+                const SizedBox(height: 16),
+                Text(l10n.wifiConfigInstruction,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.textTheme.bodyLarge?.color?.withOpacity(0.8),
+                    )),
+                const SizedBox(height: 32.0),
 
-              // --- SSID Field ---
-              TextFormField(
-                controller: _ssidController,
-                decoration: InputDecoration(
-                  labelText: l10n.wifiSsidLabel, // <<< DÙNG KEY
-                  prefixIcon: const Icon(Icons.wifi),
-                  border: const OutlineInputBorder(),
-                  hintText: l10n.wifiSsidHint, // <<< DÙNG KEY
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return l10n.wifiSsidValidation; // <<< DÙNG KEY
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16.0),
-
-              // --- Password Field (Ẩn/Hiện dựa trên _isOpenNetwork) ---
-              // --- Password Field ---
-              if (!_isOpenNetwork)
+                // SSID Field (sử dụng style từ theme)
                 TextFormField(
-                  controller: _passwordController,
+                  controller: _ssidController,
+                  enabled: !_isSending,
                   decoration: InputDecoration(
-                    labelText: l10n.wifiPasswordLabel, // <<< DÙNG KEY
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(_isPasswordVisible
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
+                    labelText: l10n.wifiSsidLabel,
+                    hintText: l10n.wifiSsidHint,
+                    prefixIcon: Icon(Icons.wifi,
+                        color: theme.colorScheme.primary.withOpacity(0.8)),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide(
+                            color: theme.colorScheme.primary, width: 2.0)),
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? l10n.wifiSsidValidation
+                      : null,
+                ),
+                const SizedBox(height: 16.0),
+
+                // Password Field với hiệu ứng
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
+                  child: !_isOpenNetwork
+                      ? TextFormField(
+                          key: const ValueKey('password_field'),
+                          controller: _passwordController,
+                          enabled: !_isSending,
+                          obscureText: !_isPasswordVisible,
+                          decoration: InputDecoration(
+                            labelText: l10n.wifiPasswordLabel,
+                            prefixIcon: Icon(Icons.lock_outline,
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.8)),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                  _isPasswordVisible
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.6)),
+                              onPressed: () => setState(() =>
+                                  _isPasswordVisible = !_isPasswordVisible),
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(
+                                    color: theme.colorScheme.primary,
+                                    width: 2.0)),
+                          ),
+                          validator: (value) => (value != null &&
+                                  value.isNotEmpty &&
+                                  value.length < 8)
+                              ? l10n.wifiPasswordValidationLength
+                              : null,
+                        )
+                      : const SizedBox(
+                          height: 56, key: ValueKey('empty_space')),
+                ),
+                const SizedBox(height: 8.0),
+
+                // Checkbox được style lại
+                CheckboxListTile(
+                  title: Text(l10n.wifiOpenNetworkCheckbox,
+                      style: theme.textTheme.bodyMedium),
+                  value: _isOpenNetwork,
+                  // <<< SỬA LỖI LOGIC: Thêm setState >>>
+                  onChanged: _isSending
+                      ? null
+                      : (bool? value) {
+                          setState(() {
+                            _isOpenNetwork = value ?? false;
+                            if (_isOpenNetwork) _passwordController.clear();
+                          });
+                        },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: theme.colorScheme.secondary,
+                ),
+                const SizedBox(height: 32.0),
+
+                // Nút Gửi (style từ theme)
+                ElevatedButton(
+                  onPressed: (!isConnected || _isSending) ? null : _sendConfig,
+                  child: _isSending
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 3, color: Colors.white),
+                        )
+                      : Text(l10n.sendWifiConfigButton.toUpperCase()),
+                ),
+
+                const SizedBox(height: 16.0),
+                if (!isConnected)
+                  AnimatedOpacity(
+                    opacity: isConnected ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 400),
+                    child: Text(
+                      l10n.deviceNotConnectedToSend,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
-                  obscureText: !_isPasswordVisible,
-                  validator: (value) {
-                    if (!_isOpenNetwork) {
-                      if (value != null &&
-                          value.isNotEmpty &&
-                          value.length < 8) {
-                        return l10n
-                            .wifiPasswordValidationLength; // <<< DÙNG KEY
-                      }
-                    }
-                    return null;
-                  },
-                ),
-              if (_isOpenNetwork)
-                const SizedBox(
-                    height:
-                        75), // Giữ bố cục/ Chiều cao tương đương TextFormField+padding
-
-              // --- Checkbox Mạng Mở ---
-              // --- Checkbox Mạng Mở ---
-              CheckboxListTile(
-                title: Text(l10n.wifiOpenNetworkCheckbox), // <<< DÙNG KEY
-                value: _isOpenNetwork,
-                onChanged: (bool? value) {/* ... logic giữ nguyên ... */},
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 24.0),
-              // --- Send Button ---
-              ElevatedButton.icon(
-                icon: _isSending ? Container() : const Icon(Icons.send),
-                label: _isSending
-                    ? const SizedBox(/* ... loading indicator ... */)
-                    : Text(l10n.sendWifiConfigButton), // <<< DÙNG KEY
-                onPressed: (!isConnected || _isSending) ? null : _sendConfig,
-                style: ElevatedButton.styleFrom(/* ... style ... */),
-              ),
-              const SizedBox(height: 12.0),
-              if (!isConnected)
-                Text(
-                  l10n.deviceNotConnectedToSend, // <<< DÙNG KEY
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
