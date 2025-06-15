@@ -1,5 +1,6 @@
 // lib/models/activity_segment.dart
-import 'package:cloud_firestore/cloud_firestore.dart'; // Cần cho Timestamp
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/local_db_service.dart';
 
 class ActivitySegment {
   final int? id;
@@ -49,32 +50,31 @@ class ActivitySegment {
   Map<String, dynamic> toMap() {
     // Dùng cho SQLite
     return {
-      // 'id' sẽ được SQLite tự tạo nếu là null khi insert
-      if (id != null) 'id': id, // Chỉ thêm id vào map nếu nó không null
+      // <<< SỬA Ở ĐÂY: Dùng hằng số từ LocalDbService >>>
+      if (id != null) LocalDbService.columnId: id,
       'activityName': activityName,
-      'startTime': startTime.toIso8601String(), // UTC
-      'endTime': endTime.toIso8601String(), // UTC
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
       'durationInSeconds': durationInSeconds,
       'caloriesBurned': caloriesBurned,
       'userId': userId,
-      'is_synced': isSynced ? 1 : 0, // <<< THÊM MỚI: Lưu 0 hoặc 1 vào SQLite
+      LocalDbService.columnIsSynced: isSynced ? 1 : 0, // Dùng hằng số
     };
   }
 
   factory ActivitySegment.fromMap(Map<String, dynamic> map) {
     // Đọc từ SQLite
     return ActivitySegment(
-      id: map['id'] as int?,
+      // <<< SỬA Ở ĐÂY: Dùng hằng số từ LocalDbService >>>
+      id: map[LocalDbService.columnId] as int?,
       activityName: map['activityName'] as String,
-      startTime: DateTime.parse(map['startTime'] as String)
-          .toUtc(), // Đảm bảo đọc là UTC
-      endTime: DateTime.parse(map['endTime'] as String)
-          .toUtc(), // Đảm bảo đọc là UTC
+      startTime: DateTime.parse(map['startTime'] as String).toUtc(),
+      endTime: DateTime.parse(map['endTime'] as String).toUtc(),
       durationInSeconds: map['durationInSeconds'] as int,
       caloriesBurned: map['caloriesBurned'] as double?,
       userId: map['userId'] as String?,
-      isSynced:
-          (map['is_synced'] as int? ?? 0) == 1, // <<< THÊM MỚI: Đọc từ SQLite
+      isSynced: (map[LocalDbService.columnIsSynced] as int? ?? 0) ==
+          1, // Dùng hằng số
     );
   }
 

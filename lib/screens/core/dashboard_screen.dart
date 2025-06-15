@@ -549,8 +549,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       // Biểu đồ tròn tóm tắt hoạt động
                       GestureDetector(
                         onTap: () {
-                          // <<< SỬA Ở ĐÂY >>>
-                          // Chỉ giữ lại logic điều hướng, xóa bỏ SnackBar.
                           Navigator.push(
                             context,
                             MaterialPageRoute(

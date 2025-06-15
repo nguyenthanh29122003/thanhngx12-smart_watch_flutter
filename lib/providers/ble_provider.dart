@@ -46,7 +46,7 @@ class BleProvider with ChangeNotifier {
     _listenToStatusUpdates();
     _listenToDeviceReady();
     _listenToScanResults();
-    _tryReconnectOnInit();
+    // _tryReconnectOnInit();
     print("[BleProvider] Initialized and subscribed to BleService streams.");
   }
 
@@ -268,20 +268,17 @@ class BleProvider with ChangeNotifier {
   // --- Dispose ---
   @override
   void dispose() {
-    print("Disposing BleProvider...");
+    if (kDebugMode) print("[BleProvider] Disposing...");
     _mounted = false;
     _healthDataSub?.cancel();
     _connectionStatusSub?.cancel();
     _statusDataSub?.cancel();
     _deviceReadySub?.cancel();
-    if (_scanResultsListener != null) {
+    if (_scanResultsListener != null)
       _bleService.scanResults.removeListener(_scanResultsListener!);
-    }
     latestHealthDataNotifier.dispose();
     deviceWifiStatusNotifier.dispose();
     isReconnectingNotifier.dispose();
-    _bleService.setAutoReconnect(false);
-    print("BleProvider disposed.");
     super.dispose();
   }
 
