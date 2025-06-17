@@ -1,8 +1,6 @@
-// lib/services/activity_recognition_service.dart
-
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data'; // Cần cho Int8List
+import 'dart:typed_data'; // Cần cho Float32List
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -17,16 +15,16 @@ import 'auth_service.dart';
 import '../app_constants.dart';
 
 // ===================================================================
-// HẰNG SỐ CỦA MÔ HÌNH (Lấy từ Notebook)
+// HẰNG SỐ CỦA MÔ HÌNH
 // ===================================================================
 const String TFLITE_MODEL_HAR_FILE =
-    'assets/ml_models/HAR_CNN_1D_Custom_best_val_accuracy_int8.tflite';
+    'assets/ml_models/HAR_CNN_1D_Custom_best_val_accuracy_float32_V2.tflite'; // Cập nhật tên file mô hình float32
 const String SCALER_PARAMS_FILE = 'assets/ml_models/scaler_params.json';
 
 const int HAR_WINDOW_SIZE = 20;
 const int HAR_NUM_FEATURES = 6;
-const int HAR_STEP_SIZE = 10; // Cửa sổ trượt đi 10 mẫu (overlap 50%)
-const int HAR_SAMPLING_FREQUENCY_HZ = 1; // 1 Hz
+const int HAR_STEP_SIZE = 10;
+const int HAR_SAMPLING_FREQUENCY_HZ = 1;
 const int HAR_NUM_CLASSES = 5;
 
 const Map<int, String> HAR_ACTIVITY_LABELS = {
@@ -72,8 +70,6 @@ class ActivityRecognitionService {
   // --- TFLite & Scaler ---
   Interpreter? _harInterpreter;
   bool _isHarModelLoaded = false;
-  QuantizationParams? _inputQuantizationParams;
-  QuantizationParams? _outputQuantizationParams;
   List<double>? _scalerMeans;
   List<double>? _scalerStdDevs;
 
@@ -109,7 +105,7 @@ class ActivityRecognitionService {
   Timer? _lyingWarningResetTimer;
   Timer? _periodicAnalysisTimer;
 
-  // Các biến cấu hình (sẽ được cập nhật bởi applySettings)
+  // Các biến cấu hình
   Duration _sittingWarningThreshold =
       AppConstants.defaultSittingWarningThreshold;
   Duration _lyingDaytimeWarningThreshold =
@@ -134,6 +130,44 @@ class ActivityRecognitionService {
     await _loadResources();
   }
 
+  Future<void> _loadResources() async {
+    if (_isDisposed || _isHarModelLoaded) return;
+
+    if (kDebugMode)
+      print("[ARService] Loading HAR TFLite model and Scaler params...");
+
+    try {
+      _harInterpreter = await Interpreter.fromAsset(TFLITE_MODEL_HAR_FILE);
+      final scalerJsonString = await rootBundle.loadString(SCALER_PARAMS_FILE);
+      final scalerData = jsonDecode(scalerJsonString) as Map<String, dynamic>;
+      _scalerMeans = (scalerData['mean'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      _scalerStdDevs = (scalerData['std_dev'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList();
+
+      if (_harInterpreter != null &&
+          _scalerMeans != null &&
+          _scalerStdDevs != null) {
+        _isHarModelLoaded = true;
+
+        if (kDebugMode) {
+          print("[ARService] Float32 Model and Scaler loaded successfully.");
+        }
+        await _restoreLastKnownActivity();
+      } else {
+        throw Exception("Interpreter or Scaler Params are null after loading.");
+      }
+    } catch (e) {
+      if (kDebugMode) print("!!! [ARService] Error loading resources: $e");
+      _isHarModelLoaded = false;
+      if (!_activityPredictionController.isClosed) {
+        _activityPredictionController.addError("Failed to load ML model");
+      }
+    }
+  }
+
   void startProcessingHealthData(Stream<HealthData> healthDataStream) {
     if (_isDisposed || !_isHarModelLoaded) {
       if (kDebugMode) print("[ARService] Model not ready. Retrying load...");
@@ -156,15 +190,18 @@ class ActivityRecognitionService {
       const Duration(milliseconds: 1000 ~/ HAR_SAMPLING_FREQUENCY_HZ),
       trailing: true,
     )
-        // <<< SỬA LỖI Ở ĐÂY: Thêm (event) {} để Dart hiểu kiểu dữ liệu >>>
         .listen((event) {
-      // Biến event ở đây có thể là dynamic, chúng ta cần đảm bảo nó là HealthData
-      // Mặc dù trong trường hợp này, trình phân tích của Dart thường đủ thông minh,
-      // nhưng để chắc chắn, ta có thể kiểm tra kiểu.
       if (event is HealthData) {
         if (_isDisposed) return;
-        _processImuSample(
-            [event.ax, event.ay, event.az, event.gx, event.gy, event.gz]);
+        final List<double> imuSample = [
+          event.ax,
+          event.ay,
+          event.az,
+          event.gx,
+          event.gy,
+          event.gz,
+        ].cast<double>();
+        _processImuSample(imuSample);
       }
     }, onError: (error) {
       if (kDebugMode) {
@@ -177,63 +214,42 @@ class ActivityRecognitionService {
         _periodicAnalysisInterval, (_) => _runPeriodicAnalysis());
   }
 
-  // void _processImuSample(List<double> imuSample) {
-  //   // Thêm mẫu mới vào buffer
-  //   _imuDataBuffer.add(imuSample);
-
-  //   // Nếu buffer có nhiều hơn số mẫu cần thiết cho 1 cửa sổ,
-  //   // xóa bớt mẫu cũ nhất đi để đảm bảo cửa sổ luôn "trượt" về phía trước.
-  //   while (_imuDataBuffer.length > HAR_WINDOW_SIZE) {
-  //     _imuDataBuffer.removeAt(0);
-  //   }
-
-  //   // Chỉ khi buffer có chính xác số lượng mẫu cần thiết (20), thì mới chạy dự đoán.
-  //   // Điều này đảm bảo rằng mỗi lần dự đoán đều dựa trên một cửa sổ dữ liệu hoàn chỉnh.
-  //   if (_imuDataBuffer.length == HAR_WINDOW_SIZE) {
-  //     // In log để xác nhận buffer đã đầy và inference sắp được gọi
-  //     if (kDebugMode) {
-  //       print(
-  //           "[ARService] Buffer is full (${_imuDataBuffer.length}/$HAR_WINDOW_SIZE). Running inference...");
-  //     }
-  //     _runInferenceOnWindow(List.from(_imuDataBuffer)); // Chạy trên một bản sao
-  //   } else {
-  //     // In log để biết buffer đang được lấp đầy, giúp gỡ lỗi
-  //     if (kDebugMode) {
-  //       print(
-  //           "[ARService] Filling buffer: ${_imuDataBuffer.length}/$HAR_WINDOW_SIZE");
-  //     }
-  //   }
-  // }
-
   void _processImuSample(List<double> imuSample) {
     if (_isDisposed ||
         !_isHarModelLoaded ||
         imuSample.length != HAR_NUM_FEATURES) {
+      if (kDebugMode) {
+        print(
+            "[ARService] Invalid sample: length=${imuSample.length}, expected=$HAR_NUM_FEATURES");
+      }
+      return;
+    }
+
+    if (!imuSample.every((element) => element is double && element.isFinite)) {
+      if (kDebugMode) {
+        print(
+            "[ARService] Invalid sample: contains non-double or non-finite values: $imuSample");
+      }
       return;
     }
 
     _imuDataBuffer.add(imuSample);
 
-    // LOGIC CỬA SỔ TRƯỢT ĐÚNG: Luôn giữ buffer có kích thước tối đa là WINDOW_SIZE
     while (_imuDataBuffer.length > HAR_WINDOW_SIZE) {
-      _imuDataBuffer.removeAt(0); // Xóa mẫu cũ nhất
+      _imuDataBuffer.removeAt(0);
     }
 
-    // In log để theo dõi
     if (kDebugMode) {
       print(
           "[ARService] Filling buffer: ${_imuDataBuffer.length}/$HAR_WINDOW_SIZE");
     }
 
-    // Chỉ khi buffer ĐỦ 20 MẪU, mới chạy dự đoán.
     if (_imuDataBuffer.length == HAR_WINDOW_SIZE) {
       if (kDebugMode) {
         print(">>> Buffer is full. Running inference on current window.");
       }
-      // Tạo bản sao với kiểu dữ liệu tường minh để tránh lỗi
       final List<List<double>> windowData =
           _imuDataBuffer.map((sample) => List<double>.from(sample)).toList();
-
       _runInferenceOnWindow(windowData);
     }
   }
@@ -241,70 +257,53 @@ class ActivityRecognitionService {
   void _runInferenceOnWindow(List<List<double>> windowData) {
     if (_harInterpreter == null ||
         _scalerMeans == null ||
-        _scalerStdDevs == null ||
-        _inputQuantizationParams == null ||
-        _outputQuantizationParams == null) {
+        _scalerStdDevs == null) {
       if (kDebugMode)
         print("[ARService] Inference skipped: resources not ready.");
       return;
     }
 
-    // --- BƯỚC 1 & 2: CHUẨN BỊ, SCALE VÀ LƯỢNG TỬ HÓA ĐẦU VÀO ---
-    final inputScale = _inputQuantizationParams!.scale;
-    final inputZeroPoint = _inputQuantizationParams!.zeroPoint;
-
-    // Tạo một list 2D phẳng trước
-    var flatQuantizedInput = Int8List(HAR_WINDOW_SIZE * HAR_NUM_FEATURES);
+    // --- BƯỚC 1: CHUẨN HÓA ĐẦU VÀO ---
+    // Tạo một Float32List phẳng trước
+    var flatInput = Float32List(HAR_WINDOW_SIZE * HAR_NUM_FEATURES);
     int index = 0;
     for (int i = 0; i < HAR_WINDOW_SIZE; i++) {
       for (int j = 0; j < HAR_NUM_FEATURES; j++) {
         double stdDev =
             _scalerStdDevs![j].abs() < 1e-9 ? 1.0 : _scalerStdDevs![j];
-        final scaledValue = (windowData[i][j] - _scalerMeans![j]) / stdDev;
-        flatQuantizedInput[index++] =
-            (scaledValue / inputScale + inputZeroPoint).round();
+        flatInput[index++] =
+            ((windowData[i][j] - _scalerMeans![j]) / stdDev).toDouble();
       }
     }
 
-    // <<< SỬA LỖI QUAN TRỌNG: Reshape thành đúng hình dạng [1, 20, 6] >>>
-    // TFLite interpreter rất nhạy cảm với hình dạng và kiểu dữ liệu.
-    var inputTensor =
-        flatQuantizedInput.reshape([1, HAR_WINDOW_SIZE, HAR_NUM_FEATURES]);
+    // Reshape thành hình dạng [1, 20, 6]
+    var inputTensor = flatInput.reshape([1, HAR_WINDOW_SIZE, HAR_NUM_FEATURES]);
 
-    // --- BƯỚC 3: CHUẨN BỊ TENSOR ĐẦU RA ---
-    // Tạo một list 2D phẳng
-    var flatOutputTensor = Int8List(1 * HAR_NUM_CLASSES);
-    // Reshape nó thành hình dạng mà interpreter mong đợi
+    // --- BƯỚC 2: CHUẨN BỊ TENSOR ĐẦU RA ---
+    var flatOutputTensor = Float32List(1 * HAR_NUM_CLASSES);
     var outputTensor = flatOutputTensor.reshape([1, HAR_NUM_CLASSES]);
 
-    // --- BƯỚC 4: CHẠY DỰ ĐOÁN (INFERENCE) ---
+    // --- BƯỚC 3: CHẠY DỰ ĐOÁN (INFERENCE) ---
     try {
       _harInterpreter!.run(inputTensor, outputTensor);
     } catch (e) {
       if (kDebugMode)
-        print("!!! [ARService] Error running INT8 model inference: $e");
+        print("!!! [ARService] Error running Float32 model inference: $e");
       return;
     }
 
-    // --- BƯỚC 5: GIẢI LƯỢNG TỬ HÓA ĐẦU RA ---
-    final outputScale = _outputQuantizationParams!.scale;
-    final outputZeroPoint = _outputQuantizationParams!.zeroPoint;
-
-    // Lấy dòng đầu tiên của outputTensor (vì batch size là 1)
-    List<double> probabilities = outputTensor[0].map((quantizedValue) {
-      return (quantizedValue - outputZeroPoint) * outputScale;
-    }).toList();
+    // --- BƯỚC 4: XỬ LÝ ĐẦU RA ---
+    List<double> probabilities = outputTensor[0].toList();
 
     // Debug log
     if (kDebugMode) {
-      print("--- Running INT8 Inference (SUCCESS) ---");
+      print("--- Running Float32 Inference (SUCCESS) ---");
       final probString =
           probabilities.map((p) => p.toStringAsFixed(3)).toList();
-      print("Dequantized Output Probabilities: $probString");
+      print("Output Probabilities: $probString");
     }
 
-    // --- BƯỚC 6: XỬ LÝ KẾT QUẢ ---
-    // ... (logic tìm max probability và gọi _handleActivityChange giữ nguyên) ...
+    // --- BƯỚC 5: XỬ LÝ KẾT QUẢ ---
     int predictedIndex = 0;
     double maxProbability = 0.0;
     for (int i = 0; i < probabilities.length; i++) {
@@ -319,52 +318,6 @@ class ActivityRecognitionService {
         maxProbability > AppConstants.harMinConfidenceThreshold) {
       if (predictedActivityName != _currentActivityInternal) {
         _handleActivityChange(predictedActivityName);
-      }
-    }
-  }
-
-  Future<void> _loadResources() async {
-    if (_isDisposed || _isHarModelLoaded) return;
-
-    if (kDebugMode)
-      print("[ARService] Loading HAR TFLite model and Scaler params...");
-
-    try {
-      _harInterpreter = await Interpreter.fromAsset(TFLITE_MODEL_HAR_FILE);
-      final scalerJsonString = await rootBundle.loadString(SCALER_PARAMS_FILE);
-      final scalerData = jsonDecode(scalerJsonString) as Map<String, dynamic>;
-      _scalerMeans = (scalerData['mean'] as List<dynamic>)
-          .map((e) => (e as num).toDouble())
-          .toList();
-      _scalerStdDevs = (scalerData['std_dev'] as List<dynamic>)
-          .map((e) => (e as num).toDouble())
-          .toList();
-
-      if (_harInterpreter != null &&
-          _scalerMeans != null &&
-          _scalerStdDevs != null) {
-        // Lấy và lưu tham số lượng tử hóa cho mô hình INT8
-        _inputQuantizationParams = _harInterpreter!.getInputTensor(0).params;
-        _outputQuantizationParams = _harInterpreter!.getOutputTensor(0).params;
-
-        _isHarModelLoaded = true;
-
-        if (kDebugMode) {
-          print("[ARService] INT8 Model and Scaler loaded successfully.");
-          print(
-              "  - Input Quantization: scale=${_inputQuantizationParams?.scale}, zeroPoint=${_inputQuantizationParams?.zeroPoint}");
-          print(
-              "  - Output Quantization: scale=${_outputQuantizationParams?.scale}, zeroPoint=${_outputQuantizationParams?.zeroPoint}");
-        }
-        await _restoreLastKnownActivity();
-      } else {
-        throw Exception("Interpreter or Scaler Params are null after loading.");
-      }
-    } catch (e) {
-      if (kDebugMode) print("!!! [ARService] Error loading resources: $e");
-      _isHarModelLoaded = false;
-      if (!_activityPredictionController.isClosed) {
-        _activityPredictionController.addError("Failed to load ML model");
       }
     }
   }
@@ -420,9 +373,6 @@ class ActivityRecognitionService {
     }
   }
 
-  // ===================================================================
-  // LOGIC XỬ LÝ DỮ LIỆU VÀ DỰ ĐOÁN
-  // ===================================================================
   void stopProcessingHealthData() {
     if (kDebugMode)
       print("[ARService] Stopping health data processing for HAR.");
@@ -443,10 +393,6 @@ class ActivityRecognitionService {
     }
     _saveLastKnownActivity();
   }
-
-  // ===================================================================
-  // LOGIC XỬ LÝ THAY ĐỔI HOẠT ĐỘNG VÀ CẢNH BÁO
-  // ===================================================================
 
   void _handleActivityChange(String newActivity,
       {bool isInitialRestore = false}) {
@@ -609,10 +555,6 @@ class ActivityRecognitionService {
     }
   }
 
-  // ===================================================================
-  // LƯU TRỮ DỮ LIỆU VÀ QUẢN LÝ VÒNG ĐỜI
-  // ===================================================================
-
   Future<void> _handleActivityEnd(String endedActivity) async {
     if (_isDisposed ||
         _currentActivityStartTime == null ||
@@ -635,7 +577,124 @@ class ActivityRecognitionService {
   }
 
   Future<void> _runPeriodicAnalysis() async {
-    // Logic này giữ nguyên như code của bạn
+    if (_isDisposed || _authService.currentUser == null) {
+      if (kDebugMode) {
+        print(
+            "[ARService] Skipping periodic analysis: Service disposed or user not logged in.");
+      }
+      return;
+    }
+
+    // Chỉ chạy phân tích nếu người dùng bật nhắc nhở thông minh
+    if (!_smartRemindersEnabled) {
+      if (kDebugMode)
+        print(
+            "[ARService] Skipping periodic analysis: Smart reminders are disabled.");
+      return;
+    }
+
+    final String currentUserId = _authService.currentUser!.uid;
+    final now = DateTime.now().toUtc();
+    final startTime = now.subtract(_periodicAnalysisInterval);
+
+    if (kDebugMode) {
+      print(
+          "[ARService] Running periodic analysis for the last ${_periodicAnalysisInterval.inHours} hour(s)...");
+    }
+
+    try {
+      // Lấy các phân đoạn hoạt động trong khoảng thời gian phân tích
+      final segments = await _localDbService.getActivitySegmentsForDateRange(
+        startTime,
+        now,
+        userId: currentUserId,
+      );
+
+      if (segments.isEmpty) {
+        if (kDebugMode)
+          print(
+              "[ARService] No activity segments found for periodic analysis.");
+        // Nếu không có hoạt động nào được ghi lại, có thể người dùng đang ở trạng thái tĩnh
+        // Kiểm tra hoạt động hiện tại để đưa ra nhắc nhở nếu cần
+        if (_currentActivityInternal == 'Sitting' ||
+            _currentActivityInternal == 'Lying') {
+          final warning = ActivityWarning(
+            type: ActivityWarningType.smartReminderToMove,
+            message:
+                "Có vẻ như bạn đã không vận động trong một khoảng thời gian. Hãy đứng dậy và đi lại một chút nhé!",
+            timestamp: now,
+          );
+          if (!_warningController.isClosed) _warningController.add(warning);
+        }
+        return;
+      }
+
+      int totalSittingSeconds = 0;
+      int totalLyingSeconds = 0;
+      int totalMovementSeconds = 0;
+
+      for (var segment in segments) {
+        switch (segment.activityName) {
+          case 'Sitting':
+            totalSittingSeconds += segment.durationInSeconds;
+            break;
+          case 'Lying':
+            totalLyingSeconds += segment.durationInSeconds;
+            break;
+          case 'Walking':
+          case 'Running':
+          case 'Standing':
+            totalMovementSeconds += segment.durationInSeconds;
+            break;
+        }
+      }
+
+      // Thêm thời gian của hoạt động hiện tại nếu nó là tĩnh
+      if (_currentActivityInternal == 'Sitting' &&
+          _currentActivityStartTime != null) {
+        totalSittingSeconds +=
+            now.difference(_currentActivityStartTime!).inSeconds;
+      } else if (_currentActivityInternal == 'Lying' &&
+          _currentActivityStartTime != null) {
+        totalLyingSeconds +=
+            now.difference(_currentActivityStartTime!).inSeconds;
+      }
+
+      final int totalSittingMinutes = totalSittingSeconds ~/ 60;
+      final int totalMovementMinutes = totalMovementSeconds ~/ 60;
+      final int totalMinutesInInterval = _periodicAnalysisInterval.inMinutes;
+
+      if (kDebugMode) {
+        print(
+            "[ARService] Analysis result: Sitting=${totalSittingMinutes}min, Movement=${totalMovementMinutes}min in a ${totalMinutesInInterval}min period.");
+      }
+
+      // Đưa ra nhắc nhở nếu thời gian ngồi quá nhiều
+      if (totalSittingMinutes > totalMinutesInInterval * 0.75) {
+        // Ví dụ: ngồi hơn 75% thời gian
+        final warning = ActivityWarning(
+          type: ActivityWarningType.smartReminderToMove,
+          message:
+              "Trong giờ qua, bạn đã ngồi khoảng $totalSittingMinutes phút. Hãy cố gắng vận động nhiều hơn trong giờ tới nhé!",
+          timestamp: now,
+        );
+        if (!_warningController.isClosed) _warningController.add(warning);
+      }
+      // Khen ngợi nếu người dùng vận động đủ nhiều
+      else if (totalMovementMinutes > totalMinutesInInterval * 0.20) {
+        // Ví dụ: vận động hơn 20% thời gian
+        final warning = ActivityWarning(
+          type: ActivityWarningType.positiveReinforcement,
+          message:
+              "Làm tốt lắm! Bạn đã vận động khoảng $totalMovementMinutes phút trong giờ qua. Hãy tiếp tục duy trì nhé!",
+          timestamp: now,
+        );
+        if (!_warningController.isClosed) _warningController.add(warning);
+      }
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error during periodic analysis: $e");
+    }
   }
 
   Future<void> _saveLastKnownActivity() async {
@@ -679,7 +738,31 @@ class ActivityRecognitionService {
   }
 
   Future<void> prepareForLogout() async {
+    if (kDebugMode) print("[ARService] Preparing for logout...");
     stopProcessingHealthData();
-    // Logic còn lại giữ nguyên
+
+    _currentActivityInternal = "Initializing...";
+    _currentActivityStartTime = null;
+    if (!_activityPredictionController.isClosed &&
+        _activityPredictionController.valueOrNull != _currentActivityInternal) {
+      _activityPredictionController.add(_currentActivityInternal);
+    }
+    _imuDataBuffer.clear();
+    _lastWarningTypeSent = null;
+    _hasWarnedForCurrentSitting = false;
+    _hasWarnedForCurrentLyingDaytime = false;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.prefKeyLastKnownActivity);
+      await prefs.remove(AppConstants.prefKeyLastKnownActivityTimestamp);
+      if (kDebugMode)
+        print(
+            "[ARService] Cleared last known activity from SharedPreferences.");
+    } catch (e) {
+      if (kDebugMode)
+        print("!!! [ARService] Error clearing SharedPreferences on logout: $e");
+    }
+    if (kDebugMode) print("[ARService] State prepared for logout.");
   }
 }
