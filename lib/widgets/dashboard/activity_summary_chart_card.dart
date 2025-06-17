@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:smart_wearable_app/models/activity_segment.dart';
+import 'package:smart_wearable_app/screens/core/activity_history_screen.dart';
 
 import '../../providers/dashboard_provider.dart';
 import '../../generated/app_localizations.dart';
-// import '../../screens/core/activity_history_screen.dart'; // Bỏ comment khi bạn tạo màn hình này
 
 // <<<<<<<<<<<<<<< BẮT ĐẦU CODE HOÀN CHỈNH >>>>>>>>>>>>>>>
 
@@ -21,52 +21,47 @@ class ActivitySummaryChartCard extends StatefulWidget {
 class _ActivitySummaryChartCardState extends State<ActivitySummaryChartCard> {
   int touchedIndex = -1;
 
-  // --- HÀM BUILD CHÍNH ---
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Card(
-      // Style card sẽ tự lấy từ AppTheme
-      elevation: 2.0, // Có thể giảm elevation cho thiết kế phẳng hơn
+      elevation: 2.0,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // Điều hướng đến màn hình chi tiết lịch sử hoạt động
-          // Navigator.push(context, MaterialPageRoute(builder: (context) => const ActivityHistoryScreen()));
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(l10n.comingSoon)));
+          // Điều hướng đến màn hình chi tiết
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ActivityHistoryScreen()));
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tiêu đề của card
+              // Tiêu đề
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    l10n.activitySummaryTitle, // Sử dụng key đã dịch
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  Text(l10n.activitySummaryTitle,
+                      style: theme.textTheme.titleMedium),
                   Icon(Icons.arrow_forward_ios_rounded,
                       size: 18, color: theme.unselectedWidgetColor)
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Consumer để lấy dữ liệu và rebuild khi cần
+              const SizedBox(height: 16),
+              // Nội dung biểu đồ
               Consumer<DashboardProvider>(
                 builder: (context, provider, child) {
                   return AnimatedSwitcher(
                     duration: const Duration(milliseconds: 350),
                     child: SizedBox(
-                      // Key để trigger animation khi trạng thái thay đổi
                       key: ValueKey(
                           'activity-summary-${provider.historyStatus}'),
-                      height: 180, // Chiều cao cố định
+                      height: 190, // Tăng chiều cao một chút
                       child: _buildChartContent(context, provider, l10n),
                     ),
                   );
@@ -79,114 +74,164 @@ class _ActivitySummaryChartCardState extends State<ActivitySummaryChartCard> {
     );
   }
 
-  // --- CÁC HÀM HELPER ĐỂ BUILD UI ---
+  // --- CÁC HÀM HELPER ---
 
-  // Quyết định nội dung cần hiển thị dựa trên trạng thái của provider
   Widget _buildChartContent(
       BuildContext context, DashboardProvider provider, AppLocalizations l10n) {
     switch (provider.historyStatus) {
       case HistoryStatus.loading:
       case HistoryStatus.initial:
         return const Center(child: CircularProgressIndicator());
-
       case HistoryStatus.error:
         return _MessageState(
             icon: Icons.error_outline_rounded,
             message: provider.historyError ?? l10n.chartCouldNotLoad,
             color: Theme.of(context).colorScheme.error);
-
       case HistoryStatus.loaded:
         final summary = provider.activitySummary;
-        // Tổng thời gian hoạt động
         final double totalSeconds = summary.fold(
             0, (prev, element) => prev + element.totalDuration.inSeconds);
 
         if (summary.isEmpty || totalSeconds < 60) {
-          // Nếu không có dữ liệu hoặc tổng thời gian quá ít
           return _MessageState(
               icon: Icons.insights_rounded,
               message: l10n.activitySummaryNoData,
               color: Theme.of(context).disabledColor);
         } else {
-          return _buildPieChart(context, summary, totalSeconds, l10n);
+          // <<< THAY ĐỔI LỚN Ở ĐÂY: DÙNG LAYOUTBUILDER >>>
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Nếu chiều rộng có sẵn nhỏ hơn 320 (một ngưỡng an toàn cho điện thoại nhỏ)
+              if (constraints.maxWidth < 320) {
+                // Sử dụng layout dạng CỘT
+                return _buildPieChartColumnLayout(
+                    context, summary, totalSeconds, l10n);
+              } else {
+                // Sử dụng layout dạng HÀNG (như cũ)
+                return _buildPieChartRowLayout(
+                    context, summary, totalSeconds, l10n);
+              }
+            },
+          );
         }
     }
   }
 
-  // Xây dựng giao diện biểu đồ tròn
-  Widget _buildPieChart(BuildContext context, List<ActivitySummaryData> summary,
-      double totalSeconds, AppLocalizations l10n) {
+  // --- LAYOUT DẠNG HÀNG (CHO MÀN HÌNH RỘNG) ---
+  Widget _buildPieChartRowLayout(
+      BuildContext context,
+      List<ActivitySummaryData> summary,
+      double totalSeconds,
+      AppLocalizations l10n) {
     return Row(
       children: <Widget>[
-        // --- Phần biểu đồ tròn ---
         Expanded(
-          flex: 2, // Biểu đồ chiếm ít không gian hơn
-          child: PieChart(
-            PieChartData(
-              pieTouchData: PieTouchData(
-                touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                  // Logic tương tác khi chạm vào biểu đồ
-                  setState(() {
-                    if (!event.isInterestedForInteractions ||
-                        pieTouchResponse == null ||
-                        pieTouchResponse.touchedSection == null) {
-                      touchedIndex = -1;
-                      return;
-                    }
-                    touchedIndex =
-                        pieTouchResponse.touchedSection!.touchedSectionIndex;
-                  });
-                },
-              ),
-              borderData: FlBorderData(show: false),
-              sectionsSpace: 2, // Khoảng cách giữa các phần
-              centerSpaceRadius: 30, // Tăng không gian ở giữa
-              sections: List.generate(summary.length, (i) {
-                final isTouched = (i == touchedIndex);
-                // Bán kính lớn hơn khi được chạm
-                final radius = isTouched ? 70.0 : 60.0;
-                final percentage =
-                    (summary[i].totalDuration.inSeconds / totalSeconds) * 100;
-
-                return PieChartSectionData(
-                  color: summary[i].color,
-                  value: summary[i].totalDuration.inSeconds.toDouble(),
-                  // Chỉ hiển thị % nếu nó đủ lớn để không gây rối
-                  title: (percentage > 8)
-                      ? '${percentage.toStringAsFixed(0)}%'
-                      : '',
-                  radius: radius,
-                  titleStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [Shadow(color: Colors.black45, blurRadius: 3)],
-                  ),
-                );
-              }),
-            ),
-            swapAnimationDuration: const Duration(milliseconds: 250),
-            swapAnimationCurve: Curves.easeInOut,
-          ),
+          flex: 3, // Biểu đồ chiếm nhiều không gian hơn một chút
+          child: _buildPieChart(summary, totalSeconds, l10n),
         ),
-
-        const SizedBox(width: 24),
-
-        // --- Phần Chú thích (Legend) ---
+        const SizedBox(width: 16),
         Expanded(
-          flex: 3, // Chú thích chiếm nhiều không gian hơn
-          child: ListView(
-            // Dùng ListView để có thể cuộn nếu danh sách hoạt động dài
-            children: summary.map((item) {
-              return _Indicator(
-                activity: item,
-                isTouched: (summary.indexOf(item) == touchedIndex),
-                l10n: l10n,
-              );
-            }).toList(),
-          ),
+          flex: 2, // Chú thích chiếm ít không gian hơn
+          child: _buildLegend(summary, l10n),
         ),
       ],
+    );
+  }
+
+  // --- LAYOUT DẠNG CỘT (CHO MÀN HÌNH HẸP) ---
+  Widget _buildPieChartColumnLayout(
+      BuildContext context,
+      List<ActivitySummaryData> summary,
+      double totalSeconds,
+      AppLocalizations l10n) {
+    return Column(
+      children: <Widget>[
+        Expanded(
+          flex: 2, // Biểu đồ chiếm không gian trên
+          child: _buildPieChart(summary, totalSeconds, l10n),
+        ),
+        const SizedBox(height: 16),
+        // Chú thích được đặt trong một GridView 2 cột để tiết kiệm không gian
+        Expanded(
+          flex: 1, // Chú thích chiếm không gian dưới
+          child: _buildLegend(summary, l10n, isGridView: true),
+        ),
+      ],
+    );
+  }
+
+  // --- WIDGET CHUNG ĐỂ VẼ BIỂU ĐỒ TRÒN ---
+  Widget _buildPieChart(List<ActivitySummaryData> summary, double totalSeconds,
+      AppLocalizations l10n) {
+    return PieChart(
+      PieChartData(
+        pieTouchData: PieTouchData(
+          touchCallback: (FlTouchEvent event, pieTouchResponse) {
+            setState(() {
+              if (!event.isInterestedForInteractions ||
+                  pieTouchResponse == null ||
+                  pieTouchResponse.touchedSection == null) {
+                touchedIndex = -1;
+                return;
+              }
+              touchedIndex =
+                  pieTouchResponse.touchedSection!.touchedSectionIndex;
+            });
+          },
+        ),
+        borderData: FlBorderData(show: false),
+        sectionsSpace: 2,
+        centerSpaceRadius: 35,
+        sections: List.generate(summary.length, (i) {
+          final isTouched = (i == touchedIndex);
+          final radius = isTouched ? 65.0 : 55.0;
+          final percentage =
+              (summary[i].totalDuration.inSeconds / totalSeconds) * 100;
+          return PieChartSectionData(
+            color: summary[i].color,
+            value: summary[i].totalDuration.inSeconds.toDouble(),
+            title: (percentage > 8) ? '${percentage.toStringAsFixed(0)}%' : '',
+            radius: radius,
+            titleStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [Shadow(color: Colors.black45, blurRadius: 3)]),
+          );
+        }),
+      ),
+      swapAnimationDuration: const Duration(milliseconds: 250),
+      swapAnimationCurve: Curves.easeInOut,
+    );
+  }
+
+  // --- WIDGET CHUNG ĐỂ VẼ CHÚ THÍCH (LEGEND) ---
+  Widget _buildLegend(List<ActivitySummaryData> summary, AppLocalizations l10n,
+      {bool isGridView = false}) {
+    if (isGridView) {
+      return GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, // 2 cột
+          childAspectRatio: 3.5, // Tỉ lệ của mỗi item
+          mainAxisSpacing: 4,
+          crossAxisSpacing: 8,
+        ),
+        itemCount: summary.length,
+        itemBuilder: (context, index) {
+          final item = summary[index];
+          return _Indicator(
+              activity: item, isTouched: (index == touchedIndex), l10n: l10n);
+        },
+      );
+    }
+
+    return ListView(
+      children: summary.map((item) {
+        return _Indicator(
+            activity: item,
+            isTouched: (summary.indexOf(item) == touchedIndex),
+            l10n: l10n);
+      }).toList(),
     );
   }
 }

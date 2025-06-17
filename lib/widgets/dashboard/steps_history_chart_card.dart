@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../generated/app_localizations.dart';
 
+// <<<<<<<<<<<<<<< BẮT ĐẦU CODE HOÀN CHỈNH >>>>>>>>>>>>>>>
+
 class StepsHistoryChartCard extends StatelessWidget {
   StepsHistoryChartCard({super.key});
 
@@ -14,23 +16,29 @@ class StepsHistoryChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
+        // Toàn bộ logic switch-case và các widget _buildErrorState
+        // được tái sử dụng từ các biểu đồ trước, không cần thay đổi.
         switch (provider.historyStatus) {
           case HistoryStatus.loading:
           case HistoryStatus.initial:
             return const Center(child: CircularProgressIndicator());
 
           case HistoryStatus.error:
-            return _buildErrorState(context, l10n.chartErrorPrefix,
-                provider.historyError ?? l10n.chartCouldNotLoad);
+            return _buildErrorState(
+                context,
+                AppLocalizations.of(context)!.chartErrorPrefix,
+                provider.historyError ??
+                    AppLocalizations.of(context)!.chartCouldNotLoad);
 
           case HistoryStatus.loaded:
             final hourlySteps = provider.hourlyStepsData;
             if (hourlySteps.isEmpty) {
               return _buildErrorState(
-                  context, l10n.chartInfo, l10n.chartNoStepsCalculated);
+                  context,
+                  AppLocalizations.of(context)!.chartInfo,
+                  AppLocalizations.of(context)!.chartNoStepsCalculated);
             } else {
               return _buildStepsBarChart(context, hourlySteps);
             }
@@ -58,43 +66,47 @@ class StepsHistoryChartCard extends StatelessWidget {
     );
   }
 
-  // --- HÀM XÂY DỰNG BIỂU ĐỒ (ĐƯỢC THIẾT KẾ LẠI) ---
+  // --- HÀM XÂY DỰNG BIỂU ĐỒ (ĐÃ TINH CHỈNH) ---
   Widget _buildStepsBarChart(
       BuildContext context, List<HourlyStepsData> hourlySteps) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final chartColor = Colors.orange.shade600;
+    // Lấy màu từ AppTheme để nhất quán
+    final chartColor = Colors.orange.shade400;
 
     // --- 1. Chuẩn bị dữ liệu ---
-    // Tìm số bước cao nhất để xác định trục Y
     int maxHourlySteps = 0;
     if (hourlySteps.isNotEmpty) {
       maxHourlySteps =
           hourlySteps.map((d) => d.steps).reduce((a, b) => a > b ? a : b);
     }
-    // Làm tròn trục Y lên một giá trị "đẹp"
-    double maxY =
-        (maxHourlySteps == 0) ? 100 : (maxHourlySteps * 1.2 / 50).ceil() * 50.0;
+    // Logic làm tròn trục Y lên một giá trị "đẹp"
+    double maxY = (maxHourlySteps == 0)
+        ? 100
+        : (maxHourlySteps * 1.2 / 100).ceil() * 100.0;
+
+    // Tính toán interval cho lưới ngang
+    final double horizontalInterval =
+        (maxY > 0) ? (maxY / 4).ceilToDouble() : 25;
 
     // --- 2. Cấu hình BarChart ---
     return BarChart(
       BarChartData(
         maxY: maxY,
         minY: 0,
-        alignment: BarChartAlignment.spaceAround, // Căn đều các cột
+        alignment: BarChartAlignment.spaceAround,
 
-        // --- CẤU HÌNH TOOLTIP KHI CHẠM ---
+        // --- CẤU HÌNH TOOLTIP KHI CHẠM (ĐÃ SỬA LỖI) ---
         barTouchData: _buildBarTouchData(context, l10n),
 
         // --- CẤU HÌNH CÁC TRỤC ---
-        titlesData: _buildTitlesData(context),
+        titlesData: _buildTitlesData(context, maxY, horizontalInterval),
 
         // --- CẤU HÌNH LƯỚI ---
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval:
-              (maxY / 4).floorToDouble(), // Lưới ngang chia làm 4 khoảng
+          horizontalInterval: horizontalInterval,
           getDrawingHorizontalLine: (value) => FlLine(
             color: theme.dividerColor.withOpacity(0.1),
             strokeWidth: 1,
@@ -105,53 +117,76 @@ class StepsHistoryChartCard extends StatelessWidget {
         borderData: FlBorderData(show: false),
 
         // --- DỮ LIỆU CÁC CỘT ---
-        barGroups: hourlySteps.map((data) {
+        barGroups: List.generate(24, (index) {
+          // Luôn tạo 24 cột cho 24 giờ
+          final hourlyData = hourlySteps.firstWhere(
+              (data) => data.hourStart.hour == index,
+              orElse: () =>
+                  HourlyStepsData(DateTime.now().copyWith(hour: index), 0));
+
           return BarChartGroupData(
-            x: data.hourStart.hour,
+            x: index,
             barRods: [
               BarChartRodData(
-                toY: data.steps.toDouble(),
-                // Dùng gradient cho các cột
+                toY: hourlyData.steps.toDouble(),
                 gradient: LinearGradient(
-                  colors: [
-                    chartColor.withOpacity(0.8),
-                    chartColor,
-                  ],
+                  colors: [chartColor.withOpacity(0.8), chartColor],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
-                width: 12, // Độ rộng cột nhỏ hơn một chút
+                width: 8, // Giảm độ rộng cột cho gọn
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(4)),
               ),
             ],
           );
-        }).toList(),
+        }),
       ),
+      swapAnimationDuration: const Duration(milliseconds: 250),
     );
   }
 
-  // --- TÁCH CÁC HÀM HELPER CẤU HÌNH BIỂU ĐỒ ---
-
-  FlTitlesData _buildTitlesData(BuildContext context) {
+  // --- HÀM HELPER CẤU HÌNH CÁC TRỤC ---
+  FlTitlesData _buildTitlesData(
+      BuildContext context, double maxY, double intervalY) {
     final textStyle =
         Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10);
 
     return FlTitlesData(
       leftTitles: AxisTitles(
-        sideTitles: SideTitles(showTitles: false), // Ẩn trục Y cho gọn
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 40,
+          interval: intervalY,
+          getTitlesWidget: (value, meta) {
+            // Không hiển thị giá trị min và max để tránh chồng chéo
+            if (value == 0 || value == meta.max) return const SizedBox();
+            // Định dạng số lớn (ví dụ: 1500 -> 1.5k)
+            String formattedValue;
+            if (value >= 1000) {
+              formattedValue = '${(value / 1000).toStringAsFixed(1)}k';
+            } else {
+              formattedValue = value.toInt().toString();
+            }
+            return SideTitleWidget(
+              axisSide: meta.axisSide,
+              space: 4,
+              child: Text(formattedValue, style: textStyle),
+            );
+          },
+        ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 22,
-          interval: 6, // Hiển thị nhãn mỗi 6 giờ
+          interval: 4, // Hiển thị nhãn mỗi 4 giờ
           getTitlesWidget: (value, meta) {
-            final hour = value.toInt();
             String text = '';
-            // Chỉ hiển thị tại các mốc chính
-            if (hour == 0 || hour == 6 || hour == 12 || hour == 18) {
-              text = _hourFormat.format(DateTime.now().copyWith(hour: hour));
+            if (value.toInt() % 4 == 0) {
+              // Chỉ hiển thị tại các mốc 0, 4, 8, 12, 16, 20
+              text = _hourFormat
+                  .format(DateTime.now().copyWith(hour: value.toInt()));
             }
             return SideTitleWidget(
               axisSide: meta.axisSide,
@@ -166,36 +201,28 @@ class StepsHistoryChartCard extends StatelessWidget {
     );
   }
 
-  // --- HELPER CHO TOOLTIP ---
+  // --- HELPER CHO TOOLTIP (Sử dụng cú pháp an toàn) ---
   BarTouchData _buildBarTouchData(BuildContext context, AppLocalizations l10n) {
     return BarTouchData(
-      // Cho phép tooltip hiển thị ngay cả khi chạm vào khoảng trống gần cột
-      touchExtraThreshold: const EdgeInsets.symmetric(horizontal: 8),
       touchTooltipData: BarTouchTooltipData(
         // tooltipBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.9),
         tooltipRoundedRadius: 8,
         getTooltipItem: (group, groupIndex, rod, rodIndex) {
-          // Lấy giờ và số bước từ dữ liệu
           final hour = group.x.toInt();
           final steps = rod.toY.toInt();
-          // Định dạng giờ: 00:00 - 00:59
           final timeRange = '$hour:00 - $hour:59';
 
           return BarTooltipItem(
-            '$steps ${l10n.stepsUnit}\n',
+            '${NumberFormat.decimalPattern().format(steps)} ${l10n.stepsUnit}\n',
             const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
             children: <TextSpan>[
               TextSpan(
                 text: timeRange,
                 style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500),
               ),
             ],
           );
