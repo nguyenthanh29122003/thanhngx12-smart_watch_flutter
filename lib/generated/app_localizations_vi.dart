@@ -1114,4 +1114,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get errorWeightRange => 'Vui lòng nhập cân nặng hợp lệ (20-200kg)';
+
+  @override
+  String get selectDateTooltip => 'Chọn Ngày';
+
+  @override
+  String get activitySummaryNoDataForDate => 'Không có dữ liệu hoạt động nào được ghi nhận cho ngày này.';
+
+  @override
+  String get today => 'Hôm nay';
+
+  @override
+  String get yesterday => 'Hôm qua';
 }

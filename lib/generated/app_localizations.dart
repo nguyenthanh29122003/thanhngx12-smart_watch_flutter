@@ -2176,6 +2176,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a valid weight (20-200kg)'**
   String get errorWeightRange;
+
+  /// No description provided for @selectDateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Date'**
+  String get selectDateTooltip;
+
+  /// No description provided for @activitySummaryNoDataForDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity data was recorded for this date.'**
+  String get activitySummaryNoDataForDate;
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1114,4 +1114,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorWeightRange => 'Please enter a valid weight (20-200kg)';
+
+  @override
+  String get selectDateTooltip => 'Select Date';
+
+  @override
+  String get activitySummaryNoDataForDate => 'No activity data was recorded for this date.';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
 }

@@ -46,6 +46,9 @@ class DashboardProvider with ChangeNotifier {
 
   bool _isDisposed = false;
 
+  DateTime _selectedDate = DateTime.now();
+  DateTime get selectedDate => _selectedDate;
+
   // --- State cho Health History ---
   List<HealthData> _healthHistory = [];
   List<HourlyStepsData> _hourlyStepsData = [];
@@ -62,10 +65,7 @@ class DashboardProvider with ChangeNotifier {
   String? get historyError => _historyError;
   List<HourlyStepsData> get hourlyStepsData => _hourlyStepsData;
   List<ActivitySummaryData> get activitySummary => _activitySummary;
-
-  // <<< SỬA LỖI: THÊM GETTER CÒN THIẾU Ở ĐÂY >>>
   List<ActivitySegment> get activityHistory => _activityHistory;
-  // ---------------------------------------------
 
   Duration get todayTotalActivityDuration {
     if (_activitySummary.isEmpty) return Duration.zero;
@@ -179,47 +179,44 @@ class DashboardProvider with ChangeNotifier {
   }
 
   Future<void> fetchHealthHistory({
-    Duration duration = const Duration(hours: 24),
+    DateTime? specificDate, // Tham số mới để nhận ngày cụ thể
     bool useDummyData = false,
   }) async {
     final currentUser = _authService.currentUser;
     if (currentUser == null && !useDummyData) {
       _updateHistoryStatus(HistoryStatus.error, "User not logged in");
-      _clearHistoryData();
       return;
     }
 
     if (_historyStatus == HistoryStatus.loading) return;
-
     _updateHistoryStatus(HistoryStatus.loading);
-    _clearHistoryData();
+    _clearHistoryData(); // Xóa dữ liệu cũ trước khi tải mới
+
+    // --- Logic mới để xác định khoảng thời gian cần tải ---
+    _selectedDate = specificDate ?? DateTime.now();
+    // Chuẩn hóa để đảm bảo chúng ta lấy cả ngày
+    final dateToFetch = _selectedDate;
+    final startTime = DateTime(dateToFetch.year, dateToFetch.month,
+        dateToFetch.day, 0, 0, 0); // 00:00:00 của ngày
+    final endTime = DateTime(dateToFetch.year, dateToFetch.month,
+        dateToFetch.day, 23, 59, 59); // 23:59:59 của ngày
 
     try {
+      // Tải song song cả hai loại dữ liệu
       final results = await Future.wait([
-        if (useDummyData)
-          Future.value(generateDummyHealthData(
-              count: 200, duration: duration, simulateGaps: true))
-        else
-          _firestoreService.getHealthDataForPeriod(currentUser!.uid,
-              DateTime.now().subtract(duration), DateTime.now()),
-        if (!useDummyData)
-          _localDbService.getActivitySegmentsForDay(DateTime.now(),
-              userId: currentUser!.uid)
-        else
-          Future.value(<ActivitySegment>[])
+        _firestoreService.getHealthDataForPeriod(
+            currentUser!.uid, startTime, endTime),
+        _localDbService.getActivitySegmentsForDay(dateToFetch,
+            userId: currentUser.uid),
       ]);
 
-      if (_isDisposed) {
-        if (kDebugMode)
-          print(
-              "[DashboardProvider] Aborting state update because provider was disposed.");
-        return;
-      }
+      if (_isDisposed) return;
 
       final List<HealthData> fetchedHealthData = results[0] as List<HealthData>;
       final List<ActivitySegment> fetchedActivitySegments =
           results[1] as List<ActivitySegment>;
 
+      // Xử lý và cập nhật state
       _healthHistory = fetchedHealthData;
       _hourlyStepsData = _calculateHourlySteps(_healthHistory);
 
@@ -227,20 +224,11 @@ class DashboardProvider with ChangeNotifier {
       _activitySummary = _calculateActivitySummary(_activityHistory);
 
       _updateHistoryStatus(HistoryStatus.loaded);
-      if (kDebugMode)
-        print(
-            "[DashboardProvider] Data fetch/calculation successful (including ${fetchedActivitySegments.length} activity segments).");
     } catch (e) {
       if (kDebugMode)
         print("!!! [DashboardProvider] Error during fetchHealthHistory: $e");
-      if (_isDisposed) {
-        if (kDebugMode)
-          print(
-              "[DashboardProvider] Aborting error state update because provider was disposed.");
-        return;
-      }
+      if (_isDisposed) return;
       _updateHistoryStatus(HistoryStatus.error, "Failed to load history data.");
-      _clearHistoryData();
     }
   }
 

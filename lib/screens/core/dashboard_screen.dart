@@ -1,419 +1,3 @@
-// // lib/screens/core/dashboard_screen.dart
-// import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart';
-// import 'package:provider/provider.dart';
-// import 'package:smart_wearable_app/screens/core/main_navigator.dart';
-// import 'package:smart_wearable_app/widgets/dashboard/activity_summary_chart_card.dart';
-// import 'dart:math';
-
-// // Import Providers
-// import '../../providers/auth_provider.dart';
-// import '../../providers/ble_provider.dart';
-// import '../../providers/dashboard_provider.dart';
-// import '../../providers/goals_provider.dart';
-// // Import Services
-// import '../../services/ble_service.dart';
-// import '../../services/activity_recognition_service.dart';
-// // Import Widgets
-// import '../../widgets/dashboard/realtime_metrics_card.dart'; // <<< TẠM THỜI GIỮ LẠI
-// import '../../widgets/dashboard/history_chart_card.dart';
-// import '../../widgets/dashboard/spo2_history_chart_card.dart';
-// import '../../widgets/dashboard/steps_history_chart_card.dart';
-// // Import Helpers & Constants
-// import '../../app_constants.dart';
-// import '../../generated/app_localizations.dart';
-
-// // <<< PHẦN 1: MÀN HÌNH CHÍNH & CÁC HÀM BUILD HELPER >>>
-
-// class DashboardScreen extends StatefulWidget {
-//   const DashboardScreen({super.key});
-
-//   @override
-//   State<DashboardScreen> createState() => _DashboardScreenState();
-// }
-
-// class _DashboardScreenState extends State<DashboardScreen>
-//     with WidgetsBindingObserver, TickerProviderStateMixin {
-//   // TickerProviderStateMixin cần cho TabController
-
-//   late final TabController _tabController;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _tabController =
-//         TabController(length: 3, vsync: this); // 3 tab cho 3 biểu đồ
-
-//     // Phần logic initState cũ của bạn (addObserver) vẫn giữ nguyên
-//     WidgetsBinding.instance.addObserver(this);
-
-//     WidgetsBinding.instance.addPostFrameCallback((_) {
-//       // Logic cũ trong addPostFrameCallback cũng có thể giữ lại nếu cần
-//       // Ví dụ: để làm mới dữ liệu khi màn hình được tải lần đầu
-//       Provider.of<DashboardProvider>(context, listen: false)
-//           .fetchHealthHistory();
-//       Provider.of<GoalsProvider>(context, listen: false).loadDailyGoal();
-//     });
-//   }
-
-//   @override
-//   void dispose() {
-//     WidgetsBinding.instance.removeObserver(this);
-//     _tabController.dispose(); // Hủy TabController
-//     super.dispose();
-//   }
-
-//   @override
-//   void didChangeAppLifecycleState(AppLifecycleState state) {
-//     super.didChangeAppLifecycleState(state);
-//     if (state == AppLifecycleState.resumed && mounted) {
-//       // Kích hoạt làm mới dữ liệu khi người dùng quay lại app
-//       final dashboardProvider =
-//           Provider.of<DashboardProvider>(context, listen: false);
-//       final goalsProvider = Provider.of<GoalsProvider>(context, listen: false);
-
-//       dashboardProvider.fetchHealthHistory();
-//       goalsProvider.loadDailyGoal();
-//     }
-//   }
-
-//   // --- HÀM BUILD CHÍNH - ĐÃ THAY ĐỔI HOÀN TOÀN ---
-//   @override
-//   Widget build(BuildContext context) {
-//     // Lấy theme và l10n một lần ở đây
-//     final l10n = AppLocalizations.of(context)!;
-//     final theme = Theme.of(context);
-//     final authProvider = context.watch<AuthProvider>();
-
-//     // Sử dụng Scaffold mới, không có AppBar để chúng ta có thể tạo header tùy chỉnh
-//     return Scaffold(
-//       // SafeArea để đảm bảo nội dung không bị che khuất
-//       body: SafeArea(
-//         // RefreshIndicator để người dùng có thể kéo xuống để làm mới
-//         child: RefreshIndicator(
-//           onRefresh: () async {
-//             // Khi làm mới, tải lại cả dữ liệu dashboard và mục tiêu
-//             await Future.wait([
-//               context.read<DashboardProvider>().fetchHealthHistory(),
-//               context.read<GoalsProvider>().loadDailyGoal(),
-//             ]);
-//           },
-//           child: CustomScrollView(
-//             // Sử dụng CustomScrollView với Slivers để có header "dính"
-//             slivers: [
-//               // Header tùy chỉnh của chúng ta
-//               _buildSliverHeader(context, l10n, theme, authProvider),
-
-//               // Nội dung chính, có thể cuộn
-//               SliverToBoxAdapter(
-//                 child: Padding(
-//                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       const SizedBox(height: 24),
-//                       // "Hero" section - Card mục tiêu chính
-//                       _MainGoalCard(),
-//                       const SizedBox(height: 32),
-
-//                       // Tiêu đề cho các chỉ số
-//                       Text(l10n.realtimeMetricsTitle,
-//                           style: theme.textTheme.titleLarge),
-//                       const SizedBox(height: 16),
-
-//                       // Card chỉ số thời gian thực (tạm thời giữ lại widget cũ)
-//                       const RealtimeMetricsCard(),
-//                       const SizedBox(height: 32),
-
-//                       // Tiêu đề cho các biểu đồ
-//                       Text(l10n.historyAndTrendsTitle,
-//                           style: theme.textTheme.titleLarge),
-//                       const SizedBox(height: 16),
-
-//                       // Card Lịch sử Hoạt động
-//                       // Widget mới này sẽ được thêm vào
-//                       ActivitySummaryChartCard(),
-//                       const SizedBox(height: 16),
-
-//                       // Card Lịch sử Sức khỏe với các Tab
-//                       _buildHistoryTabBarCard(l10n, theme),
-//                       const SizedBox(height: 32), // Padding ở dưới cùng
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   // --- HÀM BUILD HELPER CHO CÁC PHẦN GIAO DIỆN MỚI ---
-
-//   // Xây dựng Header tùy chỉnh dính ở trên
-//   SliverAppBar _buildSliverHeader(
-//     BuildContext context,
-//     AppLocalizations l10n,
-//     ThemeData theme,
-//     AuthProvider authProvider,
-//   ) {
-//     final String welcomeMessage;
-//     final int currentHour = DateTime.now().hour;
-
-//     if (currentHour < 12) {
-//       welcomeMessage = l10n.greetingGoodMorning; // Key mới
-//     } else if (currentHour < 18) {
-//       welcomeMessage = l10n.greetingGoodAfternoon; // Key mới
-//     } else {
-//       welcomeMessage = l10n.greetingGoodEvening; // Key mới
-//     }
-
-//     final displayName = authProvider.preferredDisplayName ?? l10n.defaultUser;
-
-//     return SliverAppBar(
-//       // Các thuộc tính để AppBar "dính" lại khi cuộn
-//       pinned: true,
-//       floating: true,
-//       snap: true,
-
-//       // Nội dung của AppBar
-//       backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.85),
-//       elevation: 0,
-//       surfaceTintColor:
-//           Colors.transparent, // Loại bỏ hiệu ứng đổ màu của Material 3
-//       titleSpacing: 16.0,
-
-//       // Cột chứa lời chào và tên
-//       title: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Text(welcomeMessage,
-//               style: theme.textTheme.bodyMedium?.copyWith(
-//                 color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-//               )),
-//           Text(displayName, style: theme.textTheme.titleLarge),
-//         ],
-//       ),
-//       actions: [
-//         // Avatar người dùng ở góc phải
-//         Padding(
-//           padding: const EdgeInsets.only(right: 16.0),
-//           child: CircleAvatar(
-//             radius: 20,
-//             backgroundColor: theme.colorScheme.surface,
-//             backgroundImage: authProvider.user?.photoURL != null
-//                 ? NetworkImage(authProvider.user!.photoURL!)
-//                 : null,
-//             child: authProvider.user?.photoURL == null
-//                 ? Text(
-//                     displayName.isNotEmpty ? displayName[0].toUpperCase() : "?",
-//                     style: TextStyle(
-//                         color: theme.colorScheme.primary,
-//                         fontWeight: FontWeight.bold),
-//                   )
-//                 : null,
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   // Xây dựng Card chứa các Tab biểu đồ
-//   Widget _buildHistoryTabBarCard(AppLocalizations l10n, ThemeData theme) {
-//     return Card(
-//       // Card này sẽ không có padding bên trong để TabBar và TabBarView có thể chiếm toàn bộ không gian
-//       // và có style riêng
-//       clipBehavior: Clip.antiAlias, // Cần thiết để các góc bo tròn hoạt động
-//       child: Column(
-//         children: [
-//           // Phần TabBar tùy chỉnh
-//           Container(
-//             padding: const EdgeInsets.all(4.0),
-//             margin: const EdgeInsets.all(8.0),
-//             decoration: BoxDecoration(
-//               color:
-//                   theme.scaffoldBackgroundColor, // Màu nền hơi khác để nổi bật
-//               borderRadius: BorderRadius.circular(12.0),
-//             ),
-//             child: TabBar(
-//               controller: _tabController,
-//               labelColor: theme.colorScheme.onSurface,
-//               unselectedLabelColor:
-//                   theme.colorScheme.onSurface.withOpacity(0.6),
-//               labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-//               unselectedLabelStyle:
-//                   const TextStyle(fontWeight: FontWeight.w500),
-//               // Indicator là một hình chữ nhật bo tròn có màu nhấn
-//               indicator: BoxDecoration(
-//                 borderRadius: BorderRadius.circular(10.0),
-//                 color: theme.colorScheme.surface,
-//                 boxShadow: [
-//                   BoxShadow(
-//                     color: Colors.black.withOpacity(0.1),
-//                     blurRadius: 4,
-//                     offset: const Offset(0, 2),
-//                   ),
-//                 ],
-//               ),
-//               indicatorSize:
-//                   TabBarIndicatorSize.tab, // Indicator chiếm hết chiều rộng tab
-//               dividerColor: Colors.transparent, // Bỏ đường gạch mặc định
-//               tabs: [
-//                 Tab(text: l10n.hrTabTitle), // Key mới
-//                 Tab(text: l10n.spo2TabTitle), // Key mới
-//                 Tab(text: l10n.stepsTabTitle), // Key mới
-//               ],
-//             ),
-//           ),
-
-//           // Phần chứa nội dung các biểu đồ
-//           SizedBox(
-//             height: 250, // Chiều cao cố định cho các biểu đồ
-//             child: TabBarView(
-//               controller: _tabController,
-//               children: [
-//                 // Các widget biểu đồ cũ của bạn sẽ được đặt ở đây
-//                 Padding(
-//                   padding:
-//                       const EdgeInsets.only(right: 16, top: 16, bottom: 12),
-//                   child: HistoryChartCard(), // Biểu đồ nhịp tim
-//                 ),
-//                 Padding(
-//                   padding:
-//                       const EdgeInsets.only(right: 16, top: 16, bottom: 12),
-//                   child: Spo2HistoryChartCard(), // Biểu đồ SpO2
-//                 ),
-//                 Padding(
-//                   padding:
-//                       const EdgeInsets.only(right: 16, top: 16, bottom: 12),
-//                   child: StepsHistoryChartCard(), // Biểu đồ Bước chân
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-// // lib/screens/core/dashboard_screen.dart
-
-// // ... code của class DashboardScreen và _DashboardScreenState ở trên ...
-
-// // <<< BẮT ĐẦU PHẦN 2: CÁC WIDGET CON MỚI >>>
-
-// // --- WIDGET: CARD MỤC TIÊU CHÍNH ---
-// // Widget này sẽ hiển thị vòng tròn tiến độ mục tiêu số bước.
-// class _MainGoalCard extends StatelessWidget {
-//   const _MainGoalCard({Key? key}) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // Lắng nghe cả hai provider cần thiết: GoalsProvider và DashboardProvider
-//     final goalsProvider = context.watch<GoalsProvider>();
-//     final dashboardProvider = context.watch<DashboardProvider>();
-//     final l10n = AppLocalizations.of(context)!;
-//     final theme = Theme.of(context);
-
-//     // Lấy các giá trị cần thiết
-//     final currentSteps = dashboardProvider.todayTotalSteps;
-//     final currentGoal = goalsProvider.currentStepGoal;
-
-//     // Xử lý trường hợp goal là 0 để tránh lỗi chia cho 0
-//     final double percent =
-//         (currentGoal > 0) ? (currentSteps / currentGoal).clamp(0.0, 1.0) : 0.0;
-
-//     final bool goalAchieved = percent >= 1.0;
-
-//     return GestureDetector(
-//       onTap: () {
-//         // Điều hướng đến màn hình Mục tiêu khi nhấn vào card này
-//         // Sử dụng GlobalKey hoặc tìm kiếm MainNavigatorState như code cũ của bạn
-//         try {
-//           final mainNavigatorState =
-//               context.findAncestorStateOfType<MainNavigatorState>();
-//           mainNavigatorState?.navigateTo(AppConstants.goalsScreenIndex);
-//         } catch (e) {
-//           print("Error navigating to GoalsScreen from _MainGoalCard: $e");
-//         }
-//       },
-//       child: Card(
-//         // Card này sẽ tự lấy style từ AppTheme, chúng ta có thể tùy chỉnh thêm nếu cần
-//         elevation: 4.0, // Tăng độ nổi bật một chút
-//         child: Padding(
-//           padding: const EdgeInsets.all(20.0),
-//           child: Row(
-//             children: [
-//               // Vòng tròn tiến độ ở bên trái
-//               SizedBox(
-//                 width: 110,
-//                 height: 110,
-//                 child: CircularProgressIndicator(
-//                   // << Thay bằng CircularProgressIndicator cho hiệu ứng đẹp hơn
-//                   value: percent,
-//                   strokeWidth: 12,
-//                   backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-//                   valueColor: AlwaysStoppedAnimation<Color>(
-//                     goalAchieved ? Colors.green : theme.colorScheme.primary,
-//                   ),
-//                   strokeCap: StrokeCap.round,
-//                 ),
-//               ),
-
-//               const SizedBox(width: 20),
-
-//               // Thông tin văn bản ở bên phải
-//               Expanded(
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     Text(
-//                       l10n.mainGoalTitle, // Key mới: "Hôm nay"
-//                       style: theme.textTheme.titleMedium?.copyWith(
-//                           color: theme.textTheme.titleMedium?.color
-//                               ?.withOpacity(0.8)),
-//                     ),
-//                     const SizedBox(height: 4),
-
-//                     // Hiển thị số bước hiện tại với style lớn, nổi bật
-//                     Text(
-//                       NumberFormat.decimalPattern().format(currentSteps),
-//                       style: theme.textTheme.headlineSmall?.copyWith(
-//                           fontWeight: FontWeight.bold,
-//                           color: theme.colorScheme.primary),
-//                     ),
-
-//                     const SizedBox(height: 4),
-
-//                     // Hiển thị mục tiêu và số bước còn lại
-//                     Text(
-//                       goalAchieved
-//                           ? l10n.goalAchievedMessage // Dùng lại key cũ
-//                           : l10n.stepsOutOfGoal(NumberFormat.decimalPattern()
-//                               .format(currentGoal)), // Key mới: "/ {goal} bước"
-//                       style: theme.textTheme.bodyMedium?.copyWith(
-//                           color: theme.textTheme.bodyMedium?.color
-//                               ?.withOpacity(0.7)),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//               // Icon mũi tên để gợi ý có thể nhấn vào
-//               Icon(
-//                 Icons.arrow_forward_ios_rounded,
-//                 size: 16,
-//                 color: theme.colorScheme.primary.withOpacity(0.5),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 // lib/screens/core/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
@@ -452,27 +36,31 @@ class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   late final TabController _tabController;
 
+  // <<< THÊM STATE MỚI ĐỂ QUẢN LÝ NGÀY ĐANG CHỌN >>>
+  late DateTime _selectedDate;
+
   @override
   void initState() {
     super.initState();
-    // Khởi tạo TabController cho các biểu đồ
     _tabController = TabController(length: 3, vsync: this);
-
-    // Đăng ký observer để lắng nghe vòng đời ứng dụng
     WidgetsBinding.instance.addObserver(this);
 
-    // Lên lịch tải dữ liệu ban đầu ngay sau khi frame đầu tiên được vẽ
+    // Khởi tạo ngày đã chọn là ngày hôm nay, lấy từ provider
+    _selectedDate = context.read<DashboardProvider>().selectedDate;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Tải dữ liệu cho ngày mặc định (hôm nay)
       _initialDataFetch();
     });
   }
 
   /// Hàm để tải dữ liệu ban đầu một cách tập trung
   void _initialDataFetch() {
-    if (!mounted) return; // Luôn kiểm tra mounted trước khi dùng context
-    // Không lắng nghe (listen: false) vì chúng ta không muốn rebuild khi gọi hàm này
-    Provider.of<DashboardProvider>(context, listen: false).fetchHealthHistory();
-    Provider.of<GoalsProvider>(context, listen: false).loadDailyGoal();
+    if (!mounted) return;
+    context
+        .read<DashboardProvider>()
+        .fetchHealthHistory(specificDate: _selectedDate);
+    context.read<GoalsProvider>().loadDailyGoal();
   }
 
   @override
@@ -492,6 +80,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Future<void> _selectDate() async {
+    final dashboardProvider = context.read<DashboardProvider>();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(),
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked; // Cập nhật state của UI
+      });
+      // Yêu cầu provider tải dữ liệu cho ngày mới được chọn
+      dashboardProvider.fetchHealthHistory(specificDate: picked);
+    }
+  }
+
   // ================================================================
   // --- HÀM BUILD CHÍNH VÀ CÁC HÀM HELPER BUILD UI ---
   // ================================================================
@@ -501,6 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final authProvider = context.watch<AuthProvider>();
+    final dashboardProvider = context.watch<DashboardProvider>();
 
     // Sử dụng Scaffold mới
     return Scaffold(
@@ -517,7 +124,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: CustomScrollView(
             slivers: [
               // 1. Header dính (SliverAppBar)
-              _buildSliverHeader(context, l10n, theme, authProvider),
+              _buildSliverHeader(
+                  context, l10n, theme, authProvider, _selectDate),
 
               // 2. Nội dung chính có thể cuộn
               SliverToBoxAdapter(
@@ -580,6 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     AppLocalizations l10n,
     ThemeData theme,
     AuthProvider authProvider,
+    VoidCallback onDateTap,
   ) {
     // Logic xác định lời chào dựa trên thời gian trong ngày
     final String welcomeMessage;
@@ -593,6 +202,19 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     final displayName = authProvider.preferredDisplayName ?? l10n.defaultUser;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    final String dateDisplay;
+    if (_selectedDate == today) {
+      dateDisplay = l10n.today; // Key mới
+    } else if (_selectedDate == yesterday) {
+      dateDisplay = l10n.yesterday; // Key mới
+    } else {
+      dateDisplay = DateFormat.yMMMd(l10n.localeName).format(_selectedDate);
+    }
 
     return SliverAppBar(
       pinned: true, // "Dính" lại ở trên khi cuộn
@@ -609,14 +231,36 @@ class _DashboardScreenState extends State<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(welcomeMessage,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-              )),
-          Text(displayName, style: theme.textTheme.titleLarge),
+          // Text(welcomeMessage,
+          //     style: theme.textTheme.bodyMedium?.copyWith(
+          //       color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+          //     )),
+          // Text(displayName, style: theme.textTheme.titleLarge),
+          Text(
+              '$welcomeMessage ${authProvider.preferredDisplayName ?? l10n.defaultUser}!',
+              style: theme.textTheme.bodyMedium),
+          InkWell(
+            onTap: onDateTap, // Gọi hàm chọn ngày khi nhấn
+            child: Row(
+              mainAxisSize: MainAxisSize.min, // Co lại theo nội dung
+              children: [
+                Text(dateDisplay,
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Icon(Icons.expand_more_rounded,
+                    size: 20, color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
         ],
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.calendar_today_outlined),
+          tooltip: l10n.selectDateTooltip,
+          onPressed: onDateTap,
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: CircleAvatar(

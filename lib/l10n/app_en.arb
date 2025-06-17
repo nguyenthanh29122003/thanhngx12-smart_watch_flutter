@@ -698,5 +698,9 @@
     "description": "Validation error for the user weight input"
   },
     "activitySummaryTitle": "Activity Summary",
-  "activitySummaryNoData": "Not enough activity data recorded for today yet."
+  "activitySummaryNoData": "Not enough activity data recorded for today yet.",
+    "selectDateTooltip": "Select Date",
+  "activitySummaryNoDataForDate": "No activity data was recorded for this date.",
+    "today": "Today",
+  "yesterday": "Yesterday"
 }

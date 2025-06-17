@@ -608,5 +608,9 @@
     "description": "Lỗi xác thực cho ô nhập cân nặng"
   },
     "activitySummaryTitle": "Tổng quan Hoạt động",
-  "activitySummaryNoData": "Chưa có đủ dữ liệu hoạt động được ghi nhận hôm nay."
+  "activitySummaryNoData": "Chưa có đủ dữ liệu hoạt động được ghi nhận hôm nay.",
+    "selectDateTooltip": "Chọn Ngày",
+  "activitySummaryNoDataForDate": "Không có dữ liệu hoạt động nào được ghi nhận cho ngày này.",
+    "today": "Hôm nay",
+  "yesterday": "Hôm qua"
 }

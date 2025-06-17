@@ -20,113 +20,121 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
   // ScrollController để có thể thêm các tính năng như "tải thêm" trong tương lai
   final ScrollController _scrollController = ScrollController();
 
+  late DateTime _uiSelectedDate;
+  bool _isDateInitialized = false;
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Chỉ khởi tạo ngày một lần duy nhất
+    if (!_isDateInitialized) {
+      // Lấy giá trị ban đầu từ provider một cách an toàn
+      _uiSelectedDate = context.read<DashboardProvider>().selectedDate;
+      _isDateInitialized = true;
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final dashboardProvider = context.read<DashboardProvider>();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _uiSelectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(), // Không cho chọn ngày tương lai
+    );
+
+    if (picked != null && picked != _uiSelectedDate) {
+      setState(() => _uiSelectedDate = picked);
+      // Yêu cầu provider tải dữ liệu cho ngày mới
+      dashboardProvider.fetchHealthHistory(specificDate: picked);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
   // --- HÀM BUILD CHÍNH ---
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Dùng 'watch' ở đây để toàn bộ màn hình có thể rebuild khi provider thay đổi
-    // và kích hoạt RefreshIndicator
     final dashboardProvider = context.watch<DashboardProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.activitySummaryDetailScreenTitle), // Key mới
+        title: Text(l10n.activitySummaryDetailScreenTitle),
+        actions: [
+          // Nút chọn ngày
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: l10n.selectDateTooltip, // Key mới
+            onPressed: () => _selectDate(context),
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        // Gọi lại hàm fetchHealthHistory, hàm này sẽ tự động tính toán lại activitySummary
-        onRefresh: () => context.read<DashboardProvider>().fetchHealthHistory(),
-        // Dùng Builder để đảm bảo _buildContent luôn nhận được context mới nhất
+        onRefresh: () =>
+            dashboardProvider.fetchHealthHistory(specificDate: _uiSelectedDate),
         child: Builder(
-          builder: (context) => _buildContent(context, dashboardProvider),
-        ),
+            builder: (context) => _buildContent(context, dashboardProvider)),
       ),
     );
   }
 
-  // ... tiếp theo bên trong _ActivityHistoryScreenState
-
   // --- WIDGET XÂY DỰNG NỘI DUNG CHÍNH DỰA TRÊN TRẠNG THÁI ---
   Widget _buildContent(BuildContext context, DashboardProvider provider) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
-    // Xử lý các trạng thái khác nhau của provider
     switch (provider.historyStatus) {
       case HistoryStatus.loading:
       case HistoryStatus.initial:
         return const Center(child: CircularProgressIndicator());
 
       case HistoryStatus.error:
-        // Giao diện khi có lỗi
         return Center(
-            child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            provider.historyError ?? l10n.chartCouldNotLoad,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge
-                ?.copyWith(color: theme.colorScheme.error),
-          ),
-        ));
+            child: Text(provider.historyError ?? l10n.chartCouldNotLoad));
 
       case HistoryStatus.loaded:
-        final activitySegments = provider.activityHistory;
+        final sortedHistory =
+            List<ActivitySegment>.from(provider.activityHistory)
+              ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
-        // Giao diện khi không có dữ liệu
-        if (activitySegments.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.hourglass_empty_rounded,
-                    size: 80,
-                    color: theme.colorScheme.primary.withOpacity(0.3)),
-                const SizedBox(height: 24),
-                Text(l10n.activitySummaryNoData,
-                    style: theme.textTheme.titleLarge),
-              ],
-            ),
-          );
-        }
-
-        // Sắp xếp các phân đoạn hoạt động theo thời gian mới nhất lên đầu
-        final sortedHistory = List<ActivitySegment>.from(activitySegments)
-          ..sort((a, b) => b.startTime.compareTo(a.startTime));
-
-        // Sử dụng CustomScrollView để có thể kết hợp nhiều loại Sliver
         return CustomScrollView(
           controller: _scrollController,
-          // Luôn cho phép cuộn để RefreshIndicator hoạt động
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // Header tóm tắt tổng thời gian
             SliverToBoxAdapter(
-                child: _buildSummaryHeader(
-                    context, provider.todayTotalActivityDuration, l10n)),
+                child: _buildSummaryHeader(context, provider, l10n)),
             const SliverToBoxAdapter(child: Divider(height: 1)),
-            // Danh sách các item trên dòng thời gian
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _ActivityTimelineItem(
+            if (sortedHistory.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                    child: Text(
+                  l10n.activitySummaryNoDataForDate,
+                  textAlign: TextAlign.center,
+                )),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _ActivityTimelineItem(
                       segment: sortedHistory[index],
                       isLast: index == sortedHistory.length - 1,
-                    );
-                  },
-                  childCount: sortedHistory.length,
+                    ),
+                    childCount: sortedHistory.length,
+                  ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(
-                child: SizedBox(height: 32)), // Padding dưới cùng
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
           ],
         );
     }
@@ -134,45 +142,45 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
 
   // --- WIDGET HEADER TÓM TẮT TỔNG THỜI GIAN HOẠT ĐỘNG ---
   Widget _buildSummaryHeader(
-      BuildContext context, Duration totalDuration, AppLocalizations l10n) {
+      BuildContext context, DashboardProvider provider, AppLocalizations l10n) {
     final theme = Theme.of(context);
+    final totalDuration = provider.todayTotalActivityDuration;
     final hours = totalDuration.inHours;
     final minutes = totalDuration.inMinutes.remainder(60);
+
+    final String formattedDate =
+        DateFormat.yMMMMd(l10n.localeName).format(_uiSelectedDate);
 
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
         child: Column(
           children: [
-            Text(
-              l10n.totalActiveTimeTodayTitle, // Key mới
-              style: theme.textTheme.titleMedium,
-            ),
+            Text(formattedDate, style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            // Sử dụng Text.rich để style giờ và phút khác nhau
             Text.rich(
               TextSpan(
                 style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary),
                 children: [
                   TextSpan(text: '$hours'),
                   TextSpan(
-                    text: 'h ',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: theme.colorScheme.primary.withOpacity(0.8)),
-                  ),
+                      text: 'h ',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: theme.colorScheme.primary.withOpacity(0.8))),
                   TextSpan(text: '$minutes'),
                   TextSpan(
-                    text: 'm',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: theme.colorScheme.primary.withOpacity(0.8)),
-                  ),
+                      text: 'm',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: theme.colorScheme.primary.withOpacity(0.8))),
                 ],
               ),
             ),
+            const SizedBox(height: 4),
+            Text(l10n.totalActiveTimeTodayTitle,
+                style: theme.textTheme.bodyMedium),
           ],
         ));
   }
